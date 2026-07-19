@@ -1,0 +1,2 @@
+- [LawVise API schema names](lawvise-api-schema-names.md) — Orval generates operation-based names (e.g. AnalyzeDocumentBody), NOT component schema names (e.g. DocumentAnalysisInput).
+- [LawVise zod imports in api-server](lawvise-zod-imports.md) — Do not import zod directly in api-server routes; esbuild cannot resolve it. Use parseId() helper or rely on api-zod schemas only.

@@ -1,8 +1,10 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import healthRouter from "./health";
+import lawviseRouter from "./lawvise";
 
-const router: IRouter = Router();
+const router: Router = Router();
 
 router.use(healthRouter);
+router.use(lawviseRouter);
 
 export default router;

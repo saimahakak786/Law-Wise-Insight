@@ -3,20 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: LawVise API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: lawvise
+    description: LawVise legal AI operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +25,219 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /lawvise/analyze:
+    post:
+      operationId: analyzeDocument
+      tags: [lawvise]
+      summary: Analyze a legal document (SSE stream)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentAnalysisInput"
+      responses:
+        "200":
+          description: SSE stream of analysis
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /lawvise/chat:
+    post:
+      operationId: legalChat
+      tags: [lawvise]
+      summary: Legal AI chat (SSE stream)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalChatInput"
+      responses:
+        "200":
+          description: SSE stream of chat response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /lawvise/draft:
+    post:
+      operationId: draftDocument
+      tags: [lawvise]
+      summary: Draft a legal document (SSE stream)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentDraftInput"
+      responses:
+        "200":
+          description: SSE stream of draft
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /lawvise/calculate/limitation:
+    post:
+      operationId: calculateLimitation
+      tags: [lawvise]
+      summary: Calculate limitation period
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LimitationInput"
+      responses:
+        "200":
+          description: Limitation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitationResult"
+
+  /lawvise/calculate/court-fee:
+    post:
+      operationId: calculateCourtFee
+      tags: [lawvise]
+      summary: Calculate court fee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourtFeeInput"
+      responses:
+        "200":
+          description: Court fee result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourtFeeResult"
+
+  /lawvise/documents:
+    get:
+      operationId: getDocuments
+      tags: [lawvise]
+      summary: List user's saved documents
+      responses:
+        "200":
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LegalDocument"
+    post:
+      operationId: saveDocument
+      tags: [lawvise]
+      summary: Save a document to vault
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalDocumentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalDocument"
+
+  /lawvise/documents/{id}:
+    delete:
+      operationId: deleteDocument
+      tags: [lawvise]
+      summary: Delete a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /lawvise/cases:
+    get:
+      operationId: getCases
+      tags: [lawvise]
+      summary: List user's cases
+      responses:
+        "200":
+          description: List of cases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LegalCase"
+    post:
+      operationId: createCase
+      tags: [lawvise]
+      summary: Create a new case
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalCaseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalCase"
+
+  /lawvise/cases/{id}:
+    patch:
+      operationId: updateCase
+      tags: [lawvise]
+      summary: Update a case
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalCaseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalCase"
+    delete:
+      operationId: deleteCase
+      tags: [lawvise]
+      summary: Delete a case
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +248,216 @@ components:
       required:
         - status
 
+    DocumentAnalysisInput:
+      type: object
+      required: [content, analysisType, documentType]
+      properties:
+        content:
+          type: string
+        analysisType:
+          type: string
+          enum: [summarize, clause_analysis, risk_analysis, interpretation, full_analysis]
+        documentType:
+          type: string
+        jurisdiction:
+          type: ["string", "null"]
+        language:
+          type: ["string", "null"]
+
+    LegalChatInput:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        jurisdiction:
+          type: ["string", "null"]
+        language:
+          type: ["string", "null"]
+
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+
+    DocumentDraftInput:
+      type: object
+      required: [documentType, jurisdiction]
+      properties:
+        documentType:
+          type: string
+        jurisdiction:
+          type: string
+        details:
+          type: ["string", "null"]
+        language:
+          type: ["string", "null"]
+
+    LimitationInput:
+      type: object
+      required: [caseType, jurisdiction]
+      properties:
+        caseType:
+          type: string
+        jurisdiction:
+          type: string
+        eventDate:
+          type: ["string", "null"]
+
+    LimitationResult:
+      type: object
+      required: [periodYears, description, deadline]
+      properties:
+        periodYears:
+          type: number
+        description:
+          type: string
+        deadline:
+          type: ["string", "null"]
+        notes:
+          type: string
+
+    CourtFeeInput:
+      type: object
+      required: [courtType, caseType, jurisdiction]
+      properties:
+        courtType:
+          type: string
+        caseType:
+          type: string
+        jurisdiction:
+          type: string
+        claimAmount:
+          type: ["number", "null"]
+
+    CourtFeeResult:
+      type: object
+      required: [baseFee, totalFee, description]
+      properties:
+        baseFee:
+          type: number
+        additionalFees:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeeBreakdown"
+        totalFee:
+          type: number
+        description:
+          type: string
+
+    FeeBreakdown:
+      type: object
+      required: [name, amount]
+      properties:
+        name:
+          type: string
+        amount:
+          type: number
+
+    LegalDocument:
+      type: object
+      required: [id, title, documentType, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        title:
+          type: string
+        documentType:
+          type: string
+        content:
+          type: ["string", "null"]
+        analysisType:
+          type: ["string", "null"]
+        analysisResult:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    LegalDocumentInput:
+      type: object
+      required: [title, documentType]
+      properties:
+        title:
+          type: string
+        documentType:
+          type: string
+        content:
+          type: ["string", "null"]
+        analysisType:
+          type: ["string", "null"]
+        analysisResult:
+          type: ["string", "null"]
+
+    LegalCase:
+      type: object
+      required: [id, title, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        title:
+          type: string
+        caseNumber:
+          type: ["string", "null"]
+        court:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, pending, closed, won, lost]
+        description:
+          type: ["string", "null"]
+        hearingDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    LegalCaseInput:
+      type: object
+      required: [title, status]
+      properties:
+        title:
+          type: string
+        caseNumber:
+          type: ["string", "null"]
+        court:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, pending, closed, won, lost]
+        description:
+          type: ["string", "null"]
+        hearingDate:
+          type: ["string", "null"]
+
+    LegalCaseUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        caseNumber:
+          type: ["string", "null"]
+        court:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, pending, closed, won, lost]
+        description:
+          type: ["string", "null"]
+        hearingDate:
+          type: ["string", "null"]
