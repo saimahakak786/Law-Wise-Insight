@@ -44,7 +44,7 @@ router.patch("/lawvise/cases/:id", requireAuth, async (req, res): Promise<void> 
     return;
   }
 
-  const parsed = LegalCaseUpdate.safeParse(req.body);
+  const parsed = UpdateCaseBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;

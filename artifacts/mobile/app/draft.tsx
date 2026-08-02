@@ -12,20 +12,24 @@ import { useApp } from '@/context/AppContext';
 import { fetch } from 'expo/fetch';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as Haptics from 'expo-haptics';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import * as Clipboard from 'expo-clipboard';
+import { useSaveDocument } from '@workspace/api-client-react';
 
 const DOC_TYPES = [
-  { id: 'Rent Agreement', icon: 'home' },
-  { id: 'Employment Agreement', icon: 'briefcase' },
-  { id: 'Partnership Agreement', icon: 'users' },
-  { id: 'Sale Agreement', icon: 'shopping-cart' },
-  { id: 'Lease Agreement', icon: 'key' },
-  { id: 'Service Agreement', icon: 'tool' },
-  { id: 'Non-Disclosure Agreement', icon: 'lock' },
-  { id: 'Power of Attorney', icon: 'file-text' },
-  { id: 'Legal Notice', icon: 'alert-circle' },
-  { id: 'Will / Testament', icon: 'book' },
-  { id: 'Affidavit', icon: 'feather' },
-  { id: 'Memorandum of Understanding', icon: 'layers' },
+  { id: 'legal_notice', label: 'Legal Notice', icon: 'alert-circle' },
+  { id: 'plaint', label: 'Civil Plaint', icon: 'file-text' },
+  { id: 'written_statement', label: 'Written Statement', icon: 'edit-3' },
+  { id: 'affidavit', label: 'Affidavit', icon: 'feather' },
+  { id: 'bail_application', label: 'Bail Application', icon: 'shield' },
+  { id: 'contract', label: 'Contract', icon: 'briefcase' },
+  { id: 'agreement', label: 'Agreement', icon: 'users' },
+  { id: 'petition', label: 'Petition', icon: 'layers' },
+  { id: 'reply_notice', label: 'Reply Notice', icon: 'corner-up-right' },
+  { id: 'power_of_attorney', label: 'Power of Attorney', icon: 'key' },
+  { id: 'memorandum', label: 'Memorandum', icon: 'book' },
+  { id: 'writ_petition', label: 'Writ Petition', icon: 'award' },
 ];
 
 export default function DraftScreen() {
@@ -34,6 +38,7 @@ export default function DraftScreen() {
   const router = useRouter();
   const { getToken } = useAuth();
   const { jurisdiction, language } = useApp();
+  const saveDocument = useSaveDocument();
 
   const [selectedType, setSelectedType] = useState('');
   const [details, setDetails] = useState('');
@@ -86,6 +91,44 @@ export default function DraftScreen() {
     }
   };
 
+  const handleShare = async () => {
+    if (!draft) return;
+    try {
+      const docType = DOC_TYPES.find((d) => d.id === selectedType);
+      const filename = FileSystem.cacheDirectory + `${docType?.label ?? selectedType}_draft.txt`;
+      await FileSystem.writeAsStringAsync(filename, draft, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(filename);
+    } catch {
+      Alert.alert('Share Failed', 'Could not share the draft.');
+    }
+  };
+
+  const handleSaveToVault = async () => {
+    if (!draft) return;
+    try {
+      const docType = DOC_TYPES.find((d) => d.id === selectedType);
+      await saveDocument.mutateAsync({
+        data: {
+          title: `${docType?.label ?? selectedType} Draft`,
+          documentType: selectedType,
+          content: draft,
+          analysisType: 'draft',
+        },
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Saved', 'Draft saved to your vault.');
+    } catch {
+      Alert.alert('Save Failed', 'Could not save to vault. Please try again.');
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!draft) return;
+    await Clipboard.setStringAsync(draft);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Copied', 'Draft copied to clipboard.');
+  };
+
   const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
 
   if (showDraft) {
@@ -96,7 +139,7 @@ export default function DraftScreen() {
             <Feather name="arrow-left" size={22} color="#C9A84C" />
           </Pressable>
           <View style={{ flex: 1 }}>
-            <Text style={styles.draftHeaderTitle}>{selectedType}</Text>
+            <Text style={styles.draftHeaderTitle}>{DOC_TYPES.find((d) => d.id === selectedType)?.label ?? selectedType}</Text>
             <Text style={[styles.draftHeaderSub, { color: colors.mutedForeground }]}>{jurisdiction} Law</Text>
           </View>
           {isDrafting && <ActivityIndicator color="#C9A84C" />}
@@ -109,11 +152,39 @@ export default function DraftScreen() {
           {isDrafting && !draft && (
             <View style={styles.loadingRow}>
               <ActivityIndicator color="#C9A84C" />
-              <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Drafting your {selectedType}...</Text>
+              <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
+                Drafting your {DOC_TYPES.find((d) => d.id === selectedType)?.label ?? selectedType}...
+              </Text>
             </View>
           )}
           <Text style={[styles.draftText, { color: colors.foreground }]}>{draft}</Text>
         </ScrollView>
+
+        {/* Action buttons after draft is complete */}
+        {!isDrafting && draft ? (
+          <View style={[styles.actionBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 }]}>
+            <Pressable style={[styles.actionBtn, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={handleCopy}>
+              <Feather name="copy" size={16} color={colors.foreground} />
+              <Text style={[styles.actionBtnText, { color: colors.foreground }]}>Copy</Text>
+            </Pressable>
+            <Pressable style={[styles.actionBtn, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={handleShare}>
+              <Feather name="share-2" size={16} color={colors.foreground} />
+              <Text style={[styles.actionBtnText, { color: colors.foreground }]}>Share</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.actionBtn, styles.actionBtnPrimary, saveDocument.isPending && { opacity: 0.6 }]}
+              onPress={handleSaveToVault}
+              disabled={saveDocument.isPending}
+            >
+              {saveDocument.isPending
+                ? <ActivityIndicator color="#070D24" size="small" />
+                : <>
+                    <Feather name="save" size={16} color="#070D24" />
+                    <Text style={styles.actionBtnPrimaryText}>Save to Vault</Text>
+                  </>}
+            </Pressable>
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -145,7 +216,7 @@ export default function DraftScreen() {
             onPress={() => setSelectedType(dt.id)}
           >
             <Feather name={dt.icon as any} size={20} color={selectedType === dt.id ? '#C9A84C' : colors.mutedForeground} />
-            <Text style={[styles.docTypeLabel, { color: selectedType === dt.id ? '#C9A84C' : colors.foreground }]}>{dt.id}</Text>
+            <Text style={[styles.docTypeLabel, { color: selectedType === dt.id ? '#C9A84C' : colors.foreground }]}>{dt.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -204,4 +275,16 @@ const styles = StyleSheet.create({
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
   loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
   draftText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24 },
+  actionBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  actionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, borderRadius: 10, borderWidth: 1, height: 42,
+  },
+  actionBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
+  actionBtnPrimary: { backgroundColor: '#C9A84C', borderColor: '#C9A84C' },
+  actionBtnPrimaryText: { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#070D24' },
 });

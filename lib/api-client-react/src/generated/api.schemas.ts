@@ -3,10 +3,30 @@
  * Do not edit manually.
  * Api
  * LawVise API specification
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 export interface HealthStatus {
   status: string;
+}
+
+export interface UploadDocumentBody {
+  /** Base64-encoded file content */
+  fileBase64: string;
+  /** MIME type: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, image/jpeg, image/png, etc. */
+  mimeType: string;
+  fileName: string;
+  /** @nullable */
+  language?: string | null;
+}
+
+export interface UploadDocumentResponse {
+  extractedText: string;
+  fileName: string;
+  mimeType: string;
+  /** @nullable */
+  pageCount?: number | null;
+  /** @nullable */
+  objectPath?: string | null;
 }
 
 export type DocumentAnalysisInputAnalysisType = typeof DocumentAnalysisInputAnalysisType[keyof typeof DocumentAnalysisInputAnalysisType];
@@ -16,7 +36,10 @@ export const DocumentAnalysisInputAnalysisType = {
   summarize: 'summarize',
   clause_analysis: 'clause_analysis',
   risk_analysis: 'risk_analysis',
-  interpretation: 'interpretation',
+  key_points: 'key_points',
+  legal_issues: 'legal_issues',
+  relevant_sections: 'relevant_sections',
+  case_citations: 'case_citations',
   full_analysis: 'full_analysis',
 } as const;
 
@@ -26,6 +49,28 @@ export interface DocumentAnalysisInput {
   documentType: string;
   /** @nullable */
   jurisdiction?: string | null;
+  /** @nullable */
+  language?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type LegalResearchInputResearchType = typeof LegalResearchInputResearchType[keyof typeof LegalResearchInputResearchType] | null;
+
+
+export const LegalResearchInputResearchType = {
+  case_law: 'case_law',
+  statute: 'statute',
+  general: 'general',
+} as const;
+
+export interface LegalResearchInput {
+  query: string;
+  /** @nullable */
+  jurisdiction?: string | null;
+  /** @nullable */
+  researchType?: LegalResearchInputResearchType;
   /** @nullable */
   language?: string | null;
 }
@@ -52,13 +97,38 @@ export interface LegalChatInput {
   language?: string | null;
 }
 
+export type DocumentDraftInputDocumentType = typeof DocumentDraftInputDocumentType[keyof typeof DocumentDraftInputDocumentType];
+
+
+export const DocumentDraftInputDocumentType = {
+  legal_notice: 'legal_notice',
+  plaint: 'plaint',
+  written_statement: 'written_statement',
+  affidavit: 'affidavit',
+  bail_application: 'bail_application',
+  contract: 'contract',
+  agreement: 'agreement',
+  petition: 'petition',
+  reply_notice: 'reply_notice',
+  power_of_attorney: 'power_of_attorney',
+  memorandum: 'memorandum',
+  writ_petition: 'writ_petition',
+} as const;
+
+/**
+ * @nullable
+ */
+export type DocumentDraftInputParties = { [key: string]: unknown } | null;
+
 export interface DocumentDraftInput {
-  documentType: string;
+  documentType: DocumentDraftInputDocumentType;
   jurisdiction: string;
   /** @nullable */
   details?: string | null;
   /** @nullable */
   language?: string | null;
+  /** @nullable */
+  parties?: DocumentDraftInputParties;
 }
 
 export interface LimitationInput {
@@ -74,6 +144,8 @@ export interface LimitationResult {
   /** @nullable */
   deadline: string | null;
   notes?: string;
+  /** @nullable */
+  applicableLaw?: string | null;
 }
 
 export interface CourtFeeInput {
@@ -82,6 +154,8 @@ export interface CourtFeeInput {
   jurisdiction: string;
   /** @nullable */
   claimAmount?: number | null;
+  /** @nullable */
+  reliefSought?: string | null;
 }
 
 export interface FeeBreakdown {
@@ -94,6 +168,10 @@ export interface CourtFeeResult {
   additionalFees?: FeeBreakdown[];
   totalFee: number;
   description: string;
+  /** @nullable */
+  applicableAct?: string | null;
+  /** @nullable */
+  exemptions?: string | null;
 }
 
 export interface LegalDocument {
@@ -107,8 +185,13 @@ export interface LegalDocument {
   analysisType?: string | null;
   /** @nullable */
   analysisResult?: string | null;
+  /** @nullable */
+  fileUrl?: string | null;
+  /** @nullable */
+  folderId?: number | null;
+  isFavorite?: boolean;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
 }
 
 export interface LegalDocumentInput {
@@ -120,6 +203,40 @@ export interface LegalDocumentInput {
   analysisType?: string | null;
   /** @nullable */
   analysisResult?: string | null;
+  /** @nullable */
+  fileUrl?: string | null;
+  /** @nullable */
+  folderId?: number | null;
+}
+
+export interface LegalDocumentUpdate {
+  title?: string;
+  /** @nullable */
+  folderId?: number | null;
+  isFavorite?: boolean;
+  /** @nullable */
+  analysisResult?: string | null;
+}
+
+export interface DocumentFolder {
+  id: number;
+  userId?: string;
+  name: string;
+  /** @nullable */
+  color?: string | null;
+  createdAt: string;
+}
+
+export interface CreateFolderBody {
+  name: string;
+  /** @nullable */
+  color?: string | null;
+}
+
+export interface UpdateFolderBody {
+  name?: string;
+  /** @nullable */
+  color?: string | null;
 }
 
 export type LegalCaseStatus = typeof LegalCaseStatus[keyof typeof LegalCaseStatus];
@@ -131,6 +248,18 @@ export const LegalCaseStatus = {
   closed: 'closed',
   won: 'won',
   lost: 'lost',
+} as const;
+
+/**
+ * @nullable
+ */
+export type LegalCasePriority = typeof LegalCasePriority[keyof typeof LegalCasePriority] | null;
+
+
+export const LegalCasePriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
 } as const;
 
 export interface LegalCase {
@@ -146,6 +275,10 @@ export interface LegalCase {
   description?: string | null;
   /** @nullable */
   hearingDate?: string | null;
+  /** @nullable */
+  nextAction?: string | null;
+  /** @nullable */
+  priority?: LegalCasePriority;
   createdAt: string;
   updatedAt: string;
 }
@@ -161,6 +294,18 @@ export const LegalCaseInputStatus = {
   lost: 'lost',
 } as const;
 
+/**
+ * @nullable
+ */
+export type LegalCaseInputPriority = typeof LegalCaseInputPriority[keyof typeof LegalCaseInputPriority] | null;
+
+
+export const LegalCaseInputPriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
 export interface LegalCaseInput {
   title: string;
   /** @nullable */
@@ -172,6 +317,10 @@ export interface LegalCaseInput {
   description?: string | null;
   /** @nullable */
   hearingDate?: string | null;
+  /** @nullable */
+  nextAction?: string | null;
+  /** @nullable */
+  priority?: LegalCaseInputPriority;
 }
 
 export type LegalCaseUpdateStatus = typeof LegalCaseUpdateStatus[keyof typeof LegalCaseUpdateStatus];
@@ -185,6 +334,18 @@ export const LegalCaseUpdateStatus = {
   lost: 'lost',
 } as const;
 
+/**
+ * @nullable
+ */
+export type LegalCaseUpdatePriority = typeof LegalCaseUpdatePriority[keyof typeof LegalCaseUpdatePriority] | null;
+
+
+export const LegalCaseUpdatePriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
 export interface LegalCaseUpdate {
   title?: string;
   /** @nullable */
@@ -196,5 +357,119 @@ export interface LegalCaseUpdate {
   description?: string | null;
   /** @nullable */
   hearingDate?: string | null;
+  /** @nullable */
+  nextAction?: string | null;
+  /** @nullable */
+  priority?: LegalCaseUpdatePriority;
 }
+
+export type UserSettingsLanguage = typeof UserSettingsLanguage[keyof typeof UserSettingsLanguage];
+
+
+export const UserSettingsLanguage = {
+  en: 'en',
+  hi: 'hi',
+  ur: 'ur',
+} as const;
+
+/**
+ * @nullable
+ */
+export type UserSettingsTheme = typeof UserSettingsTheme[keyof typeof UserSettingsTheme] | null;
+
+
+export const UserSettingsTheme = {
+  dark: 'dark',
+  light: 'light',
+} as const;
+
+export interface UserSettings {
+  userId: string;
+  language: UserSettingsLanguage;
+  jurisdiction: string;
+  notificationsEnabled: boolean;
+  /** @nullable */
+  pushToken?: string | null;
+  /** @nullable */
+  theme?: UserSettingsTheme;
+}
+
+export type UpdateSettingsBodyLanguage = typeof UpdateSettingsBodyLanguage[keyof typeof UpdateSettingsBodyLanguage];
+
+
+export const UpdateSettingsBodyLanguage = {
+  en: 'en',
+  hi: 'hi',
+  ur: 'ur',
+} as const;
+
+/**
+ * @nullable
+ */
+export type UpdateSettingsBodyTheme = typeof UpdateSettingsBodyTheme[keyof typeof UpdateSettingsBodyTheme] | null;
+
+
+export const UpdateSettingsBodyTheme = {
+  dark: 'dark',
+  light: 'light',
+} as const;
+
+export interface UpdateSettingsBody {
+  language?: UpdateSettingsBodyLanguage;
+  jurisdiction?: string;
+  notificationsEnabled?: boolean;
+  /** @nullable */
+  theme?: UpdateSettingsBodyTheme;
+}
+
+/**
+ * @nullable
+ */
+export type RegisterPushTokenBodyPlatform = typeof RegisterPushTokenBodyPlatform[keyof typeof RegisterPushTokenBodyPlatform] | null;
+
+
+export const RegisterPushTokenBodyPlatform = {
+  ios: 'ios',
+  android: 'android',
+  web: 'web',
+} as const;
+
+export interface RegisterPushTokenBody {
+  token: string;
+  /** @nullable */
+  platform?: RegisterPushTokenBodyPlatform;
+}
+
+export interface RegisterPushTokenResponse {
+  success: boolean;
+}
+
+export interface RequestUploadUrlBody {
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+export type RequestUploadUrlResponseMetadata = {
+  name?: string;
+  size?: number;
+  contentType?: string;
+};
+
+export interface RequestUploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: RequestUploadUrlResponseMetadata;
+}
+
+export type GetDocumentsParams = {
+/**
+ * @nullable
+ */
+folderId?: number | null;
+/**
+ * @nullable
+ */
+search?: string | null;
+};
 

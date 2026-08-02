@@ -37,6 +37,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
       <Stack.Screen name="draft" options={{ presentation: 'modal' }} />
       <Stack.Screen name="calculator" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="research" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

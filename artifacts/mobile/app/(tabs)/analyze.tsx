@@ -12,6 +12,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { fetch } from 'expo/fetch';
 import { useSaveDocument } from '@workspace/api-client-react';
 import * as Haptics from 'expo-haptics';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 
 const DOC_TYPES = [
   'Contract', 'Judgment', 'FIR', 'Court Order', 'Legal Notice', 'Bail Application',
@@ -24,7 +27,32 @@ const ANALYSIS_TYPES = [
   { id: 'clause_analysis', label: 'Clause Analysis', icon: 'list', desc: 'Clause-by-clause breakdown' },
   { id: 'risk_analysis', label: 'Risk Analysis', icon: 'alert-triangle', desc: 'Identify risks & red flags' },
   { id: 'full_analysis', label: 'Full Analysis', icon: 'zap', desc: 'Comprehensive deep dive' },
+  { id: 'key_points', label: 'Key Points', icon: 'list', desc: 'Top key points extracted' },
+  { id: 'legal_issues', label: 'Legal Issues', icon: 'alert-circle', desc: 'Issues & concerns identified' },
+  { id: 'relevant_sections', label: 'Law Sections', icon: 'book-open', desc: 'Applicable statutes & sections' },
+  { id: 'case_citations', label: 'Case Citations', icon: 'award', desc: 'Relevant case laws & judgments' },
 ];
+
+type UploadMode = 'upload' | 'camera' | 'paste' | null;
+
+function guessDocType(fileName: string): string | null {
+  const lower = fileName.toLowerCase();
+  if (lower.includes('contract')) return 'Contract';
+  if (lower.includes('judgment') || lower.includes('judgement')) return 'Judgment';
+  if (lower.includes('fir')) return 'FIR';
+  if (lower.includes('order')) return 'Court Order';
+  if (lower.includes('notice')) return 'Legal Notice';
+  if (lower.includes('bail')) return 'Bail Application';
+  if (lower.includes('writ')) return 'Writ Petition';
+  if (lower.includes('charge')) return 'Charge Sheet';
+  if (lower.includes('rent')) return 'Rent Agreement';
+  if (lower.includes('employment')) return 'Employment Agreement';
+  if (lower.includes('lease')) return 'Lease Agreement';
+  if (lower.includes('sale')) return 'Sale Agreement';
+  if (lower.includes('partnership')) return 'Partnership Agreement';
+  if (lower.includes('will')) return 'Will';
+  return null;
+}
 
 export default function AnalyzeScreen() {
   const colors = useColors();
@@ -41,9 +69,128 @@ export default function AnalyzeScreen() {
   const [showResult, setShowResult] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
+  // Upload state
+  const [uploadMode, setUploadMode] = useState<UploadMode>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+
+  const handleUploadDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'image/jpeg',
+          'image/png',
+          'image/*',
+        ],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+      const asset = result.assets[0];
+
+      setIsExtracting(true);
+      setUploadMode('upload');
+
+      const fileBase64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const token = await getToken();
+      const domain = process.env.EXPO_PUBLIC_DOMAIN;
+      const response = await fetch(`https://${domain}/api/lawvise/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          fileBase64,
+          mimeType: asset.mimeType ?? 'application/octet-stream',
+          fileName: asset.name,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const data = await response.json() as { extractedText: string; fileName: string; mimeType: string };
+      setDocText(data.extractedText);
+      setUploadedFileName(asset.name);
+
+      const guessed = guessDocType(asset.name);
+      if (guessed) setDocType(guessed);
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err) {
+      Alert.alert('Upload Failed', 'Could not extract text from the document. Please try again.');
+      setUploadMode(null);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Camera access is needed to scan documents.');
+        return;
+      }
+
+      const pickerResult = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+
+      if (pickerResult.canceled) return;
+      const asset = pickerResult.assets[0];
+
+      setIsExtracting(true);
+      setUploadMode('camera');
+
+      const fileBase64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const token = await getToken();
+      const domain = process.env.EXPO_PUBLIC_DOMAIN;
+      const fileName = `scan_${Date.now()}.jpg`;
+      const response = await fetch(`https://${domain}/api/lawvise/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          fileBase64,
+          mimeType: 'image/jpeg',
+          fileName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const data = await response.json() as { extractedText: string; fileName: string; mimeType: string };
+      setDocText(data.extractedText);
+      setUploadedFileName(fileName);
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err) {
+      Alert.alert('Scan Failed', 'Could not extract text from the photo. Please try again.');
+      setUploadMode(null);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!docText.trim()) {
-      Alert.alert('Missing Content', 'Please paste or type your document text.');
+      Alert.alert('Missing Content', 'Please upload a document or paste your document text.');
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -108,6 +255,12 @@ export default function AnalyzeScreen() {
     setResult('');
   };
 
+  const resetUpload = () => {
+    setUploadMode(null);
+    setUploadedFileName(null);
+    setDocText('');
+  };
+
   if (showResult) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -156,9 +309,122 @@ export default function AnalyzeScreen() {
     >
       <Text style={styles.screenTitle}>Analyze Document</Text>
       <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-        Paste your legal document text below for AI analysis
+        Upload a document or paste text for AI-powered legal analysis
       </Text>
 
+      {/* ── STEP 1: Source Selection ── */}
+      {!docText.trim() && (
+        <View style={styles.sourceSection}>
+          {/* Primary — Upload Document */}
+          <Pressable
+            style={[styles.uploadPrimaryCard, { backgroundColor: colors.card, borderColor: uploadMode === 'upload' ? '#C9A84C' : colors.border }]}
+            onPress={handleUploadDocument}
+            disabled={isExtracting}
+          >
+            {isExtracting && (uploadMode === 'upload' || uploadMode === 'camera') ? (
+              <View style={styles.extractingRow}>
+                <ActivityIndicator color="#C9A84C" />
+                <Text style={styles.extractingText}>Extracting text...</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.uploadIconWrap}>
+                  <Feather name="upload-cloud" size={32} color="#C9A84C" />
+                </View>
+                <Text style={styles.uploadPrimaryLabel}>Upload Document</Text>
+                <Text style={[styles.uploadPrimaryDesc, { color: colors.mutedForeground }]}>
+                  PDF, DOCX, JPG, PNG supported
+                </Text>
+              </>
+            )}
+          </Pressable>
+
+          {/* Secondary row — Camera + Paste */}
+          <View style={styles.secondaryRow}>
+            <Pressable
+              style={[styles.secondaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={handleTakePhoto}
+              disabled={isExtracting}
+            >
+              {isExtracting && uploadMode === 'camera' ? (
+                <ActivityIndicator color="#C9A84C" size="small" />
+              ) : (
+                <Feather name="camera" size={22} color="#C9A84C" />
+              )}
+              <Text style={[styles.secondaryLabel, { color: colors.foreground }]}>Take Photo</Text>
+              <Text style={[styles.secondaryDesc, { color: colors.mutedForeground }]}>Scan document</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.secondaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => setUploadMode('paste')}
+              disabled={isExtracting}
+            >
+              <Feather name="edit-2" size={22} color={colors.mutedForeground} />
+              <Text style={[styles.secondaryLabel, { color: colors.foreground }]}>Paste Text</Text>
+              <Text style={[styles.secondaryDesc, { color: colors.mutedForeground }]}>Type or paste</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* ── STEP 2: Text Input (paste mode or after upload) ── */}
+      {(uploadMode === 'paste' || docText.trim()) && (
+        <View>
+          {/* Extracted / ready badge */}
+          {uploadedFileName ? (
+            <View style={styles.extractedBadgeRow}>
+              <View style={[styles.extractedBadge, { backgroundColor: '#22C55E18' }]}>
+                <Feather name="check-circle" size={14} color="#22C55E" />
+                <Text style={styles.extractedBadgeText}>Text Extracted — {uploadedFileName}</Text>
+              </View>
+              <Pressable onPress={resetUpload} style={styles.resetBtn}>
+                <Feather name="x" size={16} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+          ) : (
+            uploadMode === 'paste' && (
+              <View style={styles.extractedBadgeRow}>
+                <Text style={[styles.label, { color: colors.foreground, paddingHorizontal: 0, marginBottom: 0 }]}>
+                  Document Content
+                </Text>
+                <Pressable onPress={resetUpload} style={styles.resetBtn}>
+                  <Feather name="x" size={16} color={colors.mutedForeground} />
+                </Pressable>
+              </View>
+            )
+          )}
+
+          {/* Editable text area */}
+          <TextInput
+            style={[styles.textArea, { backgroundColor: colors.card, borderColor: uploadedFileName ? '#22C55E40' : colors.border, color: colors.foreground }]}
+            value={docText}
+            onChangeText={setDocText}
+            placeholder="Paste your contract, judgment, FIR, court order, or any legal document text here..."
+            placeholderTextColor={colors.mutedForeground}
+            multiline
+            numberOfLines={8}
+            textAlignVertical="top"
+          />
+          <Text style={[styles.charCount, { color: colors.mutedForeground }]}>{docText.length} characters</Text>
+        </View>
+      )}
+
+      {/* Show "Upload another" option if text already loaded */}
+      {docText.trim() && (
+        <View style={styles.changeSourceRow}>
+          <Pressable style={[styles.changeSourceBtn, { borderColor: colors.border }]} onPress={handleUploadDocument}>
+            <Feather name="upload-cloud" size={14} color="#C9A84C" />
+            <Text style={styles.changeSourceText}>Upload different file</Text>
+          </Pressable>
+          <Pressable style={[styles.changeSourceBtn, { borderColor: colors.border }]} onPress={handleTakePhoto}>
+            <Feather name="camera" size={14} color={colors.mutedForeground} />
+            <Text style={[styles.changeSourceText, { color: colors.mutedForeground }]}>Re-scan</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* ── STEP 3: Document Type + Analysis Config ── */}
       {/* Document Type */}
       <Text style={[styles.label, { color: colors.foreground }]}>Document Type</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
@@ -192,20 +458,6 @@ export default function AnalyzeScreen() {
           </Pressable>
         ))}
       </View>
-
-      {/* Document Text */}
-      <Text style={[styles.label, { color: colors.foreground }]}>Document Content</Text>
-      <TextInput
-        style={[styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-        value={docText}
-        onChangeText={setDocText}
-        placeholder="Paste your contract, judgment, FIR, court order, or any legal document text here..."
-        placeholderTextColor={colors.mutedForeground}
-        multiline
-        numberOfLines={8}
-        textAlignVertical="top"
-      />
-      <Text style={[styles.charCount, { color: colors.mutedForeground }]}>{docText.length} characters</Text>
 
       {/* Analyze Button */}
       <Pressable
@@ -260,4 +512,48 @@ const styles = StyleSheet.create({
     padding: 12, marginTop: 20,
   },
   savedText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#22C55E' },
+
+  // Source selection
+  sourceSection: { paddingHorizontal: 20, marginBottom: 24, gap: 12 },
+  uploadPrimaryCard: {
+    borderRadius: 16, borderWidth: 1.5, padding: 24,
+    alignItems: 'center', gap: 10, minHeight: 140, justifyContent: 'center',
+  },
+  uploadIconWrap: {
+    width: 60, height: 60, borderRadius: 30,
+    backgroundColor: '#C9A84C18', alignItems: 'center', justifyContent: 'center',
+  },
+  uploadPrimaryLabel: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#FFFFFF' },
+  uploadPrimaryDesc: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  extractingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  extractingText: { fontFamily: 'Inter_500Medium', fontSize: 15, color: '#C9A84C' },
+  secondaryRow: { flexDirection: 'row', gap: 12 },
+  secondaryCard: {
+    flex: 1, borderRadius: 14, borderWidth: 1, padding: 16,
+    alignItems: 'center', gap: 8,
+  },
+  secondaryLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  secondaryDesc: { fontFamily: 'Inter_400Regular', fontSize: 11 },
+
+  // Extracted badge
+  extractedBadgeRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, marginBottom: 10,
+  },
+  extractedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, flex: 1,
+  },
+  extractedBadgeText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#22C55E', flexShrink: 1 },
+  resetBtn: { padding: 6, marginLeft: 8 },
+
+  // Change source
+  changeSourceRow: {
+    flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 20,
+  },
+  changeSourceBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12,
+  },
+  changeSourceText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#C9A84C' },
 });

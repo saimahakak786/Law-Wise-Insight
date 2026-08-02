@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  TextInput, ActivityIndicator, Platform,
+  TextInput, ActivityIndicator, Platform, Alert,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,22 +44,30 @@ export default function CalculatorScreen() {
   const handleLimitation = async () => {
     if (!limCaseType) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await calculateLimitation.mutateAsync({
-      data: { caseType: limCaseType, jurisdiction, eventDate: limEventDate || null },
-    });
+    try {
+      await calculateLimitation.mutateAsync({
+        data: { caseType: limCaseType, jurisdiction, eventDate: limEventDate || null },
+      });
+    } catch (e: any) {
+      Alert.alert('Calculation Failed', e?.message ?? 'Could not calculate limitation period. Please try again.');
+    }
   };
 
   const handleCourtFee = async () => {
     if (!feeCourtType || !feeCaseType) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await calculateCourtFee.mutateAsync({
-      data: {
-        courtType: feeCourtType,
-        caseType: feeCaseType,
-        jurisdiction,
-        claimAmount: feeAmount ? parseFloat(feeAmount) : null,
-      },
-    });
+    try {
+      await calculateCourtFee.mutateAsync({
+        data: {
+          courtType: feeCourtType,
+          caseType: feeCaseType,
+          jurisdiction,
+          claimAmount: feeAmount ? parseFloat(feeAmount) : null,
+        },
+      });
+    } catch (e: any) {
+      Alert.alert('Calculation Failed', e?.message ?? 'Could not calculate court fee. Please try again.');
+    }
   };
 
   const limResult = calculateLimitation.data;
@@ -130,6 +138,12 @@ export default function CalculatorScreen() {
                 ? <ActivityIndicator color="#070D24" />
                 : <><Feather name="clock" size={18} color="#070D24" /><Text style={styles.calcBtnText}>Calculate</Text></>}
             </Pressable>
+
+            {calculateLimitation.isError && (
+              <Text style={styles.errorText}>
+                {(calculateLimitation.error as any)?.message ?? 'Calculation failed. Please try again.'}
+              </Text>
+            )}
 
             {limResult && (
               <View style={[styles.resultCard, { backgroundColor: colors.card }]}>
@@ -205,6 +219,12 @@ export default function CalculatorScreen() {
                 : <><Feather name="dollar-sign" size={18} color="#070D24" /><Text style={styles.calcBtnText}>Calculate Fee</Text></>}
             </Pressable>
 
+            {calculateCourtFee.isError && (
+              <Text style={styles.errorText}>
+                {(calculateCourtFee.error as any)?.message ?? 'Calculation failed. Please try again.'}
+              </Text>
+            )}
+
             {feeResult && (
               <View style={[styles.resultCard, { backgroundColor: colors.card }]}>
                 <View style={styles.feeTotal}>
@@ -264,4 +284,5 @@ const styles = StyleSheet.create({
   feeLine: { flexDirection: 'row', justifyContent: 'space-between' },
   feeLineLabel: { fontFamily: 'Inter_400Regular', fontSize: 14 },
   feeLineValue: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
+  errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#EF4444', marginBottom: 12, marginTop: -12 },
 });

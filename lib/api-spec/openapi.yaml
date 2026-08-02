@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
+  version: 0.2.0
   description: LawVise API specification
 servers:
   - url: /api
@@ -12,6 +11,8 @@ tags:
     description: Health operations
   - name: lawvise
     description: LawVise legal AI operations
+  - name: storage
+    description: Object storage operations
 paths:
   /healthz:
     get:
@@ -25,6 +26,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /lawvise/upload:
+    post:
+      operationId: uploadDocument
+      tags: [lawvise]
+      summary: Upload a document file (PDF, DOCX, image) and extract text via OCR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadDocumentBody"
+      responses:
+        "200":
+          description: Extracted text and storage path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadDocumentResponse"
 
   /lawvise/analyze:
     post:
@@ -59,6 +79,25 @@ paths:
       responses:
         "200":
           description: SSE stream of chat response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /lawvise/research:
+    post:
+      operationId: legalResearch
+      tags: [lawvise]
+      summary: AI legal research on Indian laws and case law (SSE stream)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalResearchInput"
+      responses:
+        "200":
+          description: SSE stream of research results
           content:
             text/event-stream:
               schema:
@@ -126,6 +165,15 @@ paths:
       operationId: getDocuments
       tags: [lawvise]
       summary: List user's saved documents
+      parameters:
+        - name: folderId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
       responses:
         "200":
           description: List of documents
@@ -154,10 +202,103 @@ paths:
                 $ref: "#/components/schemas/LegalDocument"
 
   /lawvise/documents/{id}:
+    patch:
+      operationId: updateDocument
+      tags: [lawvise]
+      summary: Update a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalDocumentUpdate"
+      responses:
+        "200":
+          description: Updated document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalDocument"
     delete:
       operationId: deleteDocument
       tags: [lawvise]
       summary: Delete a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /lawvise/folders:
+    get:
+      operationId: getFolders
+      tags: [lawvise]
+      summary: List user's document folders
+      responses:
+        "200":
+          description: List of folders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentFolder"
+    post:
+      operationId: createFolder
+      tags: [lawvise]
+      summary: Create a new folder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFolderBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentFolder"
+
+  /lawvise/folders/{id}:
+    patch:
+      operationId: updateFolder
+      tags: [lawvise]
+      summary: Rename a folder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFolderBody"
+      responses:
+        "200":
+          description: Updated folder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentFolder"
+    delete:
+      operationId: deleteFolder
+      tags: [lawvise]
+      summary: Delete a folder
       parameters:
         - name: id
           in: path
@@ -238,6 +379,74 @@ paths:
         "204":
           description: Deleted
 
+  /lawvise/settings:
+    get:
+      operationId: getSettings
+      tags: [lawvise]
+      summary: Get user settings
+      responses:
+        "200":
+          description: User settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+    put:
+      operationId: updateSettings
+      tags: [lawvise]
+      summary: Update user settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+
+  /lawvise/notifications/register:
+    post:
+      operationId: registerPushToken
+      tags: [lawvise]
+      summary: Register Expo push notification token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterPushTokenBody"
+      responses:
+        "200":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterPushTokenResponse"
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned upload URL for file storage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: Presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -248,6 +457,36 @@ components:
       required:
         - status
 
+    UploadDocumentBody:
+      type: object
+      required: [fileBase64, mimeType, fileName]
+      properties:
+        fileBase64:
+          type: string
+          description: Base64-encoded file content
+        mimeType:
+          type: string
+          description: "MIME type: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, image/jpeg, image/png, etc."
+        fileName:
+          type: string
+        language:
+          type: ["string", "null"]
+
+    UploadDocumentResponse:
+      type: object
+      required: [extractedText, fileName, mimeType]
+      properties:
+        extractedText:
+          type: string
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        pageCount:
+          type: ["integer", "null"]
+        objectPath:
+          type: ["string", "null"]
+
     DocumentAnalysisInput:
       type: object
       required: [content, analysisType, documentType]
@@ -256,11 +495,34 @@ components:
           type: string
         analysisType:
           type: string
-          enum: [summarize, clause_analysis, risk_analysis, interpretation, full_analysis]
+          enum:
+            - summarize
+            - clause_analysis
+            - risk_analysis
+            - key_points
+            - legal_issues
+            - relevant_sections
+            - case_citations
+            - full_analysis
         documentType:
           type: string
         jurisdiction:
           type: ["string", "null"]
+        language:
+          type: ["string", "null"]
+
+    LegalResearchInput:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        jurisdiction:
+          type: ["string", "null"]
+          default: "India"
+        researchType:
+          type: ["string", "null"]
+          enum: [case_law, statute, general, null]
         language:
           type: ["string", "null"]
 
@@ -295,12 +557,28 @@ components:
       properties:
         documentType:
           type: string
+          enum:
+            - legal_notice
+            - plaint
+            - written_statement
+            - affidavit
+            - bail_application
+            - contract
+            - agreement
+            - petition
+            - reply_notice
+            - power_of_attorney
+            - memorandum
+            - writ_petition
         jurisdiction:
           type: string
         details:
           type: ["string", "null"]
         language:
           type: ["string", "null"]
+        parties:
+          type: ["object", "null"]
+          additionalProperties: true
 
     LimitationInput:
       type: object
@@ -325,6 +603,8 @@ components:
           type: ["string", "null"]
         notes:
           type: string
+        applicableLaw:
+          type: ["string", "null"]
 
     CourtFeeInput:
       type: object
@@ -338,6 +618,8 @@ components:
           type: string
         claimAmount:
           type: ["number", "null"]
+        reliefSought:
+          type: ["string", "null"]
 
     CourtFeeResult:
       type: object
@@ -353,6 +635,10 @@ components:
           type: number
         description:
           type: string
+        applicableAct:
+          type: ["string", "null"]
+        exemptions:
+          type: ["string", "null"]
 
     FeeBreakdown:
       type: object
@@ -365,7 +651,7 @@ components:
 
     LegalDocument:
       type: object
-      required: [id, title, documentType, createdAt]
+      required: [id, title, documentType, createdAt, updatedAt]
       properties:
         id:
           type: integer
@@ -381,6 +667,12 @@ components:
           type: ["string", "null"]
         analysisResult:
           type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        folderId:
+          type: ["integer", "null"]
+        isFavorite:
+          type: boolean
         createdAt:
           type: string
         updatedAt:
@@ -399,6 +691,54 @@ components:
         analysisType:
           type: ["string", "null"]
         analysisResult:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        folderId:
+          type: ["integer", "null"]
+
+    LegalDocumentUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        folderId:
+          type: ["integer", "null"]
+        isFavorite:
+          type: boolean
+        analysisResult:
+          type: ["string", "null"]
+
+    DocumentFolder:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        name:
+          type: string
+        color:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    CreateFolderBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        color:
+          type: ["string", "null"]
+
+    UpdateFolderBody:
+      type: object
+      properties:
+        name:
+          type: string
+        color:
           type: ["string", "null"]
 
     LegalCase:
@@ -422,6 +762,11 @@ components:
           type: ["string", "null"]
         hearingDate:
           type: ["string", "null"]
+        nextAction:
+          type: ["string", "null"]
+        priority:
+          type: ["string", "null"]
+          enum: [low, medium, high, null]
         createdAt:
           type: string
         updatedAt:
@@ -444,6 +789,11 @@ components:
           type: ["string", "null"]
         hearingDate:
           type: ["string", "null"]
+        nextAction:
+          type: ["string", "null"]
+        priority:
+          type: ["string", "null"]
+          enum: [low, medium, high, null]
 
     LegalCaseUpdate:
       type: object
@@ -461,3 +811,87 @@ components:
           type: ["string", "null"]
         hearingDate:
           type: ["string", "null"]
+        nextAction:
+          type: ["string", "null"]
+        priority:
+          type: ["string", "null"]
+          enum: [low, medium, high, null]
+
+    UserSettings:
+      type: object
+      required: [userId, language, jurisdiction, notificationsEnabled]
+      properties:
+        userId:
+          type: string
+        language:
+          type: string
+          enum: [en, hi, ur]
+        jurisdiction:
+          type: string
+        notificationsEnabled:
+          type: boolean
+        pushToken:
+          type: ["string", "null"]
+        theme:
+          type: ["string", "null"]
+          enum: [dark, light, null]
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        language:
+          type: string
+          enum: [en, hi, ur]
+        jurisdiction:
+          type: string
+        notificationsEnabled:
+          type: boolean
+        theme:
+          type: ["string", "null"]
+          enum: [dark, light, null]
+
+    RegisterPushTokenBody:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+        platform:
+          type: ["string", "null"]
+          enum: [ios, android, web, null]
+
+    RegisterPushTokenResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    RequestUploadUrlBody:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+
+    RequestUploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          type: object
+          properties:
+            name:
+              type: string
+            size:
+              type: integer
+            contentType:
+              type: string

@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Alert,
 } from 'react-native';
 import { useSignIn, useSSO } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
@@ -28,6 +29,8 @@ function useWarmUpBrowser() {
   }, []);
 }
 
+type ForgotStep = 'idle' | 'send_code' | 'reset_password' | 'sending' | 'resetting';
+
 export default function SignInPage() {
   useWarmUpBrowser();
   const insets = useSafeAreaInsets();
@@ -40,6 +43,14 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Forgot password state
+  const [forgotStep, setForgotStep] = useState<ForgotStep>('idle');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [forgotError, setForgotError] = useState('');
 
   const navigate = useCallback(
     ({ decorateUrl }: { session?: unknown; decorateUrl: (url: string) => string }) => {
@@ -92,6 +103,43 @@ export default function SignInPage() {
     }
   }, [startSSOFlow, router]);
 
+  const handleSendResetEmail = async () => {
+    if (!forgotEmail.trim()) { setForgotError('Please enter your email address.'); return; }
+    setForgotError('');
+    setForgotStep('sending');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await signIn.create({ strategy: 'reset_password_email_code', identifier: forgotEmail.trim() });
+      setForgotStep('reset_password');
+    } catch (e: any) {
+      setForgotError(e?.errors?.[0]?.message ?? 'Failed to send reset email. Please try again.');
+      setForgotStep('send_code');
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetCode || !newPassword) { setForgotError('Please fill in both fields.'); return; }
+    setForgotError('');
+    setForgotStep('resetting');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: 'reset_password_email_code',
+        code: resetCode,
+        password: newPassword,
+      });
+      if (result.status === 'complete' && result.createdSessionId) {
+        router.push('/');
+      } else {
+        setForgotError('Password reset failed. Please try again.');
+        setForgotStep('reset_password');
+      }
+    } catch (e: any) {
+      setForgotError(e?.errors?.[0]?.message ?? 'Failed to reset password. Please check your code and try again.');
+      setForgotStep('reset_password');
+    }
+  };
+
   if (signIn.status === 'needs_client_trust') {
     return (
       <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
@@ -122,6 +170,120 @@ export default function SignInPage() {
           <Text style={styles.linkText}>Resend code</Text>
         </Pressable>
       </View>
+    );
+  }
+
+  // Forgot password: send code step
+  if (forgotStep === 'send_code' || forgotStep === 'sending') {
+    return (
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.logoRow}>
+            <Feather name="shield" size={32} color="#C9A84C" />
+            <Text style={styles.logoText}>LawVise</Text>
+          </View>
+          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.subtitle}>Enter your email to receive a reset code</Text>
+
+          <View style={styles.inputWrapper}>
+            <Feather name="mail" size={18} color="#8B9CC5" style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              value={forgotEmail}
+              onChangeText={setForgotEmail}
+              placeholder="Email address"
+              placeholderTextColor="#8B9CC5"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+            />
+          </View>
+          {forgotError ? <Text style={styles.error}>{forgotError}</Text> : null}
+
+          <Pressable
+            style={[styles.primaryBtn, (!forgotEmail.trim() || forgotStep === 'sending') && styles.disabled]}
+            onPress={handleSendResetEmail}
+            disabled={!forgotEmail.trim() || forgotStep === 'sending'}
+          >
+            {forgotStep === 'sending'
+              ? <ActivityIndicator color="#070D24" />
+              : <Text style={styles.primaryBtnText}>Send Reset Email</Text>}
+          </Pressable>
+
+          <Pressable onPress={() => { setForgotStep('idle'); setForgotError(''); }} style={styles.linkBtn}>
+            <Text style={styles.linkText}>← Back to Sign In</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // Forgot password: enter code + new password step
+  if (forgotStep === 'reset_password' || forgotStep === 'resetting') {
+    return (
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.logoRow}>
+            <Feather name="shield" size={32} color="#C9A84C" />
+            <Text style={styles.logoText}>LawVise</Text>
+          </View>
+          <Text style={styles.title}>Enter New Password</Text>
+          <Text style={styles.subtitle}>Check your email for the reset code</Text>
+
+          <View style={styles.inputWrapper}>
+            <Feather name="hash" size={18} color="#8B9CC5" style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              value={resetCode}
+              onChangeText={setResetCode}
+              placeholder="Reset code"
+              placeholderTextColor="#8B9CC5"
+              keyboardType="numeric"
+              autoFocus
+            />
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Feather name="lock" size={18} color="#8B9CC5" style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="New password"
+              placeholderTextColor="#8B9CC5"
+              secureTextEntry={!showNewPassword}
+            />
+            <Pressable onPress={() => setShowNewPassword((v) => !v)} style={styles.eyeBtn}>
+              <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={18} color="#8B9CC5" />
+            </Pressable>
+          </View>
+
+          {forgotError ? <Text style={styles.error}>{forgotError}</Text> : null}
+
+          <Pressable
+            style={[styles.primaryBtn, (!resetCode || !newPassword || forgotStep === 'resetting') && styles.disabled]}
+            onPress={handleResetPassword}
+            disabled={!resetCode || !newPassword || forgotStep === 'resetting'}
+          >
+            {forgotStep === 'resetting'
+              ? <ActivityIndicator color="#070D24" />
+              : <Text style={styles.primaryBtnText}>Reset Password</Text>}
+          </Pressable>
+
+          <Pressable onPress={() => { setForgotStep('idle'); setForgotError(''); }} style={styles.linkBtn}>
+            <Text style={styles.linkText}>← Back to Sign In</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -180,6 +342,14 @@ export default function SignInPage() {
         {errors.fields.password && (
           <Text style={styles.error}>{errors.fields.password.message}</Text>
         )}
+
+        {/* Forgot Password link */}
+        <Pressable
+          onPress={() => { setForgotEmail(email); setForgotStep('send_code'); setForgotError(''); }}
+          style={styles.forgotBtn}
+        >
+          <Text style={styles.forgotText}>Forgot Password?</Text>
+        </Pressable>
 
         {/* Sign In Button */}
         <Pressable
@@ -250,6 +420,8 @@ const styles = StyleSheet.create({
   },
   eyeBtn: { padding: 4 },
   error: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#EF4444', marginBottom: 8, marginTop: -4 },
+  forgotBtn: { alignSelf: 'flex-end', marginBottom: 16, marginTop: -4 },
+  forgotText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#C9A84C' },
   primaryBtn: {
     backgroundColor: '#C9A84C',
     borderRadius: 12,

@@ -1,0 +1,204 @@
+Analyze the existing LawVise project.
+
+Do NOT recreate completed UI screens or overwrite working functionality.
+
+The application UI is largely complete, but the core functionality is not working.
+
+Your objective is to make LawVise fully functional and production-ready before adding any new features.
+
+IMPORTANT
+
+Before making any code changes:
+
+• Run the application.
+• Reproduce every bug.
+• Test every existing feature.
+• Identify the root cause.
+• Reuse the existing codebase wherever possible.
+• Do NOT rewrite working modules.
+• Do NOT replace existing UI.
+
+====================================
+PART 1 – AUTHENTICATION
+====================================
+
+Verify and fix:
+
+• Sign Up
+• Login
+• Sign Out
+• Forgot Password
+• Session Management
+• Protected Routes
+
+====================================
+PART 2 – DOCUMENT WORKFLOW
+====================================
+
+The current workflow only supports "Paste Text".
+
+This is NOT acceptable as the primary workflow.
+
+Redesign the workflow while keeping the existing UI style.
+
+Make "Upload Document" the PRIMARY option.
+
+Support:
+
+• PDF
+• DOC
+• DOCX
+• JPG
+• PNG
+• Camera Scan (if already planned)
+
+Keep "Paste Text" as an OPTIONAL feature only.
+
+After upload:
+
+• Automatically extract text.
+• Use OCR for scanned PDFs and images.
+• Display extracted text for user review.
+• Allow editing before analysis.
+• Then enable:
+   • Risk Analysis
+   • Full Legal Analysis
+   • Simplify Document
+
+The complete Upload → OCR → Review → AI Analysis workflow must be tested.
+
+====================================
+PART 3 – AI DOCUMENT ANALYSIS
+====================================
+
+Connect the AI backend.
+
+Verify:
+
+• Risk Analysis
+• Full Legal Analysis
+• Simplify Document
+• Clause Detection
+• Legal Summary
+
+Return REAL AI-generated responses.
+
+No placeholders.
+
+====================================
+PART 4 – AI LEGAL DRAFTING
+====================================
+
+Implement and verify generation of:
+
+• Legal Notice
+• Civil Plaint
+• Written Statement
+• Agreement
+• Affidavit
+• Complaint
+• Application
+• Petition
+
+Generated drafts must be usable and downloadable.
+
+====================================
+PART 5 – LEGAL TOOLS
+====================================
+
+Verify:
+
+• Court Fee Calculator
+• Limitation Calculator
+• Case Diary
+• Hearing Reminders
+• Client Reminders
+
+Fix every HTTP 500 error.
+
+====================================
+PART 6 – CHAT AI
+====================================
+
+Verify:
+
+• Chat AI
+• Follow-up Questions
+• Context Retention
+
+Chat must return valid AI responses.
+
+====================================
+PART 7 – APPLICATION STABILITY
+====================================
+
+Verify every button.
+
+Fix:
+
+• HTTP 500 errors
+• API failures
+• Database errors
+• Broken buttons
+• Loading failures
+• Crashes
+
+Show proper:
+
+• Loading indicators
+• Success messages
+• Error messages
+
+====================================
+PART 8 – TESTING
+====================================
+
+Run the application.
+
+Test every feature.
+
+Do NOT mark any feature as PASS unless it has actually been tested.
+
+If any feature fails:
+
+• Continue debugging.
+• Fix the root cause.
+• Test again.
+
+====================================
+IMPORTANT
+====================================
+
+If an API key, backend service, OCR engine, or AI configuration is missing:
+
+Do NOT fake functionality.
+
+Instead report:
+
+• Missing API key
+• Missing backend service
+• Missing environment variable
+• Missing OCR dependency
+• Exact configuration required
+
+Do NOT claim success unless the feature actually works.
+
+Reuse existing code.
+
+Minimize unnecessary code changes.
+
+Do NOT add any new features until every existing feature is stable and fully working.
+
+====================================
+FINAL REPORT
+====================================
+
+Provide:
+
+1. Bugs found.
+2. Bugs fixed.
+3. PASS/FAIL for every feature.
+4. Files modified.
+5. Remaining issues.
+6. Missing API keys or backend configuration.
+7. Confirmation whether LawVise is production-ready.

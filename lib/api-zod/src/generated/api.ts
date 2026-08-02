@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * LawVise API specification
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import * as zod from 'zod';
 
@@ -17,11 +17,30 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Upload a document file (PDF, DOCX, image) and extract text via OCR
+ */
+export const UploadDocumentBody = zod.object({
+  "fileBase64": zod.string().describe('Base64-encoded file content'),
+  "mimeType": zod.string().describe('MIME type: application\/pdf, application\/vnd.openxmlformats-officedocument.wordprocessingml.document, image\/jpeg, image\/png, etc.'),
+  "fileName": zod.string(),
+  "language": zod.string().nullish()
+})
+
+export const UploadDocumentResponse = zod.object({
+  "extractedText": zod.string(),
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "pageCount": zod.number().nullish(),
+  "objectPath": zod.string().nullish()
+})
+
+
+/**
  * @summary Analyze a legal document (SSE stream)
  */
 export const AnalyzeDocumentBody = zod.object({
   "content": zod.string(),
-  "analysisType": zod.enum(['summarize', 'clause_analysis', 'risk_analysis', 'interpretation', 'full_analysis']),
+  "analysisType": zod.enum(['summarize', 'clause_analysis', 'risk_analysis', 'key_points', 'legal_issues', 'relevant_sections', 'case_citations', 'full_analysis']),
   "documentType": zod.string(),
   "jurisdiction": zod.string().nullish(),
   "language": zod.string().nullish()
@@ -47,13 +66,29 @@ export const LegalChatResponse = zod.unknown()
 
 
 /**
+ * @summary AI legal research on Indian laws and case law (SSE stream)
+ */
+export const legalResearchBodyJurisdictionDefault = `India`;
+
+export const LegalResearchBody = zod.object({
+  "query": zod.string(),
+  "jurisdiction": zod.string().nullish().default(legalResearchBodyJurisdictionDefault),
+  "researchType": zod.union([zod.literal('case_law'),zod.literal('statute'),zod.literal('general'),zod.literal(null)]).nullish(),
+  "language": zod.string().nullish()
+})
+
+export const LegalResearchResponse = zod.unknown()
+
+
+/**
  * @summary Draft a legal document (SSE stream)
  */
 export const DraftDocumentBody = zod.object({
-  "documentType": zod.string(),
+  "documentType": zod.enum(['legal_notice', 'plaint', 'written_statement', 'affidavit', 'bail_application', 'contract', 'agreement', 'petition', 'reply_notice', 'power_of_attorney', 'memorandum', 'writ_petition']),
   "jurisdiction": zod.string(),
   "details": zod.string().nullish(),
-  "language": zod.string().nullish()
+  "language": zod.string().nullish(),
+  "parties": zod.record(zod.string(), zod.unknown()).nullish()
 })
 
 export const DraftDocumentResponse = zod.unknown()
@@ -72,7 +107,8 @@ export const CalculateLimitationResponse = zod.object({
   "periodYears": zod.number(),
   "description": zod.string(),
   "deadline": zod.string().nullable(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "applicableLaw": zod.string().nullish()
 })
 
 
@@ -83,7 +119,8 @@ export const CalculateCourtFeeBody = zod.object({
   "courtType": zod.string(),
   "caseType": zod.string(),
   "jurisdiction": zod.string(),
-  "claimAmount": zod.number().nullish()
+  "claimAmount": zod.number().nullish(),
+  "reliefSought": zod.string().nullish()
 })
 
 export const CalculateCourtFeeResponse = zod.object({
@@ -93,13 +130,20 @@ export const CalculateCourtFeeResponse = zod.object({
   "amount": zod.number()
 })).optional(),
   "totalFee": zod.number(),
-  "description": zod.string()
+  "description": zod.string(),
+  "applicableAct": zod.string().nullish(),
+  "exemptions": zod.string().nullish()
 })
 
 
 /**
  * @summary List user's saved documents
  */
+export const GetDocumentsQueryParams = zod.object({
+  "folderId": zod.coerce.number().nullish(),
+  "search": zod.coerce.string().nullish()
+})
+
 export const GetDocumentsResponseItem = zod.object({
   "id": zod.number(),
   "userId": zod.string().optional(),
@@ -108,8 +152,11 @@ export const GetDocumentsResponseItem = zod.object({
   "content": zod.string().nullish(),
   "analysisType": zod.string().nullish(),
   "analysisResult": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "folderId": zod.number().nullish(),
+  "isFavorite": zod.boolean().optional(),
   "createdAt": zod.string(),
-  "updatedAt": zod.string().optional()
+  "updatedAt": zod.string()
 })
 export const GetDocumentsResponse = zod.array(GetDocumentsResponseItem)
 
@@ -122,7 +169,9 @@ export const SaveDocumentBody = zod.object({
   "documentType": zod.string(),
   "content": zod.string().nullish(),
   "analysisType": zod.string().nullish(),
-  "analysisResult": zod.string().nullish()
+  "analysisResult": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "folderId": zod.number().nullish()
 })
 
 export const SaveDocumentResponse = zod.object({
@@ -133,8 +182,41 @@ export const SaveDocumentResponse = zod.object({
   "content": zod.string().nullish(),
   "analysisType": zod.string().nullish(),
   "analysisResult": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "folderId": zod.number().nullish(),
+  "isFavorite": zod.boolean().optional(),
   "createdAt": zod.string(),
-  "updatedAt": zod.string().optional()
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a document
+ */
+export const UpdateDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDocumentBody = zod.object({
+  "title": zod.string().optional(),
+  "folderId": zod.number().nullish(),
+  "isFavorite": zod.boolean().optional(),
+  "analysisResult": zod.string().nullish()
+})
+
+export const UpdateDocumentResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.string().optional(),
+  "title": zod.string(),
+  "documentType": zod.string(),
+  "content": zod.string().nullish(),
+  "analysisType": zod.string().nullish(),
+  "analysisResult": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "folderId": zod.number().nullish(),
+  "isFavorite": zod.boolean().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
 })
 
 
@@ -149,6 +231,67 @@ export const DeleteDocumentResponse = zod.void()
 
 
 /**
+ * @summary List user's document folders
+ */
+export const GetFoldersResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string().optional(),
+  "name": zod.string(),
+  "color": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const GetFoldersResponse = zod.array(GetFoldersResponseItem)
+
+
+/**
+ * @summary Create a new folder
+ */
+export const CreateFolderBody = zod.object({
+  "name": zod.string(),
+  "color": zod.string().nullish()
+})
+
+export const CreateFolderResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.string().optional(),
+  "name": zod.string(),
+  "color": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Rename a folder
+ */
+export const UpdateFolderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFolderBody = zod.object({
+  "name": zod.string().optional(),
+  "color": zod.string().nullish()
+})
+
+export const UpdateFolderResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.string().optional(),
+  "name": zod.string(),
+  "color": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a folder
+ */
+export const DeleteFolderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFolderResponse = zod.void()
+
+
+/**
  * @summary List user's cases
  */
 export const GetCasesResponseItem = zod.object({
@@ -160,6 +303,8 @@ export const GetCasesResponseItem = zod.object({
   "status": zod.enum(['active', 'pending', 'closed', 'won', 'lost']),
   "description": zod.string().nullish(),
   "hearingDate": zod.string().nullish(),
+  "nextAction": zod.string().nullish(),
+  "priority": zod.union([zod.literal('low'),zod.literal('medium'),zod.literal('high'),zod.literal(null)]).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -175,7 +320,9 @@ export const CreateCaseBody = zod.object({
   "court": zod.string().nullish(),
   "status": zod.enum(['active', 'pending', 'closed', 'won', 'lost']),
   "description": zod.string().nullish(),
-  "hearingDate": zod.string().nullish()
+  "hearingDate": zod.string().nullish(),
+  "nextAction": zod.string().nullish(),
+  "priority": zod.union([zod.literal('low'),zod.literal('medium'),zod.literal('high'),zod.literal(null)]).nullish()
 })
 
 export const CreateCaseResponse = zod.object({
@@ -187,6 +334,8 @@ export const CreateCaseResponse = zod.object({
   "status": zod.enum(['active', 'pending', 'closed', 'won', 'lost']),
   "description": zod.string().nullish(),
   "hearingDate": zod.string().nullish(),
+  "nextAction": zod.string().nullish(),
+  "priority": zod.union([zod.literal('low'),zod.literal('medium'),zod.literal('high'),zod.literal(null)]).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -205,7 +354,9 @@ export const UpdateCaseBody = zod.object({
   "court": zod.string().nullish(),
   "status": zod.enum(['active', 'pending', 'closed', 'won', 'lost']).optional(),
   "description": zod.string().nullish(),
-  "hearingDate": zod.string().nullish()
+  "hearingDate": zod.string().nullish(),
+  "nextAction": zod.string().nullish(),
+  "priority": zod.union([zod.literal('low'),zod.literal('medium'),zod.literal('high'),zod.literal(null)]).nullish()
 })
 
 export const UpdateCaseResponse = zod.object({
@@ -217,6 +368,8 @@ export const UpdateCaseResponse = zod.object({
   "status": zod.enum(['active', 'pending', 'closed', 'won', 'lost']),
   "description": zod.string().nullish(),
   "hearingDate": zod.string().nullish(),
+  "nextAction": zod.string().nullish(),
+  "priority": zod.union([zod.literal('low'),zod.literal('medium'),zod.literal('high'),zod.literal(null)]).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -230,5 +383,71 @@ export const DeleteCaseParams = zod.object({
 })
 
 export const DeleteCaseResponse = zod.void()
+
+
+/**
+ * @summary Get user settings
+ */
+export const GetSettingsResponse = zod.object({
+  "userId": zod.string(),
+  "language": zod.enum(['en', 'hi', 'ur']),
+  "jurisdiction": zod.string(),
+  "notificationsEnabled": zod.boolean(),
+  "pushToken": zod.string().nullish(),
+  "theme": zod.union([zod.literal('dark'),zod.literal('light'),zod.literal(null)]).nullish()
+})
+
+
+/**
+ * @summary Update user settings
+ */
+export const UpdateSettingsBody = zod.object({
+  "language": zod.enum(['en', 'hi', 'ur']).optional(),
+  "jurisdiction": zod.string().optional(),
+  "notificationsEnabled": zod.boolean().optional(),
+  "theme": zod.union([zod.literal('dark'),zod.literal('light'),zod.literal(null)]).nullish()
+})
+
+export const UpdateSettingsResponse = zod.object({
+  "userId": zod.string(),
+  "language": zod.enum(['en', 'hi', 'ur']),
+  "jurisdiction": zod.string(),
+  "notificationsEnabled": zod.boolean(),
+  "pushToken": zod.string().nullish(),
+  "theme": zod.union([zod.literal('dark'),zod.literal('light'),zod.literal(null)]).nullish()
+})
+
+
+/**
+ * @summary Register Expo push notification token
+ */
+export const RegisterPushTokenBody = zod.object({
+  "token": zod.string(),
+  "platform": zod.union([zod.literal('ios'),zod.literal('android'),zod.literal('web'),zod.literal(null)]).nullish()
+})
+
+export const RegisterPushTokenResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Request a presigned upload URL for file storage
+ */
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string(),
+  "size": zod.number(),
+  "contentType": zod.string()
+})
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().optional(),
+  "size": zod.number().optional(),
+  "contentType": zod.string().optional()
+}).optional()
+})
 
 

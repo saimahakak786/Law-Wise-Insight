@@ -17,6 +17,7 @@ const QUICK_ACTIONS = [
   { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat' },
   { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft' },
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
+  { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research' },
 ];
 
 const DOC_TYPE_ICONS: Record<string, string> = {

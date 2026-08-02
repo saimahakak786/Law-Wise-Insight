@@ -1,6 +1,4 @@
 import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
 
 export const legalCasesTable = pgTable("legal_cases", {
   id: serial("id").primaryKey(),
@@ -11,14 +9,10 @@ export const legalCasesTable = pgTable("legal_cases", {
   status: text("status").notNull().default("active"),
   description: text("description"),
   hearingDate: text("hearing_date"),
+  nextAction: text("next_action"),
+  priority: text("priority"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertLegalCaseSchema = createInsertSchema(legalCasesTable).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertLegalCase = z.infer<typeof insertLegalCaseSchema>;
 export type LegalCase = typeof legalCasesTable.$inferSelect;

@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * LawVise API specification
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import {
   useMutation,
@@ -22,8 +22,11 @@ import type {
 import type {
   CourtFeeInput,
   CourtFeeResult,
+  CreateFolderBody,
   DocumentAnalysisInput,
   DocumentDraftInput,
+  DocumentFolder,
+  GetDocumentsParams,
   HealthStatus,
   LegalCase,
   LegalCaseInput,
@@ -31,8 +34,19 @@ import type {
   LegalChatInput,
   LegalDocument,
   LegalDocumentInput,
+  LegalDocumentUpdate,
+  LegalResearchInput,
   LimitationInput,
-  LimitationResult
+  LimitationResult,
+  RegisterPushTokenBody,
+  RegisterPushTokenResponse,
+  RequestUploadUrlBody,
+  RequestUploadUrlResponse,
+  UpdateFolderBody,
+  UpdateSettingsBody,
+  UploadDocumentBody,
+  UploadDocumentResponse,
+  UserSettings
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -138,6 +152,77 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+export const getUploadDocumentUrl = () => {
+
+
+
+
+  return `/api/lawvise/upload`
+}
+
+/**
+ * @summary Upload a document file (PDF, DOCX, image) and extract text via OCR
+ */
+export const uploadDocument = async (uploadDocumentBody: UploadDocumentBody, options?: RequestInit): Promise<UploadDocumentResponse> => {
+
+  return customFetch<UploadDocumentResponse>(getUploadDocumentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(uploadDocumentBody)
+  }
+);}
+
+
+
+
+
+export const getUploadDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<UploadDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<UploadDocumentBody>}, TContext> => {
+
+const mutationKey = ['uploadDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadDocument>>, {data: BodyType<UploadDocumentBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadDocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof uploadDocument>>>
+    export type UploadDocumentMutationBody = BodyType<UploadDocumentBody>
+    export type UploadDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Upload a document file (PDF, DOCX, image) and extract text via OCR
+ */
+export const useUploadDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<UploadDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadDocument>>,
+        TError,
+        {data: BodyType<UploadDocumentBody>},
+        TContext
+      > => {
+      return useMutation(getUploadDocumentMutationOptions(options));
+    }
 
 export const getAnalyzeDocumentUrl = () => {
 
@@ -279,6 +364,77 @@ export const useLegalChat = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getLegalChatMutationOptions(options));
+    }
+
+export const getLegalResearchUrl = () => {
+
+
+
+
+  return `/api/lawvise/research`
+}
+
+/**
+ * @summary AI legal research on Indian laws and case law (SSE stream)
+ */
+export const legalResearch = async (legalResearchInput: LegalResearchInput, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getLegalResearchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(legalResearchInput)
+  }
+);}
+
+
+
+
+
+export const getLegalResearchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof legalResearch>>, TError,{data: BodyType<LegalResearchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof legalResearch>>, TError,{data: BodyType<LegalResearchInput>}, TContext> => {
+
+const mutationKey = ['legalResearch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof legalResearch>>, {data: BodyType<LegalResearchInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  legalResearch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LegalResearchMutationResult = NonNullable<Awaited<ReturnType<typeof legalResearch>>>
+    export type LegalResearchMutationBody = BodyType<LegalResearchInput>
+    export type LegalResearchMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI legal research on Indian laws and case law (SSE stream)
+ */
+export const useLegalResearch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof legalResearch>>, TError,{data: BodyType<LegalResearchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof legalResearch>>,
+        TError,
+        {data: BodyType<LegalResearchInput>},
+        TContext
+      > => {
+      return useMutation(getLegalResearchMutationOptions(options));
     }
 
 export const getDraftDocumentUrl = () => {
@@ -494,20 +650,27 @@ export const useCalculateCourtFee = <TError = ErrorType<unknown>,
       return useMutation(getCalculateCourtFeeMutationOptions(options));
     }
 
-export const getGetDocumentsUrl = () => {
+export const getGetDocumentsUrl = (params?: GetDocumentsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/lawvise/documents`
+  return stringifiedParams.length > 0 ? `/api/lawvise/documents?${stringifiedParams}` : `/api/lawvise/documents`
 }
 
 /**
  * @summary List user's saved documents
  */
-export const getDocuments = async ( options?: RequestInit): Promise<LegalDocument[]> => {
+export const getDocuments = async (params?: GetDocumentsParams, options?: RequestInit): Promise<LegalDocument[]> => {
 
-  return customFetch<LegalDocument[]>(getGetDocumentsUrl(),
+  return customFetch<LegalDocument[]>(getGetDocumentsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -520,23 +683,23 @@ export const getDocuments = async ( options?: RequestInit): Promise<LegalDocumen
 
 
 
-export const getGetDocumentsQueryKey = () => {
+export const getGetDocumentsQueryKey = (params?: GetDocumentsParams,) => {
     return [
-    `/api/lawvise/documents`
+    `/api/lawvise/documents`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof getDocuments>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof getDocuments>>, TError = ErrorType<unknown>>(params?: GetDocumentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetDocumentsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocuments>>> = ({ signal }) => getDocuments({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocuments>>> = ({ signal }) => getDocuments(params, { signal, ...requestOptions });
 
 
 
@@ -554,11 +717,11 @@ export type GetDocumentsQueryError = ErrorType<unknown>
  */
 
 export function useGetDocuments<TData = Awaited<ReturnType<typeof getDocuments>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetDocumentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetDocumentsQueryOptions(options)
+  const queryOptions = getGetDocumentsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -642,6 +805,78 @@ export const useSaveDocument = <TError = ErrorType<unknown>,
       return useMutation(getSaveDocumentMutationOptions(options));
     }
 
+export const getUpdateDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/lawvise/documents/${id}`
+}
+
+/**
+ * @summary Update a document
+ */
+export const updateDocument = async (id: number,
+    legalDocumentUpdate: LegalDocumentUpdate, options?: RequestInit): Promise<LegalDocument> => {
+
+  return customFetch<LegalDocument>(getUpdateDocumentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(legalDocumentUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<LegalDocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<LegalDocumentUpdate>}, TContext> => {
+
+const mutationKey = ['updateDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDocument>>, {id: number;data: BodyType<LegalDocumentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateDocument>>>
+    export type UpdateDocumentMutationBody = BodyType<LegalDocumentUpdate>
+    export type UpdateDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a document
+ */
+export const useUpdateDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<LegalDocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDocument>>,
+        TError,
+        {id: number;data: BodyType<LegalDocumentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateDocumentMutationOptions(options));
+    }
+
 export const getDeleteDocumentUrl = (id: number,) => {
 
 
@@ -711,6 +946,297 @@ export const useDeleteDocument = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteDocumentMutationOptions(options));
+    }
+
+export const getGetFoldersUrl = () => {
+
+
+
+
+  return `/api/lawvise/folders`
+}
+
+/**
+ * @summary List user's document folders
+ */
+export const getFolders = async ( options?: RequestInit): Promise<DocumentFolder[]> => {
+
+  return customFetch<DocumentFolder[]>(getGetFoldersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFoldersQueryKey = () => {
+    return [
+    `/api/lawvise/folders`
+    ] as const;
+    }
+
+
+export const getGetFoldersQueryOptions = <TData = Awaited<ReturnType<typeof getFolders>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFolders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFoldersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFolders>>> = ({ signal }) => getFolders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFolders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFoldersQueryResult = NonNullable<Awaited<ReturnType<typeof getFolders>>>
+export type GetFoldersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List user's document folders
+ */
+
+export function useGetFolders<TData = Awaited<ReturnType<typeof getFolders>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFolders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFoldersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateFolderUrl = () => {
+
+
+
+
+  return `/api/lawvise/folders`
+}
+
+/**
+ * @summary Create a new folder
+ */
+export const createFolder = async (createFolderBody: CreateFolderBody, options?: RequestInit): Promise<DocumentFolder> => {
+
+  return customFetch<DocumentFolder>(getCreateFolderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createFolderBody)
+  }
+);}
+
+
+
+
+
+export const getCreateFolderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFolder>>, TError,{data: BodyType<CreateFolderBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFolder>>, TError,{data: BodyType<CreateFolderBody>}, TContext> => {
+
+const mutationKey = ['createFolder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFolder>>, {data: BodyType<CreateFolderBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFolder(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFolderMutationResult = NonNullable<Awaited<ReturnType<typeof createFolder>>>
+    export type CreateFolderMutationBody = BodyType<CreateFolderBody>
+    export type CreateFolderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a new folder
+ */
+export const useCreateFolder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFolder>>, TError,{data: BodyType<CreateFolderBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFolder>>,
+        TError,
+        {data: BodyType<CreateFolderBody>},
+        TContext
+      > => {
+      return useMutation(getCreateFolderMutationOptions(options));
+    }
+
+export const getUpdateFolderUrl = (id: number,) => {
+
+
+
+
+  return `/api/lawvise/folders/${id}`
+}
+
+/**
+ * @summary Rename a folder
+ */
+export const updateFolder = async (id: number,
+    updateFolderBody: UpdateFolderBody, options?: RequestInit): Promise<DocumentFolder> => {
+
+  return customFetch<DocumentFolder>(getUpdateFolderUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateFolderBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateFolderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFolder>>, TError,{id: number;data: BodyType<UpdateFolderBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFolder>>, TError,{id: number;data: BodyType<UpdateFolderBody>}, TContext> => {
+
+const mutationKey = ['updateFolder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFolder>>, {id: number;data: BodyType<UpdateFolderBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFolder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFolderMutationResult = NonNullable<Awaited<ReturnType<typeof updateFolder>>>
+    export type UpdateFolderMutationBody = BodyType<UpdateFolderBody>
+    export type UpdateFolderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Rename a folder
+ */
+export const useUpdateFolder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFolder>>, TError,{id: number;data: BodyType<UpdateFolderBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFolder>>,
+        TError,
+        {id: number;data: BodyType<UpdateFolderBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateFolderMutationOptions(options));
+    }
+
+export const getDeleteFolderUrl = (id: number,) => {
+
+
+
+
+  return `/api/lawvise/folders/${id}`
+}
+
+/**
+ * @summary Delete a folder
+ */
+export const deleteFolder = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteFolderUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteFolderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFolder>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteFolder>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteFolder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteFolder>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteFolder(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteFolderMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFolder>>>
+
+    export type DeleteFolderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a folder
+ */
+export const useDeleteFolder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFolder>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteFolder>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteFolderMutationOptions(options));
     }
 
 export const getGetCasesUrl = () => {
@@ -1002,5 +1528,295 @@ export const useDeleteCase = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteCaseMutationOptions(options));
+    }
+
+export const getGetSettingsUrl = () => {
+
+
+
+
+  return `/api/lawvise/settings`
+}
+
+/**
+ * @summary Get user settings
+ */
+export const getSettings = async ( options?: RequestInit): Promise<UserSettings> => {
+
+  return customFetch<UserSettings>(getGetSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSettingsQueryKey = () => {
+    return [
+    `/api/lawvise/settings`
+    ] as const;
+    }
+
+
+export const getGetSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSettings>>> = ({ signal }) => getSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getSettings>>>
+export type GetSettingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get user settings
+ */
+
+export function useGetSettings<TData = Awaited<ReturnType<typeof getSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateSettingsUrl = () => {
+
+
+
+
+  return `/api/lawvise/settings`
+}
+
+/**
+ * @summary Update user settings
+ */
+export const updateSettings = async (updateSettingsBody: UpdateSettingsBody, options?: RequestInit): Promise<UserSettings> => {
+
+  return customFetch<UserSettings>(getUpdateSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateSettingsBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateSettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSettings>>, TError,{data: BodyType<UpdateSettingsBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSettings>>, TError,{data: BodyType<UpdateSettingsBody>}, TContext> => {
+
+const mutationKey = ['updateSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSettings>>, {data: BodyType<UpdateSettingsBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateSettings>>>
+    export type UpdateSettingsMutationBody = BodyType<UpdateSettingsBody>
+    export type UpdateSettingsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update user settings
+ */
+export const useUpdateSettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSettings>>, TError,{data: BodyType<UpdateSettingsBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSettings>>,
+        TError,
+        {data: BodyType<UpdateSettingsBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateSettingsMutationOptions(options));
+    }
+
+export const getRegisterPushTokenUrl = () => {
+
+
+
+
+  return `/api/lawvise/notifications/register`
+}
+
+/**
+ * @summary Register Expo push notification token
+ */
+export const registerPushToken = async (registerPushTokenBody: RegisterPushTokenBody, options?: RequestInit): Promise<RegisterPushTokenResponse> => {
+
+  return customFetch<RegisterPushTokenResponse>(getRegisterPushTokenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(registerPushTokenBody)
+  }
+);}
+
+
+
+
+
+export const getRegisterPushTokenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerPushToken>>, TError,{data: BodyType<RegisterPushTokenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerPushToken>>, TError,{data: BodyType<RegisterPushTokenBody>}, TContext> => {
+
+const mutationKey = ['registerPushToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerPushToken>>, {data: BodyType<RegisterPushTokenBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  registerPushToken(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterPushTokenMutationResult = NonNullable<Awaited<ReturnType<typeof registerPushToken>>>
+    export type RegisterPushTokenMutationBody = BodyType<RegisterPushTokenBody>
+    export type RegisterPushTokenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Register Expo push notification token
+ */
+export const useRegisterPushToken = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerPushToken>>, TError,{data: BodyType<RegisterPushTokenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerPushToken>>,
+        TError,
+        {data: BodyType<RegisterPushTokenBody>},
+        TContext
+      > => {
+      return useMutation(getRegisterPushTokenMutationOptions(options));
+    }
+
+export const getRequestUploadUrlUrl = () => {
+
+
+
+
+  return `/api/storage/uploads/request-url`
+}
+
+/**
+ * @summary Request a presigned upload URL for file storage
+ */
+export const requestUploadUrl = async (requestUploadUrlBody: RequestUploadUrlBody, options?: RequestInit): Promise<RequestUploadUrlResponse> => {
+
+  return customFetch<RequestUploadUrlResponse>(getRequestUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(requestUploadUrlBody)
+  }
+);}
+
+
+
+
+
+export const getRequestUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<RequestUploadUrlBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<RequestUploadUrlBody>}, TContext> => {
+
+const mutationKey = ['requestUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestUploadUrl>>, {data: BodyType<RequestUploadUrlBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestUploadUrl>>>
+    export type RequestUploadUrlMutationBody = BodyType<RequestUploadUrlBody>
+    export type RequestUploadUrlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Request a presigned upload URL for file storage
+ */
+export const useRequestUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<RequestUploadUrlBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestUploadUrl>>,
+        TError,
+        {data: BodyType<RequestUploadUrlBody>},
+        TContext
+      > => {
+      return useMutation(getRequestUploadUrlMutationOptions(options));
     }
 

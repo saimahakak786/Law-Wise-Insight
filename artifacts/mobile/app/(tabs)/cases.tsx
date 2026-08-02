@@ -35,6 +35,20 @@ const STATUS_LABELS: Record<CaseStatus, string> = {
 
 const FILTER_OPTIONS: Array<CaseStatus | 'all'> = ['all', 'active', 'pending', 'closed', 'won', 'lost'];
 
+type CasePriority = 'low' | 'medium' | 'high' | '';
+
+const PRIORITY_COLORS: Record<string, string> = {
+  low: '#22C55E',
+  medium: '#F59E0B',
+  high: '#EF4444',
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
+
 interface CaseFormData {
   title: string;
   caseNumber: string;
@@ -42,6 +56,8 @@ interface CaseFormData {
   status: CaseStatus;
   description: string;
   hearingDate: string;
+  priority: CasePriority;
+  nextAction: string;
 }
 
 const defaultForm: CaseFormData = {
@@ -51,6 +67,8 @@ const defaultForm: CaseFormData = {
   status: 'active',
   description: '',
   hearingDate: '',
+  priority: '',
+  nextAction: '',
 };
 
 export default function CasesScreen() {
@@ -86,6 +104,8 @@ export default function CasesScreen() {
       status: c.status as CaseStatus,
       description: c.description ?? '',
       hearingDate: c.hearingDate ?? '',
+      priority: ((c as any).priority as CasePriority) ?? '',
+      nextAction: (c as any).nextAction ?? '',
     });
     setShowModal(true);
   };
@@ -100,6 +120,8 @@ export default function CasesScreen() {
       status: form.status,
       description: form.description || null,
       hearingDate: form.hearingDate || null,
+      priority: form.priority || null,
+      nextAction: form.nextAction || null,
     };
     try {
       if (editingId) {
@@ -254,6 +276,33 @@ export default function CasesScreen() {
                   <Text style={[styles.statusOptionText, { color: form.status === s ? STATUS_COLORS[s] : colors.mutedForeground }]}>{STATUS_LABELS[s]}</Text>
                 </Pressable>
               ))}
+            </View>
+
+            {/* Priority Selector */}
+            <Text style={[styles.formLabel, { color: colors.mutedForeground, paddingHorizontal: 0 }]}>Priority</Text>
+            <View style={[styles.statusGrid, { marginBottom: 16 }]}>
+              {(['low', 'medium', 'high'] as const).map((p) => (
+                <Pressable
+                  key={p}
+                  style={[styles.statusOption, { backgroundColor: form.priority === p ? PRIORITY_COLORS[p] + '30' : colors.card, borderColor: form.priority === p ? PRIORITY_COLORS[p] : colors.border }]}
+                  onPress={() => setForm((prev) => ({ ...prev, priority: prev.priority === p ? '' : p }))}
+                >
+                  <View style={[styles.statusOptionDot, { backgroundColor: PRIORITY_COLORS[p] }]} />
+                  <Text style={[styles.statusOptionText, { color: form.priority === p ? PRIORITY_COLORS[p] : colors.mutedForeground }]}>{PRIORITY_LABELS[p]}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Next Action */}
+            <View style={styles.formField}>
+              <Text style={[styles.formLabel, { color: colors.mutedForeground }]}>Next Action</Text>
+              <TextInput
+                style={[styles.formInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                value={form.nextAction}
+                onChangeText={(v) => setForm((p) => ({ ...p, nextAction: v }))}
+                placeholder="Next step or action required..."
+                placeholderTextColor={colors.mutedForeground}
+              />
             </View>
 
             <View style={styles.formField}>
