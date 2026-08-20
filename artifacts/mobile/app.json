@@ -16,7 +16,9 @@
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "package": "com.saimahakak.lawvise"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -38,6 +40,11 @@
       "backgroundColor": "#070D24",
       "barStyle": "light-content"
     },
-    "backgroundColor": "#070D24"
+    "backgroundColor": "#070D24",
+    "extra": {
+      "eas": {
+        "projectId": "992c7d24-c74c-4481-98df-31c2575db0f5"
+      }
+    }
   }
 }
