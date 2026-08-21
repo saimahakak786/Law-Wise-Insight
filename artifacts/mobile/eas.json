@@ -8,7 +8,8 @@
         "buildType": "apk"
       },
       "env": {
-        "CI": "1"
+        "CI": "1",
+        "EAS_NO_FROZEN_LOCKFILE": "1"
       }
     }
   }
