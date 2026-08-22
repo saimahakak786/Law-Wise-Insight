@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Law Wise",
-    "slug": "law-wise-insight",
+    "name": "LawVise",
+    "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,7 +17,7 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.saimahakak.lawwise"
+      "package": "com.saimahakak.lawvise"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -36,7 +36,7 @@
         {
           "android": {
             "packagingOptions": {
-              "pickFirsts": [
+              "pickFirst": [
                 "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
               ]
             }
