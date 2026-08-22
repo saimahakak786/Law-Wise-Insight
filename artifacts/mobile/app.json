@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "LawVise",
+    "name": "Law Wise",
     "slug": "law-wise-insight",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -17,7 +17,7 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.saimahakak.lawvise"
+      "package": "com.saimahakak.lawwise"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -30,7 +30,19 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "packagingOptions": {
+              "pickFirsts": [
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+              ]
+            }
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
