@@ -24,7 +24,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
@@ -35,3 +34,4 @@ jobs:
         run: cd artifacts/mobile && eas build --platform android --profile preview --non-interactive
         env:
           EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
+          EXPO_PUBLIC_DOMAIN: law-wise-insight.onrender.com
