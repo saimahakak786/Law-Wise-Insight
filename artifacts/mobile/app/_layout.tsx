@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { View, Text } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -57,6 +58,20 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
+
+  if (!publishableKey) {
+    SplashScreen.hideAsync();
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#070D24', padding: 24 }}>
+        <Text style={{ color: '#FF6B6B', fontSize: 16, textAlign: 'center', marginBottom: 12 }}>
+          Missing Clerk publishable key
+        </Text>
+        <Text style={{ color: '#8B9CC5', fontSize: 13, textAlign: 'center' }}>
+          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY was not set at build time.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
