@@ -31,7 +31,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build Android app
-        run: cd artifacts/mobile && eas build --platform android --profile preview --non-interactive
+        run: cd artifacts/mobile && eas build --platform android --profile development --non-interactive
         env:
           EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
           EXPO_PUBLIC_DOMAIN: law-wise-insight.onrender.com
