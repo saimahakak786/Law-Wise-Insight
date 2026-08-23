@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
-import * as Sentry from '@sentry/react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -20,20 +19,29 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
-Sentry.init({
-  dsn: 'https://bb242133b0f756189b28883cfdcd7c41@o4511955221020672.ingest.us.sentry.io/4511958131605504',
-  debug: false,
-  tracesSampleRate: 1.0,
-});
-
 SplashScreen.preventAutoHideAsync();
+
+let globalCaughtError: string | null = null;
+
+if ((global as any).ErrorUtils) {
+  const defaultHandler = (global as any).ErrorUtils.getGlobalHandler();
+  (global as any).ErrorUtils.setGlobalHandler((error: any, isFatal: boolean) => {
+    globalCaughtError = `${error?.name ?? 'Error'}: ${error?.message ?? String(error)}\n\n${error?.stack ?? ''}`;
+    if (defaultHandler) defaultHandler(error, isFatal);
+  });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 });
 
-const domain = process.env.EXPO_PUBLIC_DOMAIN;
-if (domain) setBaseUrl(`https://${domain}`);
+let setupError: string | null = null;
+try {
+  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  if (domain) setBaseUrl(`https://${domain}`);
+} catch (e: any) {
+  setupError = `setBaseUrl failed: ${e?.message ?? String(e)}`;
+}
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 
@@ -50,7 +58,22 @@ function RootLayoutNav() {
   );
 }
 
-function RootLayout() {
+function ErrorScreen({ message }: { message: string }) {
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: '#070D24' }} contentContainerStyle={{ padding: 24, paddingTop: 60 }}>
+      <Text style={{ color: '#FF6B6B', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
+        App Error
+      </Text>
+      <Text style={{ color: '#FFFFFF', fontSize: 13 }} selectable>
+        {message}
+      </Text>
+    </ScrollView>
+  );
+}
+
+export default function RootLayout() {
+  const [caughtError, setCaughtError] = useState<string | null>(null);
+
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -62,25 +85,34 @@ function RootLayout() {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
-    if (fontError) {
-      Sentry.captureException(fontError);
-    }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (globalCaughtError) setCaughtError(globalCaughtError);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 
+  if (setupError) {
+    SplashScreen.hideAsync();
+    return <ErrorScreen message={setupError} />;
+  }
+
+  if (fontError) {
+    SplashScreen.hideAsync();
+    return <ErrorScreen message={`Font load error: ${fontError.message}`} />;
+  }
+
+  if (caughtError) {
+    return <ErrorScreen message={caughtError} />;
+  }
+
   if (!publishableKey) {
     SplashScreen.hideAsync();
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#070D24', padding: 24 }}>
-        <Text style={{ color: '#FF6B6B', fontSize: 16, textAlign: 'center', marginBottom: 12 }}>
-          Missing Clerk publishable key
-        </Text>
-        <Text style={{ color: '#8B9CC5', fontSize: 13, textAlign: 'center' }}>
-          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY was not set at build time.
-        </Text>
-      </View>
-    );
+    return <ErrorScreen message="Missing Clerk publishable key (EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY was not set at build time)." />;
   }
 
   return (
@@ -103,5 +135,3 @@ function RootLayout() {
     </ClerkProvider>
   );
 }
-
-export default Sentry.wrap(RootLayout);
