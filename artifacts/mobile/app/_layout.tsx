@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
+import * as Sentry from '@sentry/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -18,6 +19,12 @@ import {
 } from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+
+Sentry.init({
+  dsn: 'https://bb242133b0f756189b28883cfdcd7c41@o4511955221020672.ingest.us.sentry.io/4511958131605504',
+  debug: false,
+  tracesSampleRate: 1.0,
+});
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,7 +50,7 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -54,6 +61,9 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
+    }
+    if (fontError) {
+      Sentry.captureException(fontError);
     }
   }, [fontsLoaded, fontError]);
 
@@ -93,3 +103,5 @@ export default function RootLayout() {
     </ClerkProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);
