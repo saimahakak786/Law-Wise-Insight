@@ -29,6 +29,8 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+          packager: pnpm
+          install: false
 
       - name: Build Android app
         run: cd artifacts/mobile && eas build --platform android --profile production --non-interactive
