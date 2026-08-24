@@ -32,9 +32,15 @@ jobs:
           packager: pnpm
           install: false
 
-      - name: Build Android app
+      - name: Build Android app locally on GitHub runner
         working-directory: artifacts/mobile
-        run: eas build --platform android --profile production --non-interactive
+        run: eas build --platform android --profile production --non-interactive --local --output ./app-release.apk
         env:
           EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
           EXPO_PUBLIC_DOMAIN: law-wise-insight.onrender.com
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: artifacts/mobile/app-release.apk
