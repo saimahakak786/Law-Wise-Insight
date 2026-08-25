@@ -43,7 +43,8 @@ try {
   setupError = `setBaseUrl failed: ${e?.message ?? String(e)}`;
 }
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? 'pk_test_placeholder';
+
 
 function RootLayoutNav() {
   return (
