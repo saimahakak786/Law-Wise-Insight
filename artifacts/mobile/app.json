@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "LawVise",
+    "name": "LawWise",
     "slug": "law-wise-insight",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,12 +16,14 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.saimahakak.lawvise"
+      "package": "com.saimahakak.lawwise"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
+      "expo-secure-store",
+      "@clerk/expo",
       [
         "expo-router",
         {
