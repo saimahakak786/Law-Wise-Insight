@@ -12,7 +12,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@clerk/expo": "^3.7.8",
     "@expo-google-fonts/inter": "^0.4.0",
     "@expo/cli": "54.0.23",
     "@expo/ngrok": "^4.1.0",
@@ -72,5 +71,6 @@
     "expo-notifications": "~0.32.17",
     "expo-sharing": "~14.0.8",
     "i18n-js": "^4.5.3"
+    "@clerk/expo": "^3.7.8",
   }
 }
