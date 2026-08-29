@@ -1,31 +1,51 @@
-import React from 'react';
-import { ClerkProvider } from '@clerk/expo';
+import React, { Component, ReactNode } from 'react';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Slot } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
+import { ClerkProvider } from '@clerk/clerk-expo';
 
-const tokenCache = {
-  async getToken(key: string) {
-    try {
-      return await SecureStore.getItemAsync(key);
-    } catch (err) {
-      return null;
-    }
-  },
-  async saveToken(key: string, value: string) {
-    try {
-      return await SecureStore.setItemAsync(key, value);
-    } catch (err) {
-      return;
-    }
-  },
-};
+const CLERK_PUBLISHABLE_KEY = "pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk";
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk";
+class CrashBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error("Caught crash:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.container}>
+          <Text style={styles.title}>💥 Caught Crash Error:</Text>
+          <ScrollView style={styles.box}>
+            <Text style={styles.errorText}>{this.state.error?.toString()}</Text>
+            <Text style={styles.stackText}>{this.state.error?.stack}</Text>
+          </ScrollView>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function RootLayout() {
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <Slot />
-    </ClerkProvider>
+    <CrashBoundary>
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        <Slot />
+      </ClerkProvider>
+    </CrashBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#cc0000', padding: 20, justifyContent: 'center', alignItems: 'center' },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 15, marginTop: 40 },
+  box: { flex: 1, backgroundColor: '#000', padding: 15, borderRadius: 8, width: '100%' },
+  errorText: { color: '#ff5555', fontSize: 16, fontWeight: 'bold', marginBottom: 10 },
+  stackText: { color: '#aaa', fontSize: 12 },
+});
