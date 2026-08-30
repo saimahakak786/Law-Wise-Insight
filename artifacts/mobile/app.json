@@ -1,13 +1,12 @@
 {
   "expo": {
-    "name": "LawVise",
+    "name": "LawWise",
     "slug": "law-wise-insight",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -17,12 +16,14 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.saimahakak.lawvise"
+      "package": "com.saimahakak.lawwise"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
+      "expo-secure-store",
+      "@clerk/expo",
       [
         "expo-router",
         {
@@ -30,7 +31,19 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "packagingOptions": {
+              "pickFirst": [
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+              ]
+            }
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
