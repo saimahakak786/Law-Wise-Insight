@@ -1,12 +1,13 @@
 {
   "expo": {
-    "name": "LawWise",
+    "name": "LawVise",
     "slug": "law-wise-insight",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -16,14 +17,12 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.saimahakak.lawwise"
+      "package": "com.saimahakak.lawvise"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
-      "expo-secure-store",
-      "@clerk/expo",
       [
         "expo-router",
         {
