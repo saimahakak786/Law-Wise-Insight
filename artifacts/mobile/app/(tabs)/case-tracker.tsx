@@ -1,20 +1,63 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
+
+// Configure notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function CauseListScreen() {
   const [judgeName, setJudgeName] = useState('');
   const [caseNumber, setCaseNumber] = useState('');
   const [itemNo, setItemNo] = useState('');
-  
-  // Initial sample cause list items
+
   const [causeList, setCauseList] = useState([
     { id: '1', judge: 'Hon. Justice R.K. Agrawal', case: 'Civil Suit 402/2024', item: 'Item No. 14', status: 'First Board' },
-    { id: '2', judge: 'Hon. Justice S. Mukherjee', case: 'Criminal Writ 89/2025', item: 'Item No. 5', status: 'After Notice' },
+    { id: '2', judge: 'Hon. Justice S. Mukherjee', case: 'Criminal Writ 89/2025', item: 'Item No. 5', status: 'After Notice' }
   ]);
 
+  useEffect(() => {
+    // Request notification permissions on load
+    async function requestPermissions() {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Please enable notifications to receive 1-day prior case alerts.');
+      }
+    }
+    requestPermissions();
+  }, []);
+
+  const scheduleHearingReminder = async (caseNum: string, judge: string, item: string) => {
+    try {
+      // Schedule notification for 24 hours prior (For testing right now, trigger it in 5 seconds!)
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `⚖️ Hearing Reminder Tomorrow!`,
+          body: `Case ${caseNum} (${item}) before ${judge} is scheduled for tomorrow.`,
+          data: { caseNum },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: 10, // Change this to 24 hours later if you link a date picker, set to 10 seconds for instant testing!
+        },
+      });
+      Alert.alert('Success', 'Hearing added & 1-day prior reminder notification scheduled!');
+    } catch (error) {
+      console.log('Error scheduling notification:', error);
+    }
+  };
+
   const addHearing = () => {
-    if (!judgeName || !caseNumber || !itemNo) return;
-    
+    if (!judgeName || !caseNumber || !itemNo) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
     const newItem = {
       id: Date.now().toString(),
       judge: judgeName,
@@ -24,6 +67,10 @@ export default function CauseListScreen() {
     };
 
     setCauseList([newItem, ...causeList]);
+    
+    // Trigger the 1-day reminder notification logic
+    scheduleHearingReminder(caseNumber, judgeName, `Item No. ${itemNo}`);
+
     setJudgeName('');
     setCaseNumber('');
     setItemNo('');
@@ -60,7 +107,7 @@ export default function CauseListScreen() {
           onChangeText={setItemNo}
         />
         <TouchableOpacity style={styles.addButton} onPress={addHearing}>
-          <Text style={styles.addButtonText}>Add to Daily Cause List</Text>
+          <Text style={styles.addButtonText}>Add to Daily Cause List & Set Reminder</Text>
         </TouchableOpacity>
       </View>
 
