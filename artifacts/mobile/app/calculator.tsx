@@ -7,7 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCalculateLimitation, useCalculateCourtFee } from '@workspace/api-client-react';
+import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import * as Haptics from 'expo-haptics';
 
@@ -26,52 +26,98 @@ export default function CalculatorScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { jurisdiction } = useApp();
+  const { getToken } = useAuth();
   const [tab, setTab] = useState<'limitation' | 'courtfee'>('limitation');
 
   // Limitation state
   const [limCaseType, setLimCaseType] = useState('');
   const [limEventDate, setLimEventDate] = useState('');
-  const calculateLimitation = useCalculateLimitation();
+  const [limitationPending, setLimitationPending] = useState(false);
+  const [limResult, setLimResult] = useState<any>(null);
+  const [limError, setLimError] = useState<string | null>(null);
 
   // Court fee state
   const [feeCourtType, setFeeCourtType] = useState('');
   const [feeCaseType, setFeeCaseType] = useState('');
   const [feeAmount, setFeeAmount] = useState('');
-  const calculateCourtFee = useCalculateCourtFee();
+  const [courtFeePending, setCourtFeePending] = useState(false);
+  const [feeResult, setFeeResult] = useState<any>(null);
+  const [courtFeeError, setCourtFeeError] = useState<string | null>(null);
 
   const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
 
   const handleLimitation = async () => {
     if (!limCaseType) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setLimitationPending(true);
+    setLimError(null);
     try {
-      await calculateLimitation.mutateAsync({
-        data: { caseType: limCaseType, jurisdiction, eventDate: limEventDate || null },
+      const token = await getToken();
+      const domain = 'https://law-wise-insight.onrender.com';
+
+      const response = await fetch(`${domain}/api/lawwise/calculator/limitation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          caseType: limCaseType,
+          jurisdiction,
+          eventDate: limEventDate || null,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Server returned error code ${response.status}`);
+      }
+
+      const result = await response.json();
+      setLimResult(result);
     } catch (e: any) {
+      setLimError(e?.message ?? 'Could not calculate limitation period. Please try again.');
       Alert.alert('Calculation Failed', e?.message ?? 'Could not calculate limitation period. Please try again.');
+    } finally {
+      setLimitationPending(false);
     }
   };
 
   const handleCourtFee = async () => {
     if (!feeCourtType || !feeCaseType) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setCourtFeePending(true);
+    setCourtFeeError(null);
     try {
-      await calculateCourtFee.mutateAsync({
-        data: {
+      const token = await getToken();
+      const domain = 'https://law-wise-insight.onrender.com';
+
+      const response = await fetch(`${domain}/api/lawwise/calculator/court-fee`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
           courtType: feeCourtType,
           caseType: feeCaseType,
           jurisdiction,
           claimAmount: feeAmount ? parseFloat(feeAmount) : null,
-        },
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Server returned error code ${response.status}`);
+      }
+
+      const result = await response.json();
+      setFeeResult(result);
     } catch (e: any) {
+      setCourtFeeError(e?.message ?? 'Could not calculate court fee. Please try again.');
       Alert.alert('Calculation Failed', e?.message ?? 'Could not calculate court fee. Please try again.');
+    } finally {
+      setCourtFeePending(false);
     }
   };
-
-  const limResult = calculateLimitation.data;
-  const feeResult = calculateCourtFee.data;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -130,18 +176,18 @@ export default function CalculatorScreen() {
             />
 
             <Pressable
-              style={[styles.calcBtn, (!limCaseType || calculateLimitation.isPending) && { opacity: 0.5 }]}
+              style={[styles.calcBtn, (!limCaseType || limitationPending) && { opacity: 0.5 }]}
               onPress={handleLimitation}
-              disabled={!limCaseType || calculateLimitation.isPending}
+              disabled={!limCaseType || limitationPending}
             >
-              {calculateLimitation.isPending
+              {limitationPending
                 ? <ActivityIndicator color="#070D24" />
                 : <><Feather name="clock" size={18} color="#070D24" /><Text style={styles.calcBtnText}>Calculate</Text></>}
             </Pressable>
 
-            {calculateLimitation.isError && (
+            {limError && (
               <Text style={styles.errorText}>
-                {(calculateLimitation.error as any)?.message ?? 'Calculation failed. Please try again.'}
+                {limError}
               </Text>
             )}
 
@@ -210,18 +256,18 @@ export default function CalculatorScreen() {
             />
 
             <Pressable
-              style={[styles.calcBtn, ((!feeCourtType || !feeCaseType) || calculateCourtFee.isPending) && { opacity: 0.5 }]}
+              style={[styles.calcBtn, ((!feeCourtType || !feeCaseType) || courtFeePending) && { opacity: 0.5 }]}
               onPress={handleCourtFee}
-              disabled={!feeCourtType || !feeCaseType || calculateCourtFee.isPending}
+              disabled={!feeCourtType || !feeCaseType || courtFeePending}
             >
-              {calculateCourtFee.isPending
+              {courtFeePending
                 ? <ActivityIndicator color="#070D24" />
                 : <><Feather name="dollar-sign" size={18} color="#070D24" /><Text style={styles.calcBtnText}>Calculate Fee</Text></>}
             </Pressable>
 
-            {calculateCourtFee.isError && (
+            {courtFeeError && (
               <Text style={styles.errorText}>
-                {(calculateCourtFee.error as any)?.message ?? 'Calculation failed. Please try again.'}
+                {courtFeeError}
               </Text>
             )}
 
