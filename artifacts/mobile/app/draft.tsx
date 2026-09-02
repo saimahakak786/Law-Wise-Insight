@@ -56,8 +56,8 @@ export default function DraftScreen() {
 
     try {
       const token = await getToken();
-      const domain = process.env.EXPO_PUBLIC_DOMAIN;
-      const response = await fetch(`https://${domain}/api/lawvise/draft`, {
+      const domain = 'https://law-wise-insight.onrender.com';
+      const response = await fetch(`${domain}/api/lawwise/draft`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ documentType: selectedType, jurisdiction, language, details: details || null }),
