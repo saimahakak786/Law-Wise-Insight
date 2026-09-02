@@ -27,7 +27,7 @@
       [
         "expo-router",
         {
-       "origin":   https://law-wise-insight.onrender.com
+       "origin": "https://law-wise-insight.onrender.com"
 
         }
       ],
