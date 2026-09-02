@@ -54,8 +54,8 @@ export default function ChatScreen() {
 
     try {
       const token = await getToken();
-      const domain = process.env.EXPO_PUBLIC_DOMAIN;
-      const response = await fetch(`https://${domain}/api/lawvise/chat`, {
+      const domain = 'https://law-wise-insight.onrender.com';
+      const response = await fetch(`${domain}/api/lawwise/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
