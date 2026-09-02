@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { useAuth } from '@clerk/expo';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -12,6 +13,7 @@ Notifications.setNotificationHandler({
 });
 
 export default function CauseListScreen() {
+  const { getToken } = useAuth();
   const [judgeName, setJudgeName] = useState('');
   const [caseNumber, setCaseNumber] = useState('');
   const [itemNo, setItemNo] = useState('');
@@ -34,7 +36,7 @@ export default function CauseListScreen() {
 
   const scheduleHearingReminder = async (caseNum: string, judge: string, item: string) => {
     try {
-      // Schedule notification for 24 hours prior (For testing right now, trigger it in 5 seconds!)
+      // Schedule notification for 24 hours prior (For testing right now, trigger it in 10 seconds!)
       await Notifications.scheduleNotificationAsync({
         content: {
           title: `⚖️ Hearing Reminder Tomorrow!`,
@@ -43,7 +45,7 @@ export default function CauseListScreen() {
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: 10, // Change this to 24 hours later if you link a date picker, set to 10 seconds for instant testing!
+          seconds: 10, 
         },
       });
       Alert.alert('Success', 'Hearing added & 1-day prior reminder notification scheduled!');
@@ -52,28 +54,49 @@ export default function CauseListScreen() {
     }
   };
 
-  const addHearing = () => {
+  const addHearing = async () => {
     if (!judgeName || !caseNumber || !itemNo) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
 
-    const newItem = {
-      id: Date.now().toString(),
-      judge: judgeName,
-      case: caseNumber,
-      item: `Item No. ${itemNo}`,
-      status: 'Pending Call',
-    };
+    try {
+      // Authenticate with your backend via Clerk token & Render URL if you save cases server-side
+      const token = await getToken();
+      const domain = 'https://law-wise-insight.onrender.com';
+      
+      // Optional: Send to backend database if you have an endpoint for it
+      /*
+      await fetch(`${domain}/api/lawwise/cases`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ judgeName, caseNumber, itemNo })
+      });
+      */
 
-    setCauseList([newItem, ...causeList]);
-    
-    // Trigger the 1-day reminder notification logic
-    scheduleHearingReminder(caseNumber, judgeName, `Item No. ${itemNo}`);
+      const newItem = {
+        id: Date.now().toString(),
+        judge: judgeName,
+        case: caseNumber,
+        item: `Item No. ${itemNo}`,
+        status: 'Pending Call',
+      };
 
-    setJudgeName('');
-    setCaseNumber('');
-    setItemNo('');
+      setCauseList([newItem, ...causeList]);
+      
+      // Trigger local notification reminder
+      scheduleHearingReminder(caseNumber, judgeName, `Item No. ${itemNo}`);
+
+      setJudgeName('');
+      setCaseNumber('');
+      setItemNo('');
+    } catch (error) {
+      console.log('Error adding hearing:', error);
+      Alert.alert('Error', 'Could not save hearing.');
+    }
   };
 
   return (
