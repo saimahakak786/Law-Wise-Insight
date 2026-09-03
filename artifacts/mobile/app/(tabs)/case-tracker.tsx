@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
+import { useColors } from '@/hooks/useColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
-import { fetch } from 'expo-fetch';
 import { Feather } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 
+// Import custom components
+import Card from '../components/Card';
+import Button from '../components/Button';
+
 export default function CauseListScreen() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { getToken } = useAuth();
   const { jurisdiction } = useApp();
 
@@ -89,78 +96,72 @@ export default function CauseListScreen() {
     }
   };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.headerTitle}>Cause List & Judge Tracker</Text>
-      <Text style={styles.subTitle}>Track daily cause lists, item numbers, and get automated reminders 1 day prior.</Text>
+  const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
 
-      <View style={styles.formCard}>
-        <Text style={styles.formHeader}>Add New Hearing</Text>
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}>
+      <Text style={[styles.headerTitle, { color: colors.foreground }]}>Cause List & Judge Tracker</Text>
+      <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Track daily cause lists, item numbers, and get automated reminders 1 day prior.</Text>
+
+      <Card style={styles.formCard}>
+        <Text style={[styles.formHeader, { color: colors.foreground }]}>Add New Hearing</Text>
         
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
           placeholder="Judge Name (e.g., Justice R.K. Agrawal)"
-          placeholderTextColor="#888"
+          placeholderTextColor={colors.mutedForeground}
           value={judgeName}
           onChangeText={setJudgeName}
         />
         
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
           placeholder="Case Title / Number (e.g., Suit 102/2026)"
-          placeholderTextColor="#888"
+          placeholderTextColor={colors.mutedForeground}
           value={caseTitle}
           onChangeText={setCaseTitle}
         />
         
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
           placeholder="Item Number (e.g., 24)"
-          placeholderTextColor="#888"
+          placeholderTextColor={colors.mutedForeground}
           keyboardType="numeric"
           value={itemNumber}
           onChangeText={setItemNumber}
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
           placeholder="Hearing Date (YYYY-MM-DD)"
-          placeholderTextColor="#888"
+          placeholderTextColor={colors.mutedForeground}
           value={hearingDate}
           onChangeText={setHearingDate}
         />
 
-        <TouchableOpacity 
-          style={styles.button} 
+        <Button
+          title={loading ? "Scheduling..." : "Add to Cause List & Set Reminder"}
+          variant="primary"
           onPress={handleAddHearing}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#070D24" />
-          ) : (
-            <>
-              <Feather name="calendar" size={18} color="#070D24" style={{ marginRight: 6 }} />
-              <Text style={styles.buttonText}>Add to Cause List & Set Reminder</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
+          style={[loading && { opacity: 0.5 }, { marginTop: 4, marginVertical: 0 }]}
+        />
+      </Card>
 
-      <Text style={styles.resultsHeader}>Tracked Matters ({matters.length})</Text>
+      <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Tracked Matters ({matters.length})</Text>
       {matters.length === 0 ? (
-        <Text style={styles.emptyText}>No hearings tracked yet. Add one above.</Text>
+        <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No hearings tracked yet. Add one above.</Text>
       ) : (
         matters.map((item) => (
-          <View key={item.id} style={styles.card}>
+          <Card key={item.id} style={styles.trackedCard}>
             <View style={styles.cardRow}>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>Item No. {item.itemNumber}</Text>
               </View>
               <Text style={styles.dateText}>📅 {item.hearingDate}</Text>
             </View>
-            <Text style={styles.caseTitle}>{item.caseTitle}</Text>
-            <Text style={styles.judgeText}>Presiding: {item.judgeName}</Text>
-          </View>
+            <Text style={[styles.caseTitle, { color: colors.foreground }]}>{item.caseTitle}</Text>
+            <Text style={[styles.judgeText, { color: colors.mutedForeground }]}>Presiding: {item.judgeName}</Text>
+          </Card>
         ))
       )}
     </ScrollView>
@@ -168,45 +169,26 @@ export default function CauseListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa', padding: 20 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a', marginTop: 10 },
-  subTitle: { fontSize: 14, color: '#666', marginBottom: 20, marginTop: 5 },
-  formCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#e1e4e8' },
-  formHeader: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 12 },
+  container: { flex: 1 },
+  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, marginTop: 10 },
+  subTitle: { fontFamily: 'Inter_400Regular', fontSize: 14, marginBottom: 20, marginTop: 5 },
+  formCard: { marginVertical: 0, marginBottom: 24, padding: 16 },
+  formHeader: { fontFamily: 'Inter_600SemiBold', fontSize: 16, marginBottom: 12 },
   input: {
-    backgroundColor: '#f8f9fa',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
-    color: '#333',
-    marginBottom: 12,
-  },
-  button: {
-    backgroundColor: '#C9A84C',
-    borderRadius: 8,
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  buttonText: { color: '#070D24', fontSize: 15, fontWeight: 'bold' },
-  resultsHeader: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 12 },
-  emptyText: { color: '#888', fontStyle: 'italic', marginBottom: 20 },
-  card: {
-    backgroundColor: '#fff',
     borderRadius: 10,
     padding: 14,
+    fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e1e4e8',
   },
+  resultsHeader: { fontFamily: 'Inter_700Bold', fontSize: 18, marginBottom: 12 },
+  emptyText: { fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginBottom: 20 },
+  trackedCard: { marginVertical: 0, marginBottom: 12, padding: 14 },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  badge: { backgroundColor: '#e6f4ea', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
-  badgeText: { color: '#137333', fontSize: 12, fontWeight: 'bold' },
-  dateText: { fontSize: 13, color: '#0052cc', fontWeight: '600' },
-  caseTitle: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 2 },
-  judgeText: { fontSize: 13, color: '#555' },
+  badge: { backgroundColor: '#C9A84C20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#C9A84C40' },
+  badgeText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  dateText: { fontSize: 13, color: '#C9A84C', fontFamily: 'Inter_600SemiBold' },
+  caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, marginBottom: 4 },
+  judgeText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
 });
