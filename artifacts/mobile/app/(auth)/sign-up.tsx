@@ -16,6 +16,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
+// Import custom components
+import Button from '../components/Button';
+
 export default function SignUpPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -33,17 +36,31 @@ export default function SignUpPage() {
 
   const handleSignUp = async () => {
     if (!email || !password) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const { error } = await signUp.password({ emailAddress: email, password });
-    if (!error) await signUp.verifications.sendEmailCode();
+    if (!error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await signUp.verifications.sendEmailCode();
+    }
   };
 
   const handleVerify = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await signUp.verifications.verifyEmailCode({ code });
     if (signUp.status === 'complete') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await signUp.finalize({ navigate });
     }
+  };
+
+  const handleResendCode = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    signUp.verifications.sendEmailCode();
+  };
+
+  const handleTogglePassword = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowPassword((v) => !v);
   };
 
   // Verification step
@@ -72,17 +89,19 @@ export default function SignUpPage() {
         {errors.fields.code && (
           <Text style={styles.error}>{errors.fields.code.message}</Text>
         )}
+        
+        <View style={{ width: '100%', marginTop: 8 }}>
+          <Button
+            title={fetchStatus === 'fetching' ? "Verifying..." : "Verify & Continue"}
+            variant="primary"
+            onPress={handleVerify}
+            disabled={!code || fetchStatus === 'fetching'}
+            style={fetchStatus === 'fetching' ? styles.disabledBtn : undefined}
+          />
+        </View>
+
         <Pressable
-          style={[styles.primaryBtn, (!code || fetchStatus === 'fetching') && styles.disabled]}
-          onPress={handleVerify}
-          disabled={!code || fetchStatus === 'fetching'}
-        >
-          {fetchStatus === 'fetching'
-            ? <ActivityIndicator color="#070D24" />
-            : <Text style={styles.primaryBtnText}>Verify & Continue</Text>}
-        </Pressable>
-        <Pressable
-          onPress={() => signUp.verifications.sendEmailCode()}
+          onPress={handleResendCode}
           style={styles.resendBtn}
         >
           <Text style={styles.resendText}>Resend code</Text>
@@ -141,7 +160,7 @@ export default function SignUpPage() {
             placeholderTextColor="#8B9CC5"
             secureTextEntry={!showPassword}
           />
-          <Pressable onPress={() => setShowPassword((v) => !v)} style={styles.eyeBtn}>
+          <Pressable onPress={handleTogglePassword} style={styles.eyeBtn}>
             <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#8B9CC5" />
           </Pressable>
         </View>
@@ -149,15 +168,13 @@ export default function SignUpPage() {
           <Text style={styles.error}>{errors.fields.password.message}</Text>
         )}
 
-        <Pressable
-          style={[styles.primaryBtn, (!email || !password || fetchStatus === 'fetching') && styles.disabled]}
+        <Button
+          title={fetchStatus === 'fetching' ? "Creating Account..." : "Create Account"}
+          variant="primary"
           onPress={handleSignUp}
           disabled={!email || !password || fetchStatus === 'fetching'}
-        >
-          {fetchStatus === 'fetching'
-            ? <ActivityIndicator color="#070D24" />
-            : <Text style={styles.primaryBtnText}>Create Account</Text>}
-        </Pressable>
+          style={[(!email || !password || fetchStatus === 'fetching') && styles.disabledBtn, { marginTop: 8 }]}
+        />
 
         <Text style={styles.terms}>
           By continuing, you agree to our{' '}
@@ -215,16 +232,7 @@ const styles = StyleSheet.create({
   },
   eyeBtn: { padding: 4 },
   error: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#EF4444', marginBottom: 8, marginTop: -4 },
-  primaryBtn: {
-    backgroundColor: '#C9A84C',
-    borderRadius: 12,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  disabled: { opacity: 0.5 },
-  primaryBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#070D24' },
+  disabledBtn: { opacity: 0.5 },
   terms: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#8B9CC5', textAlign: 'center', marginTop: 16, lineHeight: 20 },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
   footerText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#8B9CC5' },
