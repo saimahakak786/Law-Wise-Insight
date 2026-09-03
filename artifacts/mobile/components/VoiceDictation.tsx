@@ -4,25 +4,30 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 interface VoiceDictationProps {
+  isProUser: boolean; // Pass user subscription status here
   onTranscriptionComplete: (text: string) => void;
+  onUpgradePress: () => void; // Triggered when free user tries to use it
 }
 
-export default function VoiceDictation({ onTranscriptionComplete }: VoiceDictationProps) {
+export default function VoiceDictation({ isProUser, onTranscriptionComplete, onUpgradePress }: VoiceDictationProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleToggleRecording = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // If the user is on the Free tier, block dictation and prompt to upgrade!
+    if (!isProUser) {
+      onUpgradePress();
+      return;
+    }
     
     if (!isRecording) {
-      // Start recording state
       setIsRecording(true);
     } else {
-      // Stop recording and process
       setIsRecording(false);
       setIsProcessing(true);
 
-      // Simulating speech-to-text conversion for legal briefs
       setTimeout(() => {
         setIsProcessing(false);
         const transcribedText = " The opposing counsel failed to establish statutory compliance within the mandatory limitation window.";
@@ -44,12 +49,12 @@ export default function VoiceDictation({ onTranscriptionComplete }: VoiceDictati
           onPress={handleToggleRecording}
         >
           <Feather 
-            name={isRecording ? 'square' : 'mic'} 
+            name={isProUser ? (isRecording ? 'square' : 'mic') : 'lock'} 
             size={18} 
             color={isRecording ? '#FFFFFF' : '#070D24'} 
           />
           <Text style={[styles.micText, isRecording && { color: '#FFFFFF' }]}>
-            {isRecording ? 'Tap to Stop Dictation' : 'Voice Dictation (Pro)'}
+            {isProUser ? (isRecording ? 'Tap to Stop Dictation' : 'Voice Dictation (Pro)') : 'Voice Dictation (Locked)'}
           </Text>
         </Pressable>
       )}
