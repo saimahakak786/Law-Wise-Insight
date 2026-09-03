@@ -9,7 +9,6 @@ import {
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Alert,
 } from 'react-native';
 import { useSignIn, useSSO } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
@@ -18,6 +17,9 @@ import { Link, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+
+// Import custom components
+import Button from '../components/Button';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -66,22 +68,26 @@ export default function SignInPage() {
 
   const handleSignIn = async () => {
     if (!email || !password) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const { error } = await signIn.password({ emailAddress: email, password });
     if (error) return;
     if (signIn.status === 'complete') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await signIn.finalize({ navigate });
     }
   };
 
   const handleVerify = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await signIn.mfa.verifyEmailCode({ code });
     if (signIn.status === 'complete') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await signIn.finalize({ navigate });
     }
   };
 
   const handleGoogle = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setGoogleLoading(true);
     try {
       const { createdSessionId, setActive } = await startSSOFlow({
@@ -89,6 +95,7 @@ export default function SignInPage() {
         redirectUrl: AuthSession.makeRedirectUri(),
       });
       if (createdSessionId && setActive) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await setActive({
           session: createdSessionId,
           navigate: ({ decorateUrl }) => {
@@ -121,7 +128,7 @@ export default function SignInPage() {
     if (!resetCode || !newPassword) { setForgotError('Please fill in both fields.'); return; }
     setForgotError('');
     setForgotStep('resetting');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const result = await signIn.attemptFirstFactor({
         strategy: 'reset_password_email_code',
@@ -129,6 +136,7 @@ export default function SignInPage() {
         password: newPassword,
       });
       if (result.status === 'complete' && result.createdSessionId) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.push('/');
       } else {
         setForgotError('Password reset failed. Please try again.');
@@ -142,31 +150,34 @@ export default function SignInPage() {
 
   if (signIn.status === 'needs_client_trust') {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 40, paddingHorizontal: 24 }]}>
+        <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 24 }} />
         <Text style={styles.title}>Verify Identity</Text>
-        <Text style={styles.subtitle}>Enter the code sent to your email</Text>
+        <Text style={styles.subtitle}>Enter the verification code sent to your email</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { height: 64, textAlign: 'center', fontSize: 24, letterSpacing: 8, marginBottom: 12 }]}
           value={code}
           onChangeText={setCode}
-          placeholder="Enter verification code"
+          placeholder="000000"
           placeholderTextColor="#8B9CC5"
           keyboardType="numeric"
+          maxLength={6}
           autoFocus
         />
         {errors.fields.code && (
           <Text style={styles.error}>{errors.fields.code.message}</Text>
         )}
-        <Pressable
-          style={[styles.primaryBtn, fetchStatus === 'fetching' && styles.disabled]}
-          onPress={handleVerify}
-          disabled={fetchStatus === 'fetching'}
-        >
-          {fetchStatus === 'fetching'
-            ? <ActivityIndicator color="#070D24" />
-            : <Text style={styles.primaryBtnText}>Verify</Text>}
-        </Pressable>
-        <Pressable onPress={() => signIn.mfa.sendEmailCode()} style={styles.linkBtn}>
+        
+        <View style={{ width: '100%', marginTop: 8 }}>
+          <Button
+            title={fetchStatus === 'fetching' ? "Verifying..." : "Verify Identity"}
+            variant="primary"
+            onPress={handleVerify}
+            disabled={fetchStatus === 'fetching'}
+          />
+        </View>
+
+        <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); signIn.mfa.sendEmailCode(); }} style={styles.linkBtn}>
           <Text style={styles.linkText}>Resend code</Text>
         </Pressable>
       </View>
@@ -187,12 +198,12 @@ export default function SignInPage() {
             <Text style={styles.logoText}>LawVise</Text>
           </View>
           <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.subtitle}>Enter your email to receive a reset code</Text>
+          <Text style={styles.subtitle}>Enter your email to receive a secure reset code</Text>
 
           <View style={styles.inputWrapper}>
             <Feather name="mail" size={18} color="#8B9CC5" style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { flex: 1 }]}
+              style={[styles.inputField, { flex: 1 }]}
               value={forgotEmail}
               onChangeText={setForgotEmail}
               placeholder="Email address"
@@ -205,17 +216,15 @@ export default function SignInPage() {
           </View>
           {forgotError ? <Text style={styles.error}>{forgotError}</Text> : null}
 
-          <Pressable
-            style={[styles.primaryBtn, (!forgotEmail.trim() || forgotStep === 'sending') && styles.disabled]}
+          <Button
+            title={forgotStep === 'sending' ? "Sending Email..." : "Send Reset Email"}
+            variant="primary"
             onPress={handleSendResetEmail}
             disabled={!forgotEmail.trim() || forgotStep === 'sending'}
-          >
-            {forgotStep === 'sending'
-              ? <ActivityIndicator color="#070D24" />
-              : <Text style={styles.primaryBtnText}>Send Reset Email</Text>}
-          </Pressable>
+            style={{ marginTop: 8 }}
+          />
 
-          <Pressable onPress={() => { setForgotStep('idle'); setForgotError(''); }} style={styles.linkBtn}>
+          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setForgotStep('idle'); setForgotError(''); }} style={styles.linkBtn}>
             <Text style={styles.linkText}>← Back to Sign In</Text>
           </Pressable>
         </ScrollView>
@@ -237,12 +246,12 @@ export default function SignInPage() {
             <Text style={styles.logoText}>LawVise</Text>
           </View>
           <Text style={styles.title}>Enter New Password</Text>
-          <Text style={styles.subtitle}>Check your email for the reset code</Text>
+          <Text style={styles.subtitle}>Check your email for the verification reset code</Text>
 
           <View style={styles.inputWrapper}>
             <Feather name="hash" size={18} color="#8B9CC5" style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { flex: 1 }]}
+              style={[styles.inputField, { flex: 1 }]}
               value={resetCode}
               onChangeText={setResetCode}
               placeholder="Reset code"
@@ -255,31 +264,29 @@ export default function SignInPage() {
           <View style={styles.inputWrapper}>
             <Feather name="lock" size={18} color="#8B9CC5" style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { flex: 1 }]}
+              style={[styles.inputField, { flex: 1 }]}
               value={newPassword}
               onChangeText={setNewPassword}
               placeholder="New password"
               placeholderTextColor="#8B9CC5"
               secureTextEntry={!showNewPassword}
             />
-            <Pressable onPress={() => setShowNewPassword((v) => !v)} style={styles.eyeBtn}>
+            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowNewPassword((v) => !v); }} style={styles.eyeBtn}>
               <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={18} color="#8B9CC5" />
             </Pressable>
           </View>
 
           {forgotError ? <Text style={styles.error}>{forgotError}</Text> : null}
 
-          <Pressable
-            style={[styles.primaryBtn, (!resetCode || !newPassword || forgotStep === 'resetting') && styles.disabled]}
+          <Button
+            title={forgotStep === 'resetting' ? "Resetting..." : "Confirm & Reset Password"}
+            variant="primary"
             onPress={handleResetPassword}
             disabled={!resetCode || !newPassword || forgotStep === 'resetting'}
-          >
-            {forgotStep === 'resetting'
-              ? <ActivityIndicator color="#070D24" />
-              : <Text style={styles.primaryBtnText}>Reset Password</Text>}
-          </Pressable>
+            style={{ marginTop: 8 }}
+          />
 
-          <Pressable onPress={() => { setForgotStep('idle'); setForgotError(''); }} style={styles.linkBtn}>
+          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setForgotStep('idle'); setForgotError(''); }} style={styles.linkBtn}>
             <Text style={styles.linkText}>← Back to Sign In</Text>
           </Pressable>
         </ScrollView>
@@ -310,7 +317,7 @@ export default function SignInPage() {
         <View style={styles.inputWrapper}>
           <Feather name="mail" size={18} color="#8B9CC5" style={styles.inputIcon} />
           <TextInput
-            style={styles.input}
+            style={styles.inputField}
             value={email}
             onChangeText={setEmail}
             placeholder="Email address"
@@ -328,14 +335,14 @@ export default function SignInPage() {
         <View style={styles.inputWrapper}>
           <Feather name="lock" size={18} color="#8B9CC5" style={styles.inputIcon} />
           <TextInput
-            style={[styles.input, { flex: 1 }]}
+            style={[styles.inputField, { flex: 1 }]}
             value={password}
             onChangeText={setPassword}
             placeholder="Password"
             placeholderTextColor="#8B9CC5"
             secureTextEntry={!showPassword}
           />
-          <Pressable onPress={() => setShowPassword((v) => !v)} style={styles.eyeBtn}>
+          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPassword((v) => !v); }} style={styles.eyeBtn}>
             <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#8B9CC5" />
           </Pressable>
         </View>
@@ -345,22 +352,20 @@ export default function SignInPage() {
 
         {/* Forgot Password link */}
         <Pressable
-          onPress={() => { setForgotEmail(email); setForgotStep('send_code'); setForgotError(''); }}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setForgotEmail(email); setForgotStep('send_code'); setForgotError(''); }}
           style={styles.forgotBtn}
         >
           <Text style={styles.forgotText}>Forgot Password?</Text>
         </Pressable>
 
         {/* Sign In Button */}
-        <Pressable
-          style={[styles.primaryBtn, (!email || !password || fetchStatus === 'fetching') && styles.disabled]}
+        <Button
+          title={fetchStatus === 'fetching' ? "Signing In..." : "Sign In"}
+          variant="primary"
           onPress={handleSignIn}
           disabled={!email || !password || fetchStatus === 'fetching'}
-        >
-          {fetchStatus === 'fetching'
-            ? <ActivityIndicator color="#070D24" />
-            : <Text style={styles.primaryBtnText}>Sign In</Text>}
-        </Pressable>
+          style={{ marginTop: 4 }}
+        />
 
         {/* Divider */}
         <View style={styles.divider}>
@@ -412,8 +417,19 @@ const styles = StyleSheet.create({
     height: 52,
   },
   inputIcon: { marginRight: 10 },
-  input: {
+  inputField: {
     flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+  input: {
+    width: '100%',
+    backgroundColor: '#131D3D',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1B2448',
+    paddingHorizontal: 16,
     fontFamily: 'Inter_400Regular',
     fontSize: 15,
     color: '#FFFFFF',
@@ -422,16 +438,6 @@ const styles = StyleSheet.create({
   error: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#EF4444', marginBottom: 8, marginTop: -4 },
   forgotBtn: { alignSelf: 'flex-end', marginBottom: 16, marginTop: -4 },
   forgotText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#C9A84C' },
-  primaryBtn: {
-    backgroundColor: '#C9A84C',
-    borderRadius: 12,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  disabled: { opacity: 0.5 },
-  primaryBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#070D24' },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24, gap: 12 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#1B2448' },
   dividerText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#8B9CC5' },
