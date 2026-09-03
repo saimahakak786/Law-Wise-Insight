@@ -1,8 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export const JURISDICTIONS = {
+  IN: { code: 'IN', name: 'India', currency: '₹' },
+  UK: { code: 'UK', name: 'England & Wales', currency: '£' },
+  UAE: { code: 'UAE', name: 'United Arab Emirates', currency: 'AED' },
+  US: { code: 'US', name: 'United States', currency: '$' },
+};
+
 interface AppState {
-  jurisdiction: string;
+  jurisdiction: string; // e.g., 'IN', 'UK', 'UAE', 'US'
   language: string;
   isPremium: boolean;
   setJurisdiction: (v: string) => void;
@@ -10,7 +17,7 @@ interface AppState {
 }
 
 const AppContext = createContext<AppState>({
-  jurisdiction: 'India',
+  jurisdiction: 'IN',
   language: 'English',
   isPremium: false,
   setJurisdiction: () => {},
@@ -20,7 +27,7 @@ const AppContext = createContext<AppState>({
 const STORAGE_KEY = '@lawvise_prefs';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [jurisdiction, setJurisdictionState] = useState('India');
+  const [jurisdiction, setJurisdictionState] = useState('IN');
   const [language, setLanguageState] = useState('English');
   const [isPremium] = useState(false);
 
