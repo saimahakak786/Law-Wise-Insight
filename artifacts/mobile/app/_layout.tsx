@@ -32,13 +32,20 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
+    <Stack 
+      screenOptions={{ 
+        headerShown: false, 
+        animation: 'fade_from_bottom',
+        contentStyle: { backgroundColor: '#070D24' } 
+      }}
+    >
       <Stack.Screen name="index" options={{ animation: 'none' }} />
       <Stack.Screen name="(auth)" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
       <Stack.Screen name="draft" options={{ presentation: 'modal' }} />
       <Stack.Screen name="calculator" options={{ presentation: 'modal' }} />
       <Stack.Screen name="research" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
     </Stack>
   );
 }
