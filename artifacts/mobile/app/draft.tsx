@@ -17,6 +17,10 @@ import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import { useSaveDocument } from '@workspace/api-client-react';
 
+// Import custom components for high-end look
+import Card from '../components/Card';
+import Button from '../components/Button';
+
 const DOC_TYPES = [
   { id: 'legal_notice', label: 'Legal Notice', icon: 'alert-circle' },
   { id: 'plaint', label: 'Civil Plaint', icon: 'file-text' },
@@ -160,29 +164,27 @@ export default function DraftScreen() {
           <Text style={[styles.draftText, { color: colors.foreground }]}>{draft}</Text>
         </ScrollView>
 
-        {/* Action buttons after draft is complete */}
+        {/* Action buttons after draft is complete using custom buttons */}
         {!isDrafting && draft ? (
           <View style={[styles.actionBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 }]}>
-            <Pressable style={[styles.actionBtn, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={handleCopy}>
-              <Feather name="copy" size={16} color={colors.foreground} />
-              <Text style={[styles.actionBtnText, { color: colors.foreground }]}>Copy</Text>
-            </Pressable>
-            <Pressable style={[styles.actionBtn, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={handleShare}>
-              <Feather name="share-2" size={16} color={colors.foreground} />
-              <Text style={[styles.actionBtnText, { color: colors.foreground }]}>Share</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.actionBtn, styles.actionBtnPrimary, saveDocument.isPending && { opacity: 0.6 }]}
+            <Button
+              title="Copy"
+              variant="outline"
+              onPress={handleCopy}
+              style={styles.actionBtnCustom}
+            />
+            <Button
+              title="Share"
+              variant="outline"
+              onPress={handleShare}
+              style={styles.actionBtnCustom}
+            />
+            <Button
+              title={saveDocument.isPending ? "Saving..." : "Save to Vault"}
+              variant="primary"
               onPress={handleSaveToVault}
-              disabled={saveDocument.isPending}
-            >
-              {saveDocument.isPending
-                ? <ActivityIndicator color="#070D24" size="small" />
-                : <>
-                    <Feather name="save" size={16} color="#070D24" />
-                    <Text style={styles.actionBtnPrimaryText}>Save to Vault</Text>
-                  </>}
-            </Pressable>
+              style={[styles.actionBtnCustom, styles.primaryActionBtn]}
+            />
           </View>
         ) : null}
       </View>
@@ -205,20 +207,23 @@ export default function DraftScreen() {
 
       <Text style={[styles.label, { color: colors.foreground }]}>Document Type</Text>
       <View style={styles.docTypeGrid}>
-        {DOC_TYPES.map((dt) => (
-          <Pressable
-            key={dt.id}
-            style={[
-              styles.docTypeCard,
-              { backgroundColor: colors.card, borderColor: selectedType === dt.id ? '#C9A84C' : colors.border },
-              selectedType === dt.id && { backgroundColor: '#C9A84C15' },
-            ]}
-            onPress={() => setSelectedType(dt.id)}
-          >
-            <Feather name={dt.icon as any} size={20} color={selectedType === dt.id ? '#C9A84C' : colors.mutedForeground} />
-            <Text style={[styles.docTypeLabel, { color: selectedType === dt.id ? '#C9A84C' : colors.foreground }]}>{dt.label}</Text>
-          </Pressable>
-        ))}
+        {DOC_TYPES.map((dt) => {
+          const isSelected = selectedType === dt.id;
+          return (
+            <Card
+              key={dt.id}
+              onPress={() => setSelectedType(dt.id)}
+              style={[
+                styles.docTypeCard,
+                { backgroundColor: colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
+                isSelected && { backgroundColor: '#C9A84C20', borderColor: '#C9A84C' },
+              ]}
+            >
+              <Feather name={dt.icon as any} size={20} color={isSelected ? '#C9A84C' : colors.mutedForeground} />
+              <Text style={[styles.docTypeLabel, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{dt.label}</Text>
+            </Card>
+          );
+        })}
       </View>
 
       <Text style={[styles.label, { color: colors.foreground }]}>Details (Optional)</Text>
@@ -241,14 +246,14 @@ export default function DraftScreen() {
         <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{jurisdiction} Law • {language}</Text>
       </View>
 
-      <Pressable
-        style={[styles.draftBtn, (!selectedType || isDrafting) && { opacity: 0.5 }]}
-        onPress={handleDraft}
-        disabled={!selectedType || isDrafting}
-      >
-        <Feather name="edit-3" size={20} color="#070D24" />
-        <Text style={styles.draftBtnText}>Generate Draft</Text>
-      </Pressable>
+      <View style={{ paddingHorizontal: 20 }}>
+        <Button
+          title="Generate Draft"
+          variant="primary"
+          onPress={handleDraft}
+          style={[(!selectedType || isDrafting) && { opacity: 0.5 }]}
+        />
+      </View>
     </KeyboardAwareScrollView>
   );
 }
@@ -261,13 +266,11 @@ const styles = StyleSheet.create({
   label: { fontFamily: 'Inter_600SemiBold', fontSize: 15, paddingHorizontal: 20, marginBottom: 12 },
   sublabel: { fontFamily: 'Inter_400Regular', fontSize: 13, paddingHorizontal: 20, marginBottom: 12, marginTop: -6 },
   docTypeGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 10, marginBottom: 24 },
-  docTypeCard: { width: '47%', borderRadius: 12, padding: 14, borderWidth: 1.5, gap: 8 },
+  docTypeCard: { width: '47%', marginVertical: 0, padding: 14, gap: 8 },
   docTypeLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 16 },
   detailsInput: { marginHorizontal: 20, borderRadius: 12, borderWidth: 1, padding: 14, minHeight: 120, fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 22, marginBottom: 12 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, marginBottom: 20 },
   infoText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
-  draftBtn: { marginHorizontal: 20, backgroundColor: '#C9A84C', borderRadius: 14, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  draftBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#070D24' },
   draftHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1 },
   backBtn: { padding: 4 },
   draftHeaderTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#FFFFFF' },
@@ -280,11 +283,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 12,
     borderTopWidth: 1,
   },
-  actionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, borderRadius: 10, borderWidth: 1, height: 42,
+  actionBtnCustom: {
+    flex: 1,
+    marginVertical: 0,
+    paddingVertical: 10,
   },
-  actionBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
-  actionBtnPrimary: { backgroundColor: '#C9A84C', borderColor: '#C9A84C' },
-  actionBtnPrimaryText: { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#070D24' },
+  primaryActionBtn: {
+    backgroundColor: '#C9A84C',
+  },
 });
