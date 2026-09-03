@@ -6,18 +6,21 @@ import * as Haptics from 'expo-haptics';
 interface VoiceDictationProps {
   isProUser: boolean; // Pass user subscription status here
   onTranscriptionComplete: (text: string) => void;
-  onUpgradePress: () => void; // Triggered when free user tries to use it
+  onUpgradePress: () => void; // Triggered when free trial runs out
 }
 
 export default function VoiceDictation({ isProUser, onTranscriptionComplete, onUpgradePress }: VoiceDictationProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Track free trial usage (Starts at 1 free trial available)
+  const [hasFreeTrial, setHasFreeTrial] = useState(true);
 
   const handleToggleRecording = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // If the user is on the Free tier, block dictation and prompt to upgrade!
-    if (!isProUser) {
+    // If free user has already used their 1 free trial, trigger paywall immediately
+    if (!isProUser && !hasFreeTrial) {
       onUpgradePress();
       return;
     }
@@ -27,6 +30,11 @@ export default function VoiceDictation({ isProUser, onTranscriptionComplete, onU
     } else {
       setIsRecording(false);
       setIsProcessing(true);
+
+      // Consume the single free trial if not a Pro user
+      if (!isProUser) {
+        setHasFreeTrial(false);
+      }
 
       setTimeout(() => {
         setIsProcessing(false);
@@ -44,19 +52,34 @@ export default function VoiceDictation({ isProUser, onTranscriptionComplete, onU
           <Text style={styles.processingText}>Transcribing voice note to brief...</Text>
         </View>
       ) : (
-        <Pressable
-          style={[styles.micButton, isRecording && styles.recordingActive]}
-          onPress={handleToggleRecording}
-        >
-          <Feather 
-            name={isProUser ? (isRecording ? 'square' : 'mic') : 'lock'} 
-            size={18} 
-            color={isRecording ? '#FFFFFF' : '#070D24'} 
-          />
-          <Text style={[styles.micText, isRecording && { color: '#FFFFFF' }]}>
-            {isProUser ? (isRecording ? 'Tap to Stop Dictation' : 'Voice Dictation (Pro)') : 'Voice Dictation (Locked)'}
-          </Text>
-        </Pressable>
+        <View style={styles.wrapperRow}>
+          <Pressable
+            style={[styles.micButton, isRecording && styles.recordingActive]}
+            onPress={handleToggleRecording}
+          >
+            <Feather 
+              name={isRecording ? 'square' : 'mic'} 
+              size={18} 
+              color={isRecording ? '#FFFFFF' : '#070D24'} 
+            />
+            <Text style={[styles.micText, isRecording && { color: '#FFFFFF' }]}>
+              {isRecording 
+                ? 'Tap to Stop & Transcribe' 
+                : isProUser 
+                  ? 'Voice Dictation (Pro)' 
+                  : hasFreeTrial 
+                    ? 'Voice Dictation (1 Free Trial)' 
+                    : 'Voice Dictation (Locked)'}
+            </Text>
+          </Pressable>
+
+          {!isProUser && (
+            <Pressable style={styles.upgradeBadge} onPress={onUpgradePress}>
+              <Feather name="zap" size={12} color="#C9A84C" />
+              <Text style={styles.upgradeBadgeText}>Pro Unlimited</Text>
+            </Pressable>
+          )}
+        </View>
       )}
     </View>
   );
@@ -66,6 +89,11 @@ const styles = StyleSheet.create({
   container: {
     marginVertical: 10,
     alignItems: 'flex-start',
+  },
+  wrapperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   micButton: {
     flexDirection: 'row',
@@ -86,6 +114,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     color: '#070D24',
+  },
+  upgradeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#C9A84C18',
+    paddingHorizontal: 10,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#C9A84C40',
+  },
+  upgradeBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    color: '#C9A84C',
   },
   processingRow: {
     flexDirection: 'row',
