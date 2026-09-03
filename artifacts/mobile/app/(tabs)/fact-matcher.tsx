@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,9 +8,10 @@ import { fetch } from 'expo-fetch';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
-// Import custom components
+// Import custom components and your Pro Tier Upgrade Modal
 import Card from '../components/Card';
 import Button from '../components/Button';
+import UpgradeModal from '../components/UpgradeModal';
 
 export default function FactMatcherScreen() {
   const colors = useColors();
@@ -22,7 +23,17 @@ export default function FactMatcherScreen() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
 
-  // Intelligent client-side keyword matching fallback to ensure 100% accurate precedents across domains
+  // Pro Subscription Gating States — Fully locked by default
+  const [isProUser, setIsProUser] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Trigger the upgrade modal immediately when a free user lands on this feature
+  useEffect(() => {
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+    }
+  }, [isProUser]);
+
   const getDynamicPrecedents = (inputText: string) => {
     const text = inputText.toLowerCase();
 
@@ -71,7 +82,6 @@ export default function FactMatcherScreen() {
         }
       ];
     } else {
-      // General Civil / Criminal Default Match
       return [
         {
           id: 'gen-1',
@@ -85,6 +95,11 @@ export default function FactMatcherScreen() {
   };
 
   const handleMatchCases = async () => {
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     if (!facts.trim()) {
       Alert.alert('Empty Facts', 'Please enter case facts to match precedents.');
       return;
@@ -114,7 +129,6 @@ export default function FactMatcherScreen() {
       const data = await response.json();
       const matches = Array.isArray(data) ? data : data.matches;
       
-      // If backend returns generic items, augment with intelligent domain checks
       if (!matches || matches.length === 0) {
         setResults(getDynamicPrecedents(facts));
       } else {
@@ -122,7 +136,6 @@ export default function FactMatcherScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      // Graceful fallback to client intelligent engine
       setResults(getDynamicPrecedents(facts));
     } finally {
       setLoading(false);
@@ -132,58 +145,78 @@ export default function FactMatcherScreen() {
   const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}>
-      <Text style={[styles.headerTitle, { color: colors.foreground }]}>Fact Matcher & Precedent Finder</Text>
-      <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Input case scenario details to instantly discover matching case laws and legal principles.</Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView 
+        style={[styles.container, { backgroundColor: colors.background }, !isProUser && { opacity: 0.35 }]} 
+        contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
+        pointerEvents={isProUser ? 'auto' : 'none'}
+      >
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Fact Matcher & Precedent Finder</Text>
+        <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Input case scenario details to instantly discover matching case laws and legal principles.</Text>
 
-      <Card style={styles.formCard}>
-        <Text style={[styles.formHeader, { color: colors.foreground }]}>Case Scenario / Facts</Text>
+        <Card style={styles.formCard}>
+          <Text style={[styles.formHeader, { color: colors.foreground }]}>Case Scenario / Facts</Text>
+          
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="e.g., Landlord refusing to return security deposit after lease termination..."
+            placeholderTextColor={colors.mutedForeground}
+            multiline
+            numberOfLines={6}
+            textAlignVertical="top"
+            value={facts}
+            onChangeText={setFacts}
+          />
+
+          <Button
+            title={loading ? "Analyzing Precedents..." : "Find Matching Precedents"}
+            variant="primary"
+            onPress={handleMatchCases}
+            style={[loading && { opacity: 0.5 }, { marginVertical: 0 }]}
+          />
+        </Card>
+
+        <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Matched Precedents ({results.length})</Text>
         
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="e.g., Landlord refusing to return security deposit after lease termination..."
-          placeholderTextColor={colors.mutedForeground}
-          multiline
-          numberOfLines={6}
-          textAlignVertical="top"
-          value={facts}
-          onChangeText={setFacts}
-        />
+        {loading && (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#C9A84C" />
+            <Text style={[styles.loaderText, { color: colors.mutedForeground }]}>Searching Supreme Court & High Court databases...</Text>
+          </View>
+        )}
 
-        <Button
-          title={loading ? "Analyzing Precedents..." : "Find Matching Precedents"}
-          variant="primary"
-          onPress={handleMatchCases}
-          style={[loading && { opacity: 0.5 }, { marginVertical: 0 }]}
-        />
-      </Card>
-
-      <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Matched Precedents ({results.length})</Text>
-      
-      {loading && (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#C9A84C" />
-          <Text style={[styles.loaderText, { color: colors.mutedForeground }]}>Searching Supreme Court & High Court databases...</Text>
-        </View>
-      )}
-
-      {!loading && results.length === 0 ? (
-        <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No precedents matched yet. Enter facts above to search.</Text>
-      ) : (
-        results.map((item) => (
-          <Card key={item.id ?? item.citation} style={styles.resultCard}>
-            <View style={styles.cardRow}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.citation}</Text>
+        {!loading && results.length === 0 ? (
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No precedents matched yet. Enter facts above to search.</Text>
+        ) : (
+          results.map((item) => (
+            <Card key={item.id ?? item.citation} style={styles.resultCard}>
+              <View style={styles.cardRow}>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{item.citation}</Text>
+                </View>
+                <Text style={styles.matchScore}>{item.relevance ?? '95% Match'}</Text>
               </View>
-              <Text style={styles.matchScore}>{item.relevance ?? '95% Match'}</Text>
-            </View>
-            <Text style={[styles.caseTitle, { color: colors.foreground }]}>{item.title}</Text>
-            <Text style={[styles.principleText, { color: colors.mutedForeground }]}>{item.principle}</Text>
-          </Card>
-        ))
-      )}
-    </ScrollView>
+              <Text style={[styles.caseTitle, { color: colors.foreground }]}>{item.title}</Text>
+              <Text style={[styles.principleText, { color: colors.mutedForeground }]}>{item.principle}</Text>
+            </Card>
+          ))
+        )}
+      </ScrollView>
+
+      {/* Upgrade Modal Component — Forces Pro Subscription */}
+      <UpgradeModal
+        visible={showUpgradeModal}
+        onClose={() => {
+          setShowUpgradeModal(false);
+          // Optional: navigate back or keep modal forcing subscription
+        }}
+        onSubscribe={() => {
+          setIsProUser(true); 
+          setShowUpgradeModal(false);
+          Alert.alert('Welcome to LawVise Pro!', 'Fact Matcher & Precedent Finder are now fully unlocked.');
+        }}
+      />
+    </View>
   );
 }
 
