@@ -17,10 +17,11 @@ import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import { useSaveDocument } from '@workspace/api-client-react';
 
-// Import custom components and VoiceDictation
+// Import custom components, VoiceDictation, and your new UpgradeModal
 import Card from '../components/Card';
 import Button from '../components/Button';
 import VoiceDictation from '../components/VoiceDictation';
+import UpgradeModal from '../components/UpgradeModal';
 
 const DOC_TYPES = [
   { id: 'legal_notice', label: 'Legal Notice', icon: 'alert-circle' },
@@ -51,8 +52,9 @@ export default function DraftScreen() {
   const [draft, setDraft] = useState('');
   const [showDraft, setShowDraft] = useState(false);
   
-  // Set to true to test Pro features, or false to test the free tier lock gate
+  // Set to true to test Pro features, or false to test the free tier lock gate & paywall modal
   const [isProUser, setIsProUser] = useState(false); 
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -196,92 +198,98 @@ export default function DraftScreen() {
   }
 
   return (
-    <KeyboardAwareScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40 }}
-      bottomOffset={20}
-    >
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} style={styles.closeBtn}>
-          <Feather name="x" size={22} color={colors.mutedForeground} />
-        </Pressable>
-        <Text style={styles.screenTitle}>Draft Document</Text>
-        <View style={{ width: 30 }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAwareScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40 }}
+        bottomOffset={20}
+      >
+        <View style={styles.topBar}>
+          <Pressable onPress={() => router.back()} style={styles.closeBtn}>
+            <Feather name="x" size={22} color={colors.mutedForeground} />
+          </Pressable>
+          <Text style={styles.screenTitle}>Draft Document</Text>
+          <View style={{ width: 30 }} />
+        </View>
 
-      <Text style={[styles.label, { color: colors.foreground }]}>Document Type</Text>
-      <View style={styles.docTypeGrid}>
-        {DOC_TYPES.map((dt) => {
-          const isSelected = selectedType === dt.id;
-          return (
-            <Card
-              key={dt.id}
-              onPress={() => setSelectedType(dt.id)}
-              style={[
-                styles.docTypeCard,
-                { backgroundColor: colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
-                isSelected && { backgroundColor: '#C9A84C20', borderColor: '#C9A84C' },
-              ]}
-            >
-              <Feather name={dt.icon as any} size={20} color={isSelected ? '#C9A84C' : colors.mutedForeground} />
-              <Text style={[styles.docTypeLabel, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{dt.label}</Text>
-            </Card>
-          );
-        })}
-      </View>
+        <Text style={[styles.label, { color: colors.foreground }]}>Document Type</Text>
+        <View style={styles.docTypeGrid}>
+          {DOC_TYPES.map((dt) => {
+            const isSelected = selectedType === dt.id;
+            return (
+              <Card
+                key={dt.id}
+                onPress={() => setSelectedType(dt.id)}
+                style={[
+                  styles.docTypeCard,
+                  { backgroundColor: colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
+                  isSelected && { backgroundColor: '#C9A84C20', borderColor: '#C9A84C' },
+                ]}
+              >
+                <Feather name={dt.icon as any} size={20} color={isSelected ? '#C9A84C' : colors.mutedForeground} />
+                <Text style={[styles.docTypeLabel, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{dt.label}</Text>
+              </Card>
+            );
+          })}
+        </View>
 
-      <View style={styles.sectionHeaderRow}>
-        <Text style={[styles.label, { color: colors.foreground, paddingHorizontal: 0, marginBottom: 0 }]}>Details (Optional)</Text>
-        
-        {/* Integrated Tier-Aware Voice Dictation Component */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.label, { color: colors.foreground, paddingHorizontal: 0, marginBottom: 0 }]}>Details (Optional)</Text>
+          
+          {/* Integrated Tier-Aware Voice Dictation Component */}
+          <View style={{ paddingHorizontal: 20 }}>
+            <VoiceDictation
+              isProUser={isProUser}
+              onTranscriptionComplete={(text) => {
+                setDetails((prev) => (prev ? prev + ' ' + text : text));
+              }}
+              onUpgradePress={() => {
+                setShowUpgradeModal(true); // Pops up your custom Deep Navy & Gold Upgrade Modal
+              }}
+            />
+          </View>
+        </View>
+
+        <Text style={[styles.sublabel, { color: colors.mutedForeground }]}>
+          Provide specific terms, parties, amounts, or requirements for your document (or use Voice Dictation)
+        </Text>
+        <TextInput
+          style={[styles.detailsInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+          value={details}
+          onChangeText={setDetails}
+          placeholder="e.g. Landlord: John Smith, Tenant: Jane Doe, Rent: ₹25,000/month, Duration: 11 months..."
+          placeholderTextColor={colors.mutedForeground}
+          multiline
+          numberOfLines={5}
+          textAlignVertical="top"
+        />
+
+        <View style={styles.infoRow}>
+          <Feather name="globe" size={13} color={colors.mutedForeground} />
+          <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{jurisdiction} Law • {language}</Text>
+        </View>
+
         <View style={{ paddingHorizontal: 20 }}>
-          <VoiceDictation
-            isProUser={isProUser}
-            onTranscriptionComplete={(text) => {
-              setDetails((prev) => (prev ? prev + ' ' + text : text));
-            }}
-            onUpgradePress={() => {
-              Alert.alert(
-                'LawVise Pro Feature',
-                'Voice Dictation is an exclusive feature for Pro advocates. Would you like to unlock unlimited AI transcription?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Unlock Pro', onPress: () => setIsProUser(true) }, // Demo toggle switch to test pro mode
-                ]
-              );
-            }}
+          <Button
+            title="Generate Draft"
+            variant="primary"
+            onPress={handleDraft}
+            style={[(!selectedType || isDrafting) && { opacity: 0.5 }]}
           />
         </View>
-      </View>
+      </KeyboardAwareScrollView>
 
-      <Text style={[styles.sublabel, { color: colors.mutedForeground }]}>
-        Provide specific terms, parties, amounts, or requirements for your document (or use Voice Dictation)
-      </Text>
-      <TextInput
-        style={[styles.detailsInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-        value={details}
-        onChangeText={setDetails}
-        placeholder="e.g. Landlord: John Smith, Tenant: Jane Doe, Rent: ₹25,000/month, Duration: 11 months..."
-        placeholderTextColor={colors.mutedForeground}
-        multiline
-        numberOfLines={5}
-        textAlignVertical="top"
+      {/* Upgrade Modal Component for ₹299/month Pro Tier */}
+      <UpgradeModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onSubscribe={() => {
+          setIsProUser(true); // Upgrades user state
+          setShowUpgradeModal(false);
+          Alert.alert('Welcome to LawVise Pro!', 'Your account has been successfully upgraded.');
+        }}
       />
-
-      <View style={styles.infoRow}>
-        <Feather name="globe" size={13} color={colors.mutedForeground} />
-        <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{jurisdiction} Law • {language}</Text>
-      </View>
-
-      <View style={{ paddingHorizontal: 20 }}>
-        <Button
-          title="Generate Draft"
-          variant="primary"
-          onPress={handleDraft}
-          style={[(!selectedType || isDrafting) && { opacity: 0.5 }]}
-        />
-      </View>
-    </KeyboardAwareScrollView>
+    </View>
   );
 }
 
