@@ -16,6 +16,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 
+// Import your custom Upgrade Modal component
+import UpgradeModal from '../components/UpgradeModal';
+
 const DOC_TYPES = [
   'Contract', 'Judgment', 'FIR', 'Court Order', 'Legal Notice', 'Bail Application',
   'Writ Petition', 'Charge Sheet', 'Rent Agreement', 'Employment Agreement',
@@ -73,6 +76,10 @@ export default function AnalyzeScreen() {
   const [uploadMode, setUploadMode] = useState<UploadMode>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+
+  // Pro Subscription Gating States
+  const [isProUser, setIsProUser] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleUploadDocument = async () => {
     try {
@@ -193,6 +200,13 @@ export default function AnalyzeScreen() {
       Alert.alert('Missing Content', 'Please upload a document or paste your document text.');
       return;
     }
+
+    // Intercept with UpgradeModal if the user is not a Pro subscriber
+    if (!isProUser) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsAnalyzing(true);
     setResult('');
@@ -301,180 +315,193 @@ export default function AnalyzeScreen() {
   }
 
   return (
-    <KeyboardAwareScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 16), paddingBottom: insets.bottom + 100 }}
-      showsVerticalScrollIndicator={false}
-      bottomOffset={20}
-    >
-      <Text style={styles.screenTitle}>Analyze Document</Text>
-      <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-        Upload a document or paste text for AI-powered legal analysis
-      </Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAwareScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={{ paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 16), paddingBottom: insets.bottom + 100 }}
+        showsVerticalScrollIndicator={false}
+        bottomOffset={20}
+      >
+        <Text style={styles.screenTitle}>Analyze Document</Text>
+        <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
+          Upload a document or paste text for AI-powered legal analysis
+        </Text>
 
-      {/* ── STEP 1: Source Selection ── */}
-      {!docText.trim() && (
-        <View style={styles.sourceSection}>
-          {/* Primary — Upload Document */}
-          <Pressable
-            style={[styles.uploadPrimaryCard, { backgroundColor: colors.card, borderColor: uploadMode === 'upload' ? '#C9A84C' : colors.border }]}
-            onPress={handleUploadDocument}
-            disabled={isExtracting}
-          >
-            {isExtracting && (uploadMode === 'upload' || uploadMode === 'camera') ? (
-              <View style={styles.extractingRow}>
-                <ActivityIndicator color="#C9A84C" />
-                <Text style={styles.extractingText}>Extracting text...</Text>
-              </View>
-            ) : (
-              <>
-                <View style={styles.uploadIconWrap}>
-                  <Feather name="upload-cloud" size={32} color="#C9A84C" />
+        {/* ── STEP 1: Source Selection ── */}
+        {!docText.trim() && (
+          <View style={styles.sourceSection}>
+            {/* Primary — Upload Document */}
+            <Pressable
+              style={[styles.uploadPrimaryCard, { backgroundColor: colors.card, borderColor: uploadMode === 'upload' ? '#C9A84C' : colors.border }]}
+              onPress={handleUploadDocument}
+              disabled={isExtracting}
+            >
+              {isExtracting && (uploadMode === 'upload' || uploadMode === 'camera') ? (
+                <View style={styles.extractingRow}>
+                  <ActivityIndicator color="#C9A84C" />
+                  <Text style={styles.extractingText}>Extracting text...</Text>
                 </View>
-                <Text style={styles.uploadPrimaryLabel}>Upload Document</Text>
-                <Text style={[styles.uploadPrimaryDesc, { color: colors.mutedForeground }]}>
-                  PDF, DOCX, JPG, PNG supported
-                </Text>
-              </>
-            )}
-          </Pressable>
-
-          {/* Secondary row — Camera + Paste */}
-          <View style={styles.secondaryRow}>
-            <Pressable
-              style={[styles.secondaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={handleTakePhoto}
-              disabled={isExtracting}
-            >
-              {isExtracting && uploadMode === 'camera' ? (
-                <ActivityIndicator color="#C9A84C" size="small" />
               ) : (
-                <Feather name="camera" size={22} color="#C9A84C" />
+                <>
+                  <View style={styles.uploadIconWrap}>
+                    <Feather name="upload-cloud" size={32} color="#C9A84C" />
+                  </View>
+                  <Text style={styles.uploadPrimaryLabel}>Upload Document</Text>
+                  <Text style={[styles.uploadPrimaryDesc, { color: colors.mutedForeground }]}>
+                    PDF, DOCX, JPG, PNG supported
+                  </Text>
+                </>
               )}
-              <Text style={[styles.secondaryLabel, { color: colors.foreground }]}>Take Photo</Text>
-              <Text style={[styles.secondaryDesc, { color: colors.mutedForeground }]}>Scan document</Text>
             </Pressable>
 
-            <Pressable
-              style={[styles.secondaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => setUploadMode('paste')}
-              disabled={isExtracting}
-            >
-              <Feather name="edit-2" size={22} color={colors.mutedForeground} />
-              <Text style={[styles.secondaryLabel, { color: colors.foreground }]}>Paste Text</Text>
-              <Text style={[styles.secondaryDesc, { color: colors.mutedForeground }]}>Type or paste</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
+            {/* Secondary row — Camera + Paste */}
+            <View style={styles.secondaryRow}>
+              <Pressable
+                style={[styles.secondaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={handleTakePhoto}
+                disabled={isExtracting}
+              >
+                {isExtracting && uploadMode === 'camera' ? (
+                  <ActivityIndicator color="#C9A84C" size="small" />
+                ) : (
+                  <Feather name="camera" size={22} color="#C9A84C" />
+                )}
+                <Text style={[styles.secondaryLabel, { color: colors.foreground }]}>Take Photo</Text>
+                <Text style={[styles.secondaryDesc, { color: colors.mutedForeground }]}>Scan document</Text>
+              </Pressable>
 
-      {/* ── STEP 2: Text Input (paste mode or after upload) ── */}
-      {(uploadMode === 'paste' || docText.trim()) && (
-        <View>
-          {/* Extracted / ready badge */}
-          {uploadedFileName ? (
-            <View style={styles.extractedBadgeRow}>
-              <View style={[styles.extractedBadge, { backgroundColor: '#22C55E18' }]}>
-                <Feather name="check-circle" size={14} color="#22C55E" />
-                <Text style={styles.extractedBadgeText}>Text Extracted — {uploadedFileName}</Text>
-              </View>
-              <Pressable onPress={resetUpload} style={styles.resetBtn}>
-                <Feather name="x" size={16} color={colors.mutedForeground} />
+              <Pressable
+                style={[styles.secondaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => setUploadMode('paste')}
+                disabled={isExtracting}
+              >
+                <Feather name="edit-2" size={22} color={colors.mutedForeground} />
+                <Text style={[styles.secondaryLabel, { color: colors.foreground }]}>Paste Text</Text>
+                <Text style={[styles.secondaryDesc, { color: colors.mutedForeground }]}>Type or paste</Text>
               </Pressable>
             </View>
-          ) : (
-            uploadMode === 'paste' && (
+          </View>
+        )}
+
+        {/* ── STEP 2: Text Input (paste mode or after upload) ── */}
+        {(uploadMode === 'paste' || docText.trim()) && (
+          <View>
+            {/* Extracted / ready badge */}
+            {uploadedFileName ? (
               <View style={styles.extractedBadgeRow}>
-                <Text style={[styles.label, { color: colors.foreground, paddingHorizontal: 0, marginBottom: 0 }]}>
-                  Document Content
-                </Text>
+                <View style={[styles.extractedBadge, { backgroundColor: '#22C55E18' }]}>
+                  <Feather name="check-circle" size={14} color="#22C55E" />
+                  <Text style={styles.extractedBadgeText}>Text Extracted — {uploadedFileName}</Text>
+                </View>
                 <Pressable onPress={resetUpload} style={styles.resetBtn}>
                   <Feather name="x" size={16} color={colors.mutedForeground} />
                 </Pressable>
               </View>
-            )
-          )}
+            ) : (
+              uploadMode === 'paste' && (
+                <View style={styles.extractedBadgeRow}>
+                  <Text style={[styles.label, { color: colors.foreground, paddingHorizontal: 0, marginBottom: 0 }]}>
+                    Document Content
+                  </Text>
+                  <Pressable onPress={resetUpload} style={styles.resetBtn}>
+                    <Feather name="x" size={16} color={colors.mutedForeground} />
+                  </Pressable>
+                </View>
+              )
+            )}
 
-          {/* Editable text area */}
-          <TextInput
-            style={[styles.textArea, { backgroundColor: colors.card, borderColor: uploadedFileName ? '#22C55E40' : colors.border, color: colors.foreground }]}
-            value={docText}
-            onChangeText={setDocText}
-            placeholder="Paste your contract, judgment, FIR, court order, or any legal document text here..."
-            placeholderTextColor={colors.mutedForeground}
-            multiline
-            numberOfLines={8}
-            textAlignVertical="top"
-          />
-          <Text style={[styles.charCount, { color: colors.mutedForeground }]}>{docText.length} characters</Text>
-        </View>
-      )}
-
-      {/* Show "Upload another" option if text already loaded */}
-      {docText.trim() && (
-        <View style={styles.changeSourceRow}>
-          <Pressable style={[styles.changeSourceBtn, { borderColor: colors.border }]} onPress={handleUploadDocument}>
-            <Feather name="upload-cloud" size={14} color="#C9A84C" />
-            <Text style={styles.changeSourceText}>Upload different file</Text>
-          </Pressable>
-          <Pressable style={[styles.changeSourceBtn, { borderColor: colors.border }]} onPress={handleTakePhoto}>
-            <Feather name="camera" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.changeSourceText, { color: colors.mutedForeground }]}>Re-scan</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {/* ── STEP 3: Document Type + Analysis Config ── */}
-      {/* Document Type */}
-      <Text style={[styles.label, { color: colors.foreground }]}>Document Type</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-        {DOC_TYPES.map((dt) => (
-          <Pressable
-            key={dt}
-            style={[styles.chip, { backgroundColor: docType === dt ? '#C9A84C' : colors.card, borderColor: docType === dt ? '#C9A84C' : colors.border }]}
-            onPress={() => setDocType(dt)}
-          >
-            <Text style={[styles.chipText, { color: docType === dt ? '#070D24' : colors.mutedForeground }]}>{dt}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
-      {/* Analysis Type */}
-      <Text style={[styles.label, { color: colors.foreground }]}>Analysis Type</Text>
-      <View style={styles.analysisGrid}>
-        {ANALYSIS_TYPES.map((at) => (
-          <Pressable
-            key={at.id}
-            style={[
-              styles.analysisCard,
-              { backgroundColor: colors.card, borderColor: analysisType === at.id ? '#C9A84C' : colors.border },
-              analysisType === at.id && { borderColor: '#C9A84C', backgroundColor: '#C9A84C15' },
-            ]}
-            onPress={() => setAnalysisType(at.id)}
-          >
-            <Feather name={at.icon as any} size={20} color={analysisType === at.id ? '#C9A84C' : colors.mutedForeground} />
-            <Text style={[styles.analysisLabel, { color: analysisType === at.id ? '#C9A84C' : colors.foreground }]}>{at.label}</Text>
-            <Text style={[styles.analysisDesc, { color: colors.mutedForeground }]}>{at.desc}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {/* Analyze Button */}
-      <Pressable
-        style={[styles.analyzeBtn, (!docText.trim() || isAnalyzing) && { opacity: 0.5 }]}
-        onPress={handleAnalyze}
-        disabled={!docText.trim() || isAnalyzing}
-      >
-        {isAnalyzing ? (
-          <ActivityIndicator color="#070D24" />
-        ) : (
-          <>
-            <Feather name="zap" size={20} color="#070D24" />
-            <Text style={styles.analyzeBtnText}>Analyze with AI</Text>
-          </>
+            {/* Editable text area */}
+            <TextInput
+              style={[styles.textArea, { backgroundColor: colors.card, borderColor: uploadedFileName ? '#22C55E40' : colors.border, color: colors.foreground }]}
+              value={docText}
+              onChangeText={setDocText}
+              placeholder="Paste your contract, judgment, FIR, court order, or any legal document text here..."
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+              numberOfLines={8}
+              textAlignVertical="top"
+            />
+            <Text style={[styles.charCount, { color: colors.mutedForeground }]}>{docText.length} characters</Text>
+          </View>
         )}
-      </Pressable>
-    </KeyboardAwareScrollView>
+
+        {/* Show "Upload another" option if text already loaded */}
+        {docText.trim() && (
+          <View style={styles.changeSourceRow}>
+            <Pressable style={[styles.changeSourceBtn, { borderColor: colors.border }]} onPress={handleUploadDocument}>
+              <Feather name="upload-cloud" size={14} color="#C9A84C" />
+              <Text style={styles.changeSourceText}>Upload different file</Text>
+            </Pressable>
+            <Pressable style={[styles.changeSourceBtn, { borderColor: colors.border }]} onPress={handleTakePhoto}>
+              <Feather name="camera" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.changeSourceText, { color: colors.mutedForeground }]}>Re-scan</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── STEP 3: Document Type + Analysis Config ── */}
+        {/* Document Type */}
+        <Text style={[styles.label, { color: colors.foreground }]}>Document Type</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+          {DOC_TYPES.map((dt) => (
+            <Pressable
+              key={dt}
+              style={[styles.chip, { backgroundColor: docType === dt ? '#C9A84C' : colors.card, borderColor: docType === dt ? '#C9A84C' : colors.border }]}
+              onPress={() => setDocType(dt)}
+            >
+              <Text style={[styles.chipText, { color: docType === dt ? '#070D24' : colors.mutedForeground }]}>{dt}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {/* Analysis Type */}
+        <Text style={[styles.label, { color: colors.foreground }]}>Analysis Type</Text>
+        <View style={styles.analysisGrid}>
+          {ANALYSIS_TYPES.map((at) => (
+            <Pressable
+              key={at.id}
+              style={[
+                styles.analysisCard,
+                { backgroundColor: colors.card, borderColor: analysisType === at.id ? '#C9A84C' : colors.border },
+                analysisType === at.id && { borderColor: '#C9A84C', backgroundColor: '#C9A84C15' },
+              ]}
+              onPress={() => setAnalysisType(at.id)}
+            >
+              <Feather name={at.icon as any} size={20} color={analysisType === at.id ? '#C9A84C' : colors.mutedForeground} />
+              <Text style={[styles.analysisLabel, { color: analysisType === at.id ? '#C9A84C' : colors.foreground }]}>{at.label}</Text>
+              <Text style={[styles.analysisDesc, { color: colors.mutedForeground }]}>{at.desc}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Analyze Button */}
+        <Pressable
+          style={[styles.analyzeBtn, (!docText.trim() || isAnalyzing) && { opacity: 0.5 }]}
+          onPress={handleAnalyze}
+          disabled={!docText.trim() || isAnalyzing}
+        >
+          {isAnalyzing ? (
+            <ActivityIndicator color="#070D24" />
+          ) : (
+            <>
+              <Feather name="zap" size={20} color="#070D24" />
+              <Text style={styles.analyzeBtnText}>Analyze with AI</Text>
+            </>
+          )}
+        </Pressable>
+      </KeyboardAwareScrollView>
+
+      {/* Upgrade Modal Component for ₹299/month Pro Tier Gating */}
+      <UpgradeModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onSubscribe={() => {
+          setIsProUser(true); // Upgrades user session state to Pro
+          setShowUpgradeModal(false);
+          Alert.alert('Welcome to LawVise Pro!', 'Your document analysis and research tools are now unlocked.');
+        }}
+      />
+    </View>
   );
 }
 
