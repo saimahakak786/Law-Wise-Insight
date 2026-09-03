@@ -17,9 +17,10 @@ import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import { useSaveDocument } from '@workspace/api-client-react';
 
-// Import custom components for high-end look
+// Import custom components and VoiceDictation
 import Card from '../components/Card';
 import Button from '../components/Button';
+import VoiceDictation from '../components/VoiceDictation';
 
 const DOC_TYPES = [
   { id: 'legal_notice', label: 'Legal Notice', icon: 'alert-circle' },
@@ -49,6 +50,10 @@ export default function DraftScreen() {
   const [isDrafting, setIsDrafting] = useState(false);
   const [draft, setDraft] = useState('');
   const [showDraft, setShowDraft] = useState(false);
+  
+  // Set to true to test Pro features, or false to test the free tier lock gate
+  const [isProUser, setIsProUser] = useState(false); 
+
   const scrollRef = useRef<ScrollView>(null);
 
   const handleDraft = async () => {
@@ -164,7 +169,6 @@ export default function DraftScreen() {
           <Text style={[styles.draftText, { color: colors.foreground }]}>{draft}</Text>
         </ScrollView>
 
-        {/* Action buttons after draft is complete using custom buttons */}
         {!isDrafting && draft ? (
           <View style={[styles.actionBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 }]}>
             <Button
@@ -226,9 +230,32 @@ export default function DraftScreen() {
         })}
       </View>
 
-      <Text style={[styles.label, { color: colors.foreground }]}>Details (Optional)</Text>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={[styles.label, { color: colors.foreground, paddingHorizontal: 0, marginBottom: 0 }]}>Details (Optional)</Text>
+        
+        {/* Integrated Tier-Aware Voice Dictation Component */}
+        <View style={{ paddingHorizontal: 20 }}>
+          <VoiceDictation
+            isProUser={isProUser}
+            onTranscriptionComplete={(text) => {
+              setDetails((prev) => (prev ? prev + ' ' + text : text));
+            }}
+            onUpgradePress={() => {
+              Alert.alert(
+                'LawVise Pro Feature',
+                'Voice Dictation is an exclusive feature for Pro advocates. Would you like to unlock unlimited AI transcription?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Unlock Pro', onPress: () => setIsProUser(true) }, // Demo toggle switch to test pro mode
+                ]
+              );
+            }}
+          />
+        </View>
+      </View>
+
       <Text style={[styles.sublabel, { color: colors.mutedForeground }]}>
-        Provide specific terms, parties, amounts, or requirements for your document
+        Provide specific terms, parties, amounts, or requirements for your document (or use Voice Dictation)
       </Text>
       <TextInput
         style={[styles.detailsInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
@@ -264,6 +291,7 @@ const styles = StyleSheet.create({
   closeBtn: { padding: 4 },
   screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#FFFFFF' },
   label: { fontFamily: 'Inter_600SemiBold', fontSize: 15, paddingHorizontal: 20, marginBottom: 12 },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 4 },
   sublabel: { fontFamily: 'Inter_400Regular', fontSize: 13, paddingHorizontal: 20, marginBottom: 12, marginTop: -6 },
   docTypeGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 10, marginBottom: 24 },
   docTypeCard: { width: '47%', marginVertical: 0, padding: 14, gap: 8 },
