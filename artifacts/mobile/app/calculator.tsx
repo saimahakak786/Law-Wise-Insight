@@ -11,6 +11,10 @@ import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import * as Haptics from 'expo-haptics';
 
+// Import custom components
+import Card from '../components/Card';
+import Button from '../components/Button';
+
 const LIMITATION_CASE_TYPES = [
   'Money suit / debt recovery', 'Cheque bounce (Section 138 NI Act)',
   'Consumer complaint', 'Civil suit for damages', 'Property dispute',
@@ -155,15 +159,21 @@ export default function CalculatorScreen() {
 
             <Text style={[styles.label, { color: colors.foreground }]}>Case Type</Text>
             <View style={styles.optionsGrid}>
-              {LIMITATION_CASE_TYPES.map((ct) => (
-                <Pressable
-                  key={ct}
-                  style={[styles.optionChip, { backgroundColor: limCaseType === ct ? '#C9A84C20' : colors.card, borderColor: limCaseType === ct ? '#C9A84C' : colors.border }]}
-                  onPress={() => setLimCaseType(ct)}
-                >
-                  <Text style={[styles.optionChipText, { color: limCaseType === ct ? '#C9A84C' : colors.foreground }]}>{ct}</Text>
-                </Pressable>
-              ))}
+              {LIMITATION_CASE_TYPES.map((ct) => {
+                const isSelected = limCaseType === ct;
+                return (
+                  <Pressable
+                    key={ct}
+                    style={[
+                      styles.optionChip,
+                      { backgroundColor: isSelected ? '#C9A84C20' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border }
+                    ]}
+                    onPress={() => setLimCaseType(ct)}
+                  >
+                    <Text style={[styles.optionChipText, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{ct}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <Text style={[styles.label, { color: colors.foreground }]}>Date of Cause of Action</Text>
@@ -175,15 +185,12 @@ export default function CalculatorScreen() {
               placeholderTextColor={colors.mutedForeground}
             />
 
-            <Pressable
-              style={[styles.calcBtn, (!limCaseType || limitationPending) && { opacity: 0.5 }]}
+            <Button
+              title={limitationPending ? "Calculating..." : "Calculate"}
+              variant="primary"
               onPress={handleLimitation}
-              disabled={!limCaseType || limitationPending}
-            >
-              {limitationPending
-                ? <ActivityIndicator color="#070D24" />
-                : <><Feather name="clock" size={18} color="#070D24" /><Text style={styles.calcBtnText}>Calculate</Text></>}
-            </Pressable>
+              style={[(!limCaseType || limitationPending) && { opacity: 0.5 }, styles.calcButtonCustom]}
+            />
 
             {limError && (
               <Text style={styles.errorText}>
@@ -192,7 +199,7 @@ export default function CalculatorScreen() {
             )}
 
             {limResult && (
-              <View style={[styles.resultCard, { backgroundColor: colors.card }]}>
+              <Card style={styles.resultCard}>
                 <View style={styles.resultRow}>
                   <Feather name="clock" size={20} color="#C9A84C" />
                   <View>
@@ -210,7 +217,7 @@ export default function CalculatorScreen() {
                 {limResult.notes && (
                   <Text style={[styles.resultNotes, { color: colors.mutedForeground }]}>{limResult.notes}</Text>
                 )}
-              </View>
+              </Card>
             )}
           </>
         ) : (
@@ -221,28 +228,40 @@ export default function CalculatorScreen() {
 
             <Text style={[styles.label, { color: colors.foreground }]}>Court Type</Text>
             <View style={styles.optionsGrid}>
-              {COURT_TYPES.map((ct) => (
-                <Pressable
-                  key={ct}
-                  style={[styles.optionChip, { backgroundColor: feeCourtType === ct ? '#C9A84C20' : colors.card, borderColor: feeCourtType === ct ? '#C9A84C' : colors.border }]}
-                  onPress={() => setFeeCourtType(ct)}
-                >
-                  <Text style={[styles.optionChipText, { color: feeCourtType === ct ? '#C9A84C' : colors.foreground }]}>{ct}</Text>
-                </Pressable>
-              ))}
+              {COURT_TYPES.map((ct) => {
+                const isSelected = feeCourtType === ct;
+                return (
+                  <Pressable
+                    key={ct}
+                    style={[
+                      styles.optionChip,
+                      { backgroundColor: isSelected ? '#C9A84C20' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border }
+                    ]}
+                    onPress={() => setFeeCourtType(ct)}
+                  >
+                    <Text style={[styles.optionChipText, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{ct}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <Text style={[styles.label, { color: colors.foreground }]}>Case Type</Text>
             <View style={styles.optionsGrid}>
-              {COURT_CASE_TYPES.map((ct) => (
-                <Pressable
-                  key={ct}
-                  style={[styles.optionChip, { backgroundColor: feeCaseType === ct ? '#C9A84C20' : colors.card, borderColor: feeCaseType === ct ? '#C9A84C' : colors.border }]}
-                  onPress={() => setFeeCaseType(ct)}
-                >
-                  <Text style={[styles.optionChipText, { color: feeCaseType === ct ? '#C9A84C' : colors.foreground }]}>{ct}</Text>
-                </Pressable>
-              ))}
+              {COURT_CASE_TYPES.map((ct) => {
+                const isSelected = feeCaseType === ct;
+                return (
+                  <Pressable
+                    key={ct}
+                    style={[
+                      styles.optionChip,
+                      { backgroundColor: isSelected ? '#C9A84C20' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border }
+                    ]}
+                    onPress={() => setFeeCaseType(ct)}
+                  >
+                    <Text style={[styles.optionChipText, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{ct}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <Text style={[styles.label, { color: colors.foreground }]}>Claim / Suit Value (₹)</Text>
@@ -255,15 +274,12 @@ export default function CalculatorScreen() {
               keyboardType="numeric"
             />
 
-            <Pressable
-              style={[styles.calcBtn, ((!feeCourtType || !feeCaseType) || courtFeePending) && { opacity: 0.5 }]}
+            <Button
+              title={courtFeePending ? "Calculating Fee..." : "Calculate Fee"}
+              variant="primary"
               onPress={handleCourtFee}
-              disabled={!feeCourtType || !feeCaseType || courtFeePending}
-            >
-              {courtFeePending
-                ? <ActivityIndicator color="#070D24" />
-                : <><Feather name="dollar-sign" size={18} color="#070D24" /><Text style={styles.calcBtnText}>Calculate Fee</Text></>}
-            </Pressable>
+              style={[((!feeCourtType || !feeCaseType) || courtFeePending) && { opacity: 0.5 }, styles.calcButtonCustom]}
+            />
 
             {courtFeeError && (
               <Text style={styles.errorText}>
@@ -272,7 +288,7 @@ export default function CalculatorScreen() {
             )}
 
             {feeResult && (
-              <View style={[styles.resultCard, { backgroundColor: colors.card }]}>
+              <Card style={styles.resultCard}>
                 <View style={styles.feeTotal}>
                   <Text style={[styles.feeTotalLabel, { color: colors.mutedForeground }]}>Total Court Fee</Text>
                   <Text style={styles.feeTotalValue}>₹{(feeResult.totalFee as number).toLocaleString('en-IN')}</Text>
@@ -289,7 +305,7 @@ export default function CalculatorScreen() {
                   </View>
                 ))}
                 <Text style={[styles.resultNotes, { color: colors.mutedForeground, marginTop: 10 }]}>{feeResult.description}</Text>
-              </View>
+              </Card>
             )}
           </>
         )}
@@ -313,9 +329,8 @@ const styles = StyleSheet.create({
   optionChip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1.5 },
   optionChipText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
   input: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, height: 48, fontFamily: 'Inter_400Regular', fontSize: 15, marginBottom: 20 },
-  calcBtn: { backgroundColor: '#C9A84C', borderRadius: 14, height: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20 },
-  calcBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#070D24' },
-  resultCard: { borderRadius: 16, padding: 18, gap: 10 },
+  calcButtonCustom: { marginVertical: 0, marginBottom: 20, backgroundColor: '#C9A84C' },
+  resultCard: { marginVertical: 0, marginBottom: 20, gap: 10 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   resultMainValue: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#C9A84C' },
   resultMainLabel: { fontFamily: 'Inter_400Regular', fontSize: 13 },
