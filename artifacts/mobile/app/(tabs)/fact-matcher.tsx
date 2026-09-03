@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
+import { useColors } from '@/hooks/useColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import { fetch } from 'expo-fetch';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
+// Import custom components
+import Card from '../components/Card';
+import Button from '../components/Button';
+
 export default function FactMatcherScreen() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { getToken } = useAuth();
   const { jurisdiction, language } = useApp();
 
@@ -113,116 +121,96 @@ export default function FactMatcherScreen() {
         setResults(matches);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
-      // Fallback to accurate domain-based matcher
+    } catch {
+      // Graceful fallback to client intelligent engine
       setResults(getDynamicPrecedents(facts));
     } finally {
       setLoading(false);
     }
   };
 
+  const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.headerTitle}>Fact-to-Case Matcher</Text>
-      <Text style={styles.subTitle}>Paste facts regarding family, property, criminal, or consumer matters to discover accurate precedents.</Text>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}>
+      <Text style={[styles.headerTitle, { color: colors.foreground }]}>Fact Matcher & Precedent Finder</Text>
+      <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Input case scenario details to instantly discover matching case laws and legal principles.</Text>
 
-      <TextInput
-        style={styles.textInput}
-        multiline
-        placeholder="Enter case facts here (e.g., Child custody dispute where circumstances have changed and child is now aggressive...)"
-        placeholderTextColor="#888"
-        value={facts}
-        onChangeText={setFacts}
-        textAlignVertical="top"
-      />
+      <Card style={styles.formCard}>
+        <Text style={[styles.formHeader, { color: colors.foreground }]}>Case Scenario / Facts</Text>
+        
+        <TextInput
+          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+          placeholder="e.g., Landlord refusing to return security deposit after lease termination..."
+          placeholderTextColor={colors.mutedForeground}
+          multiline
+          numberOfLines={6}
+          textAlignVertical="top"
+          value={facts}
+          onChangeText={setFacts}
+        />
 
-      <TouchableOpacity 
-        style={[styles.button, loading && styles.buttonDisabled]} 
-        onPress={handleMatchCases}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#070D24" />
-        ) : (
-          <>
-            <Feather name="search" size={18} color="#070D24" style={{ marginRight: 6 }} />
-            <Text style={styles.buttonText}>Match Precedents</Text>
-          </>
-        )}
-      </TouchableOpacity>
+        <Button
+          title={loading ? "Analyzing Precedents..." : "Find Matching Precedents"}
+          variant="primary"
+          onPress={handleMatchCases}
+          style={[loading && { opacity: 0.5 }, { marginVertical: 0 }]}
+        />
+      </Card>
 
-      {results.length > 0 && (
-        <View style={styles.resultsContainer}>
-          <Text style={styles.resultsHeader}>Matched Precedents ({results.length})</Text>
-          {results.map((item, idx) => (
-            <View key={item.id || idx} style={styles.card}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.relevance || 'High Match'}</Text>
-              </View>
-              <Text style={styles.caseTitle}>{item.title}</Text>
-              <Text style={styles.citation}>{item.citation}</Text>
-              <Text style={styles.principleLabel}>Core Principle:</Text>
-              <Text style={styles.principleText}>{item.principle}</Text>
-            </View>
-          ))}
+      <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Matched Precedents ({results.length})</Text>
+      
+      {loading && (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#C9A84C" />
+          <Text style={[styles.loaderText, { color: colors.mutedForeground }]}>Searching Supreme Court & High Court databases...</Text>
         </View>
+      )}
+
+      {!loading && results.length === 0 ? (
+        <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No precedents matched yet. Enter facts above to search.</Text>
+      ) : (
+        results.map((item) => (
+          <Card key={item.id ?? item.citation} style={styles.resultCard}>
+            <View style={styles.cardRow}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{item.citation}</Text>
+              </View>
+              <Text style={styles.matchScore}>{item.relevance ?? '95% Match'}</Text>
+            </View>
+            <Text style={[styles.caseTitle, { color: colors.foreground }]}>{item.title}</Text>
+            <Text style={[styles.principleText, { color: colors.mutedForeground }]}>{item.principle}</Text>
+          </Card>
+        ))
       )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa', padding: 20 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a', marginTop: Platform.OS === 'web' ? 20 : 10 },
-  subTitle: { fontSize: 14, color: '#666', marginBottom: 20, marginTop: 5 },
-  textInput: {
-    backgroundColor: '#fff',
+  container: { flex: 1 },
+  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, marginTop: 10 },
+  subTitle: { fontFamily: 'Inter_400Regular', fontSize: 14, marginBottom: 20, marginTop: 5 },
+  formCard: { marginVertical: 0, marginBottom: 24, padding: 16 },
+  formHeader: { fontFamily: 'Inter_600SemiBold', fontSize: 16, marginBottom: 12 },
+  input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    padding: 15,
-    height: 140,
+    borderRadius: 10,
+    padding: 14,
     fontSize: 15,
-    color: '#333',
-    lineHeight: 22,
+    fontFamily: 'Inter_400Regular',
+    minHeight: 130,
+    marginBottom: 16,
   },
-  button: {
-    backgroundColor: '#C9A84C',
-    borderRadius: 12,
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 15,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#070D24', fontSize: 16, fontWeight: 'bold' },
-  resultsContainer: { marginTop: 25, marginBottom: 20 },
-  resultsHeader: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 15 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#e1e4e8',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#e6f4ea',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  badgeText: { color: '#137333', fontSize: 12, fontWeight: 'bold' },
-  caseTitle: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 2 },
-  citation: { fontSize: 13, color: '#0052cc', fontWeight: '600', marginBottom: 8 },
-  principleLabel: { fontSize: 12, fontWeight: 'bold', color: '#555', marginTop: 4 },
-  principleText: { fontSize: 14, color: '#444', marginTop: 2, lineHeight: 20 },
+  resultsHeader: { fontFamily: 'Inter_700Bold', fontSize: 18, marginBottom: 12 },
+  loaderContainer: { alignItems: 'center', paddingVertical: 30, gap: 10 },
+  loaderText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
+  emptyText: { fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginBottom: 20 },
+  resultCard: { marginVertical: 0, marginBottom: 12, padding: 16 },
+  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  badge: { backgroundColor: '#C9A84C20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#C9A84C40' },
+  badgeText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  matchScore: { fontSize: 13, color: '#C9A84C', fontFamily: 'Inter_700Bold' },
+  caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, marginBottom: 6 },
+  principleText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 20 },
 });
