@@ -1,172 +1,114 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, Alert, Platform, Modal, Pressable } from 'react-native';
+import {
+  View, Text, ScrollView, Pressable, StyleSheet,
+  Platform, Alert, Modal,
+} from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth, useUser } from '@clerk/expo';
-import { useApp } from '@/context/AppContext';
 import { Feather } from '@expo/vector-icons';
+import { useUser, useClerk } from '@clerk/expo';
+import { useRouter } from 'expo-router';
+import * as Haps from 'expo-haptics';
 import * as Haptics from 'expo-haptics';
-
-// Import custom components
-import Card from '../components/Card';
-import Button from '../components/Button';
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
+  const router = useRouter();
   const { user } = useUser();
-  const { jurisdiction, setJurisdiction, language } = useApp();
+  const { signOut } = useClerk();
 
-  // State to control Modals
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showDevModal, setShowDevModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
+
+  const firstName = user?.firstName ?? 'Counselor';
+  const lastName = user?.lastName ?? '';
+  const email = user?.emailAddresses?.[0]?.emailAddress ?? 'counsel@lawvise.com';
 
   const handleSignOut = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      await signOut();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      Alert.alert('Sign Out Failed', 'Could not sign out. Please try again.');
-    }
+    Haps.impactAsync(Haps.ImpactFeedbackStyle.Medium);
+    await signOut();
+    router.replace('/(auth)/sign-in');
   };
-
-  const handleJurisdictionChange = (newJurisdiction: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setJurisdiction(newJurisdiction);
-    Alert.alert('Jurisdiction Updated', `Default jurisdiction set to ${newJurisdiction}.`);
-  };
-
-  const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView 
-        style={[styles.container, { backgroundColor: colors.background }]} 
-        contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
-        showsVerticalScrollIndicator={false}
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={{ paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 16), paddingBottom: insets.bottom + 100 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Account & Settings</Text>
+      </View>
+
+      {/* User Info Card */}
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <View style={styles.avatarLarge}>
+          <Text style={styles.avatarLargeText}>
+            {firstName.charAt(0).toUpperCase()}{lastName.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <Text style={[styles.profileName, { color: colors.foreground }]}>{firstName} {lastName}</Text>
+        <Text style={[styles.profileEmail, { color: colors.mutedForeground }]}>{email}</Text>
+      </View>
+
+      {/* Professional Tier & Upgrade Card */}
+      <View style={[styles.card, { borderColor: '#C9A84C40', backgroundColor: '#C9A84C10', borderWidth: 1 }]}>
+        <View style={styles.profileHeaderRow}>
+          <View style={[styles.avatarContainer, { backgroundColor: '#C9A84C30' }]}>
+            <Feather name="award" size={24} color="#C9A84C" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.profileName, { color: colors.foreground, textAlign: 'left', fontSize: 16 }]}>Professional Counsel Tier</Text>
+            <Text style={[styles.profileEmail, { color: '#C9A84C', textAlign: 'left', marginTop: 2 }]}>Unlock Unlimited Vault & AI Drafting</Text>
+          </View>
+        </View>
+        <Pressable 
+          style={styles.upgradeButton}
+          onPress={() => {
+            Haptics.selectionAsync();
+            setShowPaywallModal(true);
+          }}
+        >
+          <Text style={styles.upgradeButtonText}>Upgrade / Select Plan</Text>
+        </Pressable>
+      </View>
+
+      {/* Navigation Options */}
+      <View style={[styles.card, { backgroundColor: colors.card, padding: 0, overflow: 'hidden' }]}>
+        <Pressable
+          style={styles.menuItem}
+          onPress={() => { Haps.selectionAsync(); setShowTermsModal(true); }}
+        >
+          <Feather name="shield" size={18} color="#C9A84C" />
+          <Text style={[styles.menuText, { color: colors.foreground }]}>Privacy Policy & Terms of Service</Text>
+          <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+        </Pressable>
+
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+        <Pressable
+          style={styles.menuItem}
+          onPress={() => { Haps.selectionAsync(); setShowAboutModal(true); }}
+        >
+          <Feather name="info" size={18} color="#C9A84C" />
+          <Text style={[styles.menuText, { color: colors.foreground }]}>About Developer</Text>
+          <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+        </Pressable>
+      </View>
+
+      {/* Sign Out */}
+      <Pressable
+        style={[styles.signOutBtn, { backgroundColor: colors.card }]}
+        onPress={handleSignOut}
       >
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Executive Profile</Text>
-        <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Manage your account credentials, legal jurisdictions, and preferences.</Text>
+        <Feather name="log-out" size={18} color="#EF4444" />
+        <Text style={styles.signOutText}>Sign Out</Text>
+      </Pressable>
 
-        {/* User Info Card */}
-        <Card style={styles.sectionCard}>
-          <View style={styles.profileHeaderRow}>
-            <View style={styles.avatarContainer}>
-              <Feather name="user" size={28} color="#C9A84C" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.profileName, { color: colors.foreground }]}>
-                {user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? 'Legal Practitioner'}
-              </Text>
-              <Text style={[styles.profileEmail, { color: colors.mutedForeground }]}>
-                {user?.primaryEmailAddress?.emailAddress ?? 'advocate@lawwise.com'}
-              </Text>
-            </View>
-          </View>
-          <View style={[styles.badgeRow, { borderColor: colors.border }]}>
-            <Feather name="shield" size={14} color="#C9A84C" />
-            <Text style={styles.badgeLabel}>Verified Enterprise Counsel</Text>
-          </View>
-        </Card>
-
-        {/* Preferences Section */}
-        <Text style={[styles.sectionHeader, { color: colors.foreground }]}>Default Jurisdiction</Text>
-        <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>Select your primary jurisdiction for automated drafting & research.</Text>
-        
-        <View style={styles.jurisdictionRow}>
-          {['Supreme Court', 'High Court', 'District Court'].map((j) => {
-            const isSelected = jurisdiction === j;
-            return (
-              <Card
-                key={j}
-                onPress={() => handleJurisdictionChange(j)}
-                style={[
-                  styles.jurisdictionCard,
-                  isSelected && { backgroundColor: '#C9A84C20', borderColor: '#C9A84C' }
-                ]}
-              >
-                <Feather 
-                  name={isSelected ? "check-circle" : "circle"} 
-                  size={16} 
-                  color={isSelected ? "#C9A84C" : colors.mutedForeground} 
-                />
-                <Text style={[styles.jurisdictionText, { color: isSelected ? '#C9A84C' : colors.foreground }]}>
-                  {j}
-                </Text>
-              </Card>
-            );
-          })}
-        </View>
-
-        {/* App Settings info */}
-        <Text style={[styles.sectionHeader, { color: colors.foreground, marginTop: 10 }]}>System Configuration</Text>
-        
-        <Card style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoLabelRow}>
-              <Feather name="globe" size={16} color="#C9A84C" />
-              <Text style={[styles.infoLabel, { color: colors.foreground }]}>Active Language</Text>
-            </View>
-            <Text style={[styles.infoValue, { color: colors.mutedForeground }]}>{language ?? 'English'}</Text>
-          </View>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <View style={styles.infoRow}>
-            <View style={styles.infoLabelRow}>
-              <Feather name="cpu" size={16} color="#C9A84C" />
-              <Text style={[styles.infoLabel, { color: colors.foreground }]}>Lyria AI Engine</Text>
-            </View>
-            <Text style={[styles.infoValue, { color: '#C9A84C' }]}>Connected v3.2</Text>
-          </View>
-        </Card>
-
-        {/* Account & Compliance Action Links */}
-        <Text style={[styles.sectionHeader, { color: colors.foreground, marginTop: 10 }]}>Account & Compliance</Text>
-        <Card style={styles.infoCard}>
-          <Pressable 
-            style={styles.infoRow} 
-            onPress={() => {
-              Haptics.selectionAsync();
-              setShowTermsModal(true);
-            }}
-          >
-            <View style={styles.infoLabelRow}>
-              <Feather name="shield" size={16} color="#C9A84C" />
-              <Text style={[styles.infoLabel, { color: colors.foreground }]}>Privacy & Terms of Service</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-          </Pressable>
-
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-          <Pressable 
-            style={styles.infoRow} 
-            onPress={() => {
-              Haptics.selectionAsync();
-              setShowDevModal(true);
-            }}
-          >
-            <View style={styles.infoLabelRow}>
-              <Feather name="code" size={16} color="#C9A84C" />
-              <Text style={[styles.infoLabel, { color: colors.foreground }]}>About Developer & System</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-          </Pressable>
-        </Card>
-
-        {/* Sign Out Button */}
-        <View style={{ marginTop: 24 }}>
-          <Button
-            title="Sign Out of Session"
-            variant="outline"
-            onPress={handleSignOut}
-            style={styles.signOutButton}
-          />
-        </View>
-      </ScrollView>
-
-      {/* Privacy & Terms Compliance Modal */}
+      {/* Privacy Policy & Terms Modal */}
       <Modal
         visible={showTermsModal}
         animationType="slide"
@@ -175,116 +117,153 @@ export default function ProfileScreen() {
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Privacy & Legal Disclaimers</Text>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Privacy & Terms</Text>
             <Pressable onPress={() => setShowTermsModal(false)} style={styles.closeBtn}>
               <Feather name="x" size={22} color={colors.foreground} />
             </Pressable>
           </View>
-
-          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-            <Text style={[styles.termsHeading, { color: '#C9A84C' }]}>1. Professional AI Legal Disclaimer</Text>
+          <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
+            <Text style={[styles.termsHeading, { color: colors.foreground }]}>Privacy Policy</Text>
             <Text style={[styles.termsText, { color: colors.mutedForeground }]}>
-              LawVise is an AI-powered legal assistant designed to accelerate drafting, case analysis, and legal research. Content generated by LawVise does not constitute formal legal advice, structural representation, or create an attorney-client privilege. Licensed legal practitioners must review all outputs before court submission.
+              LawVise respects your professional confidentiality. All documents analyzed or stored in your Secure Document Vault are encrypted using industry-standard protocols. We do not sell or share your legal data with third-party vendors.
             </Text>
-
-            <Text style={[styles.termsHeading, { color: '#C9A84C' }]}>2. Multi-Jurisdictional Compliance</Text>
+            <Text style={[styles.termsHeading, { color: colors.foreground, marginTop: 20 }]}>Terms of Service</Text>
             <Text style={[styles.termsText, { color: colors.mutedForeground }]}>
-              While LawVise adapts workflows across international jurisdictions (including US, UK, UAE, and India), local statutory updates and regional bar council regulations supersede automated templates. Verification by local qualified counsel is strongly advised.
+              LawVise provides AI-assisted legal research, drafting, and document analysis tools. Outputs generated by the platform are designed to assist legal practitioners and do not constitute formal legal counsel. Attorneys remain responsible for final filings and review.
             </Text>
-
-            <Text style={[styles.termsHeading, { color: '#C9A84C' }]}>3. Data Privacy & Vault Security</Text>
-            <Text style={[styles.termsText, { color: colors.mutedForeground }]}>
-              All documents stored in your Document Vault or analyzed through our secure endpoints comply with industrial data encryption standards. We do not use confidential client case files to train public foundational models.
-            </Text>
-
-            <View style={{ marginTop: 30 }}>
-              <Button
-                title="Acknowledge & Close"
-                variant="primary"
-                onPress={() => setShowTermsModal(false)}
-              />
-            </View>
           </ScrollView>
         </View>
       </Modal>
 
-      {/* Developer Details Modal */}
+      {/* About Developer Modal */}
       <Modal
-        visible={showDevModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowDevModal(false)}
+        visible={showAboutModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAboutModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.devModalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.devModalHeader}>
-              <Feather name="cpu" size={24} color="#C9A84C" />
-              <Text style={[styles.devModalTitle, { color: colors.foreground }]}>Developer & System Details</Text>
-              <Pressable onPress={() => setShowDevModal(false)}>
-                <Feather name="x" size={20} color={colors.mutedForeground} />
-              </Pressable>
-            </View>
-
-            <Text style={[styles.devText, { color: colors.mutedForeground }]}>
-              <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>LawVise Engine v1.0.0</Text>{"\n"}
-              Engineered for global legal compliance across the US, UK, UAE, and India. Powered by high-performance multi-jurisdictional AI routing and secure cloud encryption architectures.
-            </Text>
-
-            <View style={[styles.devInfoBox, { borderColor: colors.border }]}>
-              <Text style={[styles.devInfoText, { color: colors.foreground }]}>Lead Architect & Developer</Text>
-              <Text style={[styles.devInfoValue, { color: '#C9A84C' }]}>Enterprise Legal Tech Division</Text>
-            </View>
-
-            <Pressable 
-              style={styles.devCloseButton}
-              onPress={() => setShowDevModal(false)}
-            >
-              <Text style={styles.devCloseButtonText}>Close Details</Text>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>About Developer</Text>
+            <Pressable onPress={() => setShowAboutModal(false)} style={styles.closeBtn}>
+              <Feather name="x" size={22} color={colors.foreground} />
             </Pressable>
           </View>
+          <ScrollView contentContainerStyle={{ padding: 20, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+            <View style={[styles.avatarLarge, { marginBottom: 16 }]}>
+              <Feather name="code" size={32} color="#070D24" />
+            </View>
+            <Text style={[styles.profileName, { color: colors.foreground, fontSize: 18 }]}>LawVise Engineering</Text>
+            <Text style={[styles.profileEmail, { color: '#C9A84C', marginTop: 4 }]}>Multi-Jurisdictional Legal Intelligence</Text>
+            <Text style={[styles.termsText, { color: colors.mutedForeground, textAlign: 'center', marginTop: 20, lineHeight: 22 }]}>
+              LawVise is engineered to empower legal professionals globally across US, UK, UAE, and Indian jurisdictions. Combining state-of-the-art AI reasoning with airtight secure vault storage, LawVise optimizes drafting, case analysis, and research workflows.
+            </Text>
+          </ScrollView>
         </View>
       </Modal>
-    </View>
+
+      {/* Subscription Paywall Modal with UPI, Cards, and Wallets */}
+      <Modal
+        visible={showPaywallModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowPaywallModal(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Select Payment Method</Text>
+            <Pressable onPress={() => setShowPaywallModal(false)} style={styles.closeBtn}>
+              <Feather name="x" size={22} color={colors.foreground} />
+            </Pressable>
+          </View>
+
+          <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} showsVerticalScrollIndicator={false}>
+            <Text style={[styles.termsText, { color: colors.mutedForeground }]}>
+              Choose your preferred billing method for LawVise Professional Access across US, UK, UAE, and India jurisdictions.
+            </Text>
+
+            {/* UPI Option */}
+            <Pressable 
+              style={[styles.paymentOptionCard, { backgroundColor: colors.card, borderColor: '#C9A84C' }]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                Alert.alert('UPI Gateway', 'Redirecting to secure UPI / Razorpay checkout...');
+                setShowPaywallModal(false);
+              }}
+            >
+              <Feather name="smartphone" size={22} color="#C9A84C" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.paymentTitle, { color: colors.foreground }]}>UPI & Domestic Wallets</Text>
+                <Text style={[styles.paymentDesc, { color: colors.mutedForeground }]}>Google Pay, PhonePe, Paytm, BHIM</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+            </Pressable>
+
+            {/* Debit & Credit Cards Option */}
+            <Pressable 
+              style={[styles.paymentOptionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                Alert.alert('Card Gateway', 'Redirecting to secure card processor (Debit & Credit cards supported)...');
+                setShowPaywallModal(false);
+              }}
+            >
+              <Feather name="credit-card" size={22} color="#C9A84C" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.paymentTitle, { color: colors.foreground }]}>Debit & Credit Cards</Text>
+                <Text style={[styles.paymentDesc, { color: colors.mutedForeground }]}>Visa, MasterCard, RuPay, Maestro, Amex</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+            </Pressable>
+
+            {/* International Digital Wallets Option */}
+            <Pressable 
+              style={[styles.paymentOptionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                Alert.alert('Digital Wallet', 'Connecting to Apple Pay / Google Pay checkout...');
+                setShowPaywallModal(false);
+              }}
+            >
+              <Feather name="shield" size={22} color="#C9A84C" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.paymentTitle, { color: colors.foreground }]}>Apple Pay & Google Pay</Text>
+                <Text style={[styles.paymentDesc, { color: colors.mutedForeground }]}>One-touch secure biometric checkout</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+            </Pressable>
+          </ScrollView>
+        </View>
+      </Modal>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, marginTop: 10 },
-  subTitle: { fontFamily: 'Inter_400Regular', fontSize: 14, marginBottom: 20, marginTop: 5 },
-  sectionCard: { marginVertical: 0, marginBottom: 24, padding: 18 },
-  profileHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 },
-  avatarContainer: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#C9A84C20', borderWidth: 1, borderColor: '#C9A84C40', alignItems: 'center', justifyContent: 'center' },
-  profileName: { fontFamily: 'Inter_700Bold', fontSize: 18 },
-  profileEmail: { fontFamily: 'Inter_400Regular', fontSize: 13, marginTop: 2 },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, borderTopWidth: 1, paddingTop: 12, marginTop: 4 },
-  badgeLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#C9A84C' },
-  sectionHeader: { fontFamily: 'Inter_700Bold', fontSize: 16, marginBottom: 4 },
-  sectionSub: { fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 12 },
-  jurisdictionRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  jurisdictionCard: { flex: 1, marginVertical: 0, padding: 12, alignItems: 'center', gap: 6 },
-  jurisdictionText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, textAlign: 'center' },
-  infoCard: { marginVertical: 0, marginBottom: 24, padding: 16, gap: 12 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoLabel: { fontFamily: 'Inter_500Medium', fontSize: 14 },
-  infoValue: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
+  header: { paddingHorizontal: 20, marginBottom: 16 },
+  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 22 },
+  card: { marginHorizontal: 20, borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 16 },
+  avatarLarge: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  avatarLargeText: { fontFamily: 'Inter_700Bold', fontSize: 24, color: '#070D24' },
+  profileName: { fontFamily: 'Inter_700Bold', fontSize: 16, textAlign: 'center' },
+  profileEmail: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', marginTop: 2 },
+  profileHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 14, width: '100%', marginBottom: 14 },
+  avatarContainer: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  upgradeButton: { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, width: '100%', alignItems: 'center' },
+  upgradeButtonText: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#070D24' },
+  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 16, width: '100%', gap: 14 },
+  menuText: { fontFamily: 'Inter_500Medium', fontSize: 14, flex: 1 },
   divider: { height: 1, width: '100%' },
-  signOutButton: { borderColor: '#EF444460', backgroundColor: '#EF444415' },
+  signOutBtn: { marginHorizontal: 20, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  signOutText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#EF4444' },
   modalContainer: { flex: 1 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1 },
   modalTitle: { fontFamily: 'Inter_700Bold', fontSize: 18 },
   closeBtn: { padding: 4 },
-  termsHeading: { fontFamily: 'Inter_600SemiBold', fontSize: 15, marginTop: 16, marginBottom: 6 },
+  termsHeading: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 8 },
   termsText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 20 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  devModalContent: { width: '100%', maxWidth: 360, borderRadius: 16, borderWidth: 1, padding: 20, gap: 16 },
-  devModalHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  devModalTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, flex: 1 },
-  devText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 20 },
-  devInfoBox: { padding: 12, borderRadius: 10, borderWidth: 1, gap: 4 },
-  devInfoText: { fontFamily: 'Inter_400Regular', fontSize: 11 },
-  devInfoValue: { fontFamily: 'Inter_700Bold', fontSize: 13 },
-  devCloseButton: { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  devCloseButtonText: { fontFamily: 'Inter_700Bold', fontSize: 14, color: '#070D24' },
+  paymentOptionCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, borderWidth: 1, gap: 14 },
+  paymentTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  paymentDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
 });
