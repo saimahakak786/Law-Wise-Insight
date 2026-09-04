@@ -11,6 +11,7 @@ import { useGetDocuments, useGetCases } from '@workspace/api-client-react';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import JurisdictionSelector from '@/components/JurisdictionSelector';
 
 const QUICK_ACTIONS = [
   { id: 'analyze', label: 'Analyze\nDocument', icon: 'file-text' as const, route: '/(tabs)/analyze' },
@@ -19,13 +20,6 @@ const QUICK_ACTIONS = [
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
   { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research' },
 ];
-
-const DOC_TYPE_ICONS: Record<string, string> = {
-  Contract: 'file-text',
-  Judgment: 'award',
-  FIR: 'alert-triangle',
-  'Court Order': 'bookmark',
-};
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -59,6 +53,9 @@ export default function HomeScreen() {
           <Text style={styles.avatarText}>{firstName.charAt(0).toUpperCase()}</Text>
         </LinearGradient>
       </View>
+
+      {/* Jurisdiction Selector */}
+      <JurisdictionSelector />
 
       {/* Hero Banner */}
       <LinearGradient
@@ -157,7 +154,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 20 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 },
   greeting: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#8B9CC5' },
   name: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   avatarBadge: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
