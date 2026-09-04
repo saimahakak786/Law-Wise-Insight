@@ -76,6 +76,24 @@ export default function HomeScreen() {
         <Feather name="shield" size={64} color="#C9A84C" style={{ opacity: 0.3 }} />
       </LinearGradient>
 
+      {/* Secure Document Vault Banner */}
+      <Pressable
+        style={({ pressed }) => [styles.vaultBanner, { backgroundColor: colors.card, opacity: pressed ? 0.9 : 1 }]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.push('/(tabs)/cases' as any);
+        }}
+      >
+        <View style={styles.vaultIconBg}>
+          <Feather name="folder" size={22} color="#C9A84C" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.vaultTitle, { color: colors.foreground }]}>Secure Document Vault</Text>
+          <Text style={[styles.vaultDesc, { color: colors.mutedForeground }]}>Instant access to your saved case files & legal archives</Text>
+        </View>
+        <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+      </Pressable>
+
       {/* Stats */}
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: colors.card }]}>
@@ -161,13 +179,41 @@ const styles = StyleSheet.create({
   avatarText: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#070D24' },
   heroBanner: {
     marginHorizontal: 20, borderRadius: 16, padding: 20,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16,
   },
   heroLeft: { flex: 1 },
   heroTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#FFFFFF', marginBottom: 6 },
   heroSub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#8B9CC5', marginBottom: 14, lineHeight: 18 },
   heroBtn: { backgroundColor: '#C9A84C', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 16, alignSelf: 'flex-start' },
   heroBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#070D24' },
+  vaultBanner: {
+    marginHorizontal: 20,
+    borderRadius: 14,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#C9A84C30',
+  },
+  vaultIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#C9A84C18',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vaultTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+  },
+  vaultDesc: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    marginTop: 2,
+  },
   statsRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 24 },
   statCard: { flex: 1, borderRadius: 12, padding: 14, alignItems: 'center' },
   statNum: { fontFamily: 'Inter_700Bold', fontSize: 22 },
