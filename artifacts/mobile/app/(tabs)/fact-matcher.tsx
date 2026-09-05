@@ -9,9 +9,10 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 // Import custom components and your Pro Tier Upgrade Modal
-import Card from '../components/Card';
-import Button from '../components/Button';
-import UpgradeModal from '../components/UpgradeModal';
+import Card from '../../components/Card';
+import Button from '../../components/Button';
+import UpgradeModal from '../../components/UpgradeModal';
+
 
 export default function FactMatcherScreen() {
   const colors = useColors();
