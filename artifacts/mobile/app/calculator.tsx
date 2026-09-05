@@ -12,8 +12,10 @@ import { useApp } from '@/context/AppContext';
 import * as Haptics from 'expo-haptics';
 
 // Import custom components
-import Card from '../components/Card';
-import Button from '../components/Button';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+
+
 
 const LIMITATION_CASE_TYPES = [
   'Money suit / debt recovery', 'Cheque bounce (Section 138 NI Act)',
