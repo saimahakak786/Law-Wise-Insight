@@ -5,7 +5,8 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 // Import custom button component
-import Button from '../components/Button';
+import Button from '@/components/Button';
+
 
 export default function NotFoundScreen() {
   const handlePressHome = () => {
