@@ -9,8 +9,9 @@ import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 
 // Import custom components
-import Card from '../components/Card';
-import Button from '../components/Button';
+import Card from '../../components/Card';
+import Button from '../../components/Button';
+
 
 export default function CauseListScreen() {
   const colors = useColors();
