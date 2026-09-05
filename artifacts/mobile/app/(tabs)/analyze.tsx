@@ -17,7 +17,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 
 // Import your custom Upgrade Modal component
-import UpgradeModal from '../components/UpgradeModal';
+import UpgradeModal from '../../components/UpgradeModal';
+
 
 const DOC_TYPES = [
   'Contract', 'Judgment', 'FIR', 'Court Order', 'Legal Notice', 'Bail Application',
