@@ -19,7 +19,8 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 // Import custom components
-import Button from '../components/Button';
+import Button from '../../components/Button';
+
 
 WebBrowser.maybeCompleteAuthSession();
 
