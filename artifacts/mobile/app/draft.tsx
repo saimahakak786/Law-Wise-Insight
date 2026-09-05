@@ -17,11 +17,11 @@ import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import { useSaveDocument } from '@workspace/api-client-react';
 
-// Import custom components, VoiceDictation, and your new UpgradeModal
-import Card from '../components/Card';
-import Button from '../components/Button';
-import VoiceDictation from '../components/VoiceDictation';
-import UpgradeModal from '../components/UpgradeModal';
+
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import VoiceDictation from '@/components/VoiceDictation';
+import UpgradeModal from '@/components/UpgradeModal';
 
 const DOC_TYPES = [
   { id: 'legal_notice', label: 'Legal Notice', icon: 'alert-circle' },
