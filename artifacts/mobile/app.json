@@ -58,6 +58,7 @@
     },
     "backgroundColor": "#070024",
     "extra": {
+      "EXPO_PUBLIC_API_URL": "https://law-wise-insight.onrender.com",
       "eas": {
         "projectId": "992c7d24-c74c-4481-98df-31c2575db0f5"
       }
