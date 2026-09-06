@@ -1,65 +1,42 @@
 {
   "expo": {
-    "name": "Law-Wise",
+    "name": "Law Wise Insight",
     "slug": "law-wise-insight",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "lawwiseinsight",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#070024"
+      "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.lawwiseinsight"
     },
     "android": {
-      "package": "com.saimahakak786.lawwise"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.anonymous.lawwiseinsight"
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-secure-store",
-      "@clerk/expo",
-      [
-        "expo-router",
-        {
-          "origin": "https://law-wise-insight.onrender.com"
-        }
-      ],
-      "expo-font",
-      "expo-web-browser",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "packagingOptions": {
-              "pickFirst": [
-                "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-              ]
-            },
-            "gradleProperties": {
-              "org.gradle.jvmargs": "-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError"
-            }
-          }
-        }
-      ]
+      "expo-router"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
-    "androidStatusBar": {
-      "backgroundColor": "#070024",
-      "barStyle": "light-content"
-    },
-    "backgroundColor": "#070024",
     "extra": {
       "eas": {
-        "projectId": "992r7d24-c74c-4481-9bdf-31c2575d0bf5"
+        "projectId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
       }
     }
   }
