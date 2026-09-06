@@ -37,6 +37,7 @@ export default function SignUpPage() {
 
   const handleSignUp = async () => {
     if (!email || password.length < 8) return;
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const { error } = await signUp.password({ emailAddress: email, password });
     if (!error) {
