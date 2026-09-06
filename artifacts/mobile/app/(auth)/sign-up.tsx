@@ -36,7 +36,7 @@ export default function SignUpPage() {
   };
 
   const handleSignUp = async () => {
-    if (!email || !password) return;
+    if (!email || password.length < 8) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const { error } = await signUp.password({ emailAddress: email, password });
     if (!error) {
@@ -157,7 +157,7 @@ export default function SignUpPage() {
             style={[styles.inputField, { flex: 1 }]}
             value={password}
             onChangeText={setPassword}
-            placeholder="Create password"
+            placeholder="Create password (min 8 chars)"
             placeholderTextColor="#8B9CC5"
             secureTextEntry={!showPassword}
           />
@@ -165,6 +165,9 @@ export default function SignUpPage() {
             <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#8B9CC5" />
           </Pressable>
         </View>
+        {password.length > 0 && password.length < 8 && (
+          <Text style={styles.error}>Password must be at least 8 characters</Text>
+        )}
         {errors.fields.password && (
           <Text style={styles.error}>{errors.fields.password.message}</Text>
         )}
@@ -173,8 +176,8 @@ export default function SignUpPage() {
           title={fetchStatus === 'fetching' ? "Creating Account..." : "Create Account"}
           variant="primary"
           onPress={handleSignUp}
-          disabled={!email || !password || fetchStatus === 'fetching'}
-          style={[(!email || !password || fetchStatus === 'fetching') && styles.disabledBtn, { marginTop: 8 }]}
+          disabled={!email || password.length < 8 || fetchStatus === 'fetching'}
+          style={[(!email || password.length < 8 || fetchStatus === 'fetching') && styles.disabledBtn, { marginTop: 8 }]}
         />
 
         <Text style={styles.terms}>
