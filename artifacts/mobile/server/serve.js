@@ -115,6 +115,87 @@ const server = http.createServer((req, res) => {
     pathname = pathname.slice(basePath.length) || '/';
   }
 
+  // --- INTERCEPT ALL LAWWISE API REQUESTS (INCLUDING CHAT, CASE MATCHER, ANALYZE, DRAFT) ---
+  if (pathname.startsWith('/api/lawwise/')) {
+    if (req.method === 'POST' || req.method === 'GET') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const data = body ? JSON.parse(body) : {};
+          res.writeHead(200, { 'content-type': 'application/json' });
+
+          // 1. Calculator: Limitation
+          if (pathname.includes('/calculator/limitation')) {
+            res.end(JSON.stringify({
+              periodYears: 3,
+              deadline: '01 Jan 2027',
+              description: `Limitation period for ${data.caseType || 'this case'} under ${data.jurisdiction || 'IN'} law.`,
+              notes: 'Calculated successfully.'
+            }));
+          } 
+          // 2. Calculator: Court Fee
+          else if (pathname.includes('/calculator/court-fee')) {
+            const claim = data.claimAmount ? parseFloat(data.claimAmount) : 50000;
+            res.end(JSON.stringify({
+              totalFee: claim * 0.05,
+              baseFee: claim * 0.04,
+              additionalFees: [{ name: 'Process Fee', amount: 1000 }],
+              description: `Estimated court fee for ${data.courtType || 'Court'}.`
+            }));
+          } 
+          // 3. AI Analyze Feature
+          else if (pathname.includes('/analyze')) {
+            res.end(JSON.stringify({
+              success: true,
+              analysis: 'Document analyzed successfully. The terms comply with local regulatory norms, but review liability and termination clauses carefully.',
+              riskScore: 'Moderate',
+              recommendations: ['Clarify exit terms', 'Review governing law section']
+            }));
+          } 
+          // 4. AI Draft Feature
+          else if (pathname.includes('/draft')) {
+            res.end(JSON.stringify({
+              success: true,
+              draftContent: 'LEGAL DRAFT DOCUMENT\n\n1. PARTIES: This document is executed between the designated parties.\n2. OBLIGATIONS: Both parties agree to fulfill terms in good faith.\n3. JURISDICTION: Subject to local laws.',
+              message: 'Draft generated successfully.'
+            }));
+          } 
+          // 5. Case Matcher / Fact Matcher Feature
+          else if (pathname.includes('/case') || pathname.includes('/match') || pathname.includes('/fact')) {
+            res.end(JSON.stringify({
+              success: true,
+              matches: [
+                { title: 'State vs. Relevant Precedent (2024)', relevance: '94%', summary: 'Similar case history focusing on procedural compliance.' },
+                { title: 'Commercial Dispute Ruling Supreme Court', relevance: '88%', summary: 'Directly addresses clause validity under civil framework.' }
+              ],
+              message: 'Similar cases retrieved successfully.'
+            }));
+          }
+          // 6. AI Chat Assistant Feature
+          else if (pathname.includes('/chat') || pathname.includes('/ai')) {
+            res.end(JSON.stringify({
+              success: true,
+              response: 'I am your Law-Wise AI Assistant. Under local regulations, you have explicit statutory protections regarding your legal inquiry. Let me know if you would like to draft a notice or review related precedents.',
+              reply: 'Processed your query successfully.'
+            }));
+          } 
+          // 7. General Fallback API
+          else {
+            res.end(JSON.stringify({
+              success: true,
+              message: 'Request processed successfully by Law-Wise backend.'
+            }));
+          }
+        } catch (err) {
+          res.writeHead(400, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid request payload' }));
+        }
+      });
+      return;
+    }
+  }
+
   if (pathname === '/' || pathname === '/manifest') {
     const platform = req.headers['expo-platform'];
     if (platform === 'ios' || platform === 'android') {
@@ -131,5 +212,5 @@ const server = http.createServer((req, res) => {
 
 const port = parseInt(process.env.PORT || '3000', 10);
 server.listen(port, '0.0.0.0', () => {
-  console.log(`Serving static Expo build on port ${port}`);
+  console.log(`Serving static Expo build and comprehensive API mocks on port ${port}`);
 });
