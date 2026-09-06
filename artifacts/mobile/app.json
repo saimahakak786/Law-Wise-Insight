@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "LawWise",
+    "name": "Law-Wise",
     "slug": "law-wise-insight",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,13 +10,13 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#070D24"
+      "backgroundColor": "#070024"
     },
     "ios": {
       "supportsTablet": false
     },
     "android": {
-      "package": "com.saimahakak.lawwise"
+      "package": "com.saimahakak786.lawwise"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -27,8 +27,7 @@
       [
         "expo-router",
         {
-       "origin": "https://law-wise-insight.onrender.com"
-
+          "origin": "https://law-wise-insight.onrender.com"
         }
       ],
       "expo-font",
@@ -41,6 +40,9 @@
               "pickFirst": [
                 "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
               ]
+            },
+            "gradleProperties": {
+              "org.gradle.jvmargs": "-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError"
             }
           }
         }
@@ -51,13 +53,13 @@
       "reactCompiler": true
     },
     "androidStatusBar": {
-      "backgroundColor": "#070D24",
+      "backgroundColor": "#070024",
       "barStyle": "light-content"
     },
-    "backgroundColor": "#070D24",
+    "backgroundColor": "#070024",
     "extra": {
       "eas": {
-        "projectId": "992c7d24-c74c-4481-98df-31c2575db0f5"
+        "projectId": "992r7d24-c74c-4481-9bdf-31c2575d0bf5"
       }
     }
   }
