@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
+  const otpInputRef = useRef<TextInput>(null);
 
   const navigate = ({ decorateUrl }: { session?: unknown; decorateUrl: (url: string) => string }) => {
     const url = decorateUrl('/');
@@ -78,27 +79,53 @@ export default function SignUpPage() {
         <Text style={styles.subtitle}>
           We sent a 6-digit code to{'\n'}<Text style={{ color: '#C9A84C' }}>{email}</Text>
         </Text>
-        <TextInput
-          style={[styles.input, { marginTop: 8, textAlign: 'center', fontSize: 24, letterSpacing: 8 }]}
-          value={code}
-          onChangeText={setCode}
-          placeholder="000000"
-          placeholderTextColor="#8B9CC5"
-          keyboardType="numeric"
-          maxLength={6}
-          autoFocus
-        />
+
+        {/* Segmented OTP Boxes Container */}
+        <Pressable style={styles.otpContainer} onPress={() => otpInputRef.current?.focus()}>
+          <TextInput
+            ref={otpInputRef}
+            style={styles.hiddenInput}
+            value={code}
+            onChangeText={(text) => {
+              const cleaned = text.replace(/[^0-9]/g, '').slice(0, 6);
+              setCode(cleaned);
+            }}
+            keyboardType="number-format"
+            maxLength={6}
+            autoFocus
+          />
+          <View style={styles.boxesRow}>
+            {Array(6).fill(0).map((_, index) => {
+              const digit = code[index] || '';
+              const isFocused = code.length === index;
+
+              return (
+                <View 
+                  key={index} 
+                  style={[
+                    styles.otpBox, 
+                    isFocused && styles.otpBoxActive,
+                    digit !== '' && styles.otpBoxFilled
+                  ]}
+                >
+                  <Text style={styles.otpBoxText}>{digit}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </Pressable>
+
         {errors.fields.code && (
           <Text style={styles.error}>{errors.fields.code.message}</Text>
         )}
         
-        <View style={{ width: '100%', marginTop: 8 }}>
+        <View style={{ width: '100%', marginTop: 16 }}>
           <Button
             title={fetchStatus === 'fetching' ? "Verifying..." : "Verify & Continue"}
             variant="primary"
             onPress={handleVerify}
-            disabled={!code || fetchStatus === 'fetching'}
-            style={fetchStatus === 'fetching' ? styles.disabledBtn : undefined}
+            disabled={code.length < 6 || fetchStatus === 'fetching'}
+            style={code.length < 6 || fetchStatus === 'fetching' ? styles.disabledBtn : undefined}
           />
         </View>
 
@@ -222,19 +249,48 @@ const styles = StyleSheet.create({
   },
   inputIcon: { marginRight: 10 },
   inputField: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 15, color: '#FFFFFF' },
-  input: {
+  
+  /* OTP Segmented Box Styles */
+  otpContainer: {
     width: '100%',
-    backgroundColor: '#131D3D',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1B2448',
-    paddingHorizontal: 16,
-    height: 64,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 15,
-    color: '#FFFFFF',
-    marginBottom: 12,
+    marginBottom: 16,
+    alignItems: 'center',
   },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  boxesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: 320,
+  },
+  otpBox: {
+    width: 45,
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#1B2448',
+    backgroundColor: '#131D3D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpBoxActive: {
+    borderColor: '#C9A84C',
+  },
+  otpBoxFilled: {
+    borderColor: '#C9A84C',
+    backgroundColor: '#19244D',
+  },
+  otpBoxText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 22,
+    color: '#FFFFFF',
+  },
+
   eyeBtn: { padding: 4 },
   error: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#EF4444', marginBottom: 8, marginTop: -4 },
   disabledBtn: { opacity: 0.5 },
