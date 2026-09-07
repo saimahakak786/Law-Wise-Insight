@@ -111,17 +111,12 @@ function isTextMediaType(mediaType: string | null): boolean {
   );
 }
 
-// Use strict equality: in browsers, `response.body` is `null` when the
-// response genuinely has no content.  In React Native, `response.body` is
-// always `undefined` because the ReadableStream API is not implemented —
-// even when the response carries a full payload readable via `.text()` or
-// `.json()`.  Loose equality (`== null`) matches both `null` and `undefined`,
-// which causes every React Native response to be treated as empty.
+// Use loose equality to catch both `null` (browsers) and `undefined` (React Native).
 function hasNoBody(response: Response, method: string): boolean {
   if (method === "HEAD") return true;
   if (NO_BODY_STATUS.has(response.status)) return true;
   if (response.headers.get("content-length") === "0") return true;
-  if (response.body === null) return true;
+  if (response.body == null) return true;
   return false;
 }
 
@@ -295,73 +290,6 @@ async function parseSuccessBody(
   responseType: "json" | "text" | "blob" | "auto",
   requestInfo: { method: string; url: string },
 ): Promise<unknown> {
-  if (hasNoBody(response, requestInfo.method)) {
-    return null;
-  }
-
-  const effectiveType =
-    responseType === "auto" ? inferResponseType(response) : responseType;
-
-  switch (effectiveType) {
-    case "json":
-      return parseJsonBody(response, requestInfo);
-
-    case "text": {
-      const text = await response.text();
-      return text === "" ? null : text;
-    }
-
-    case "blob":
-      if (typeof response.blob !== "function") {
-        throw new TypeError(
-          "Blob responses are not supported in this runtime. " +
-            "Use responseType \"json\" or \"text\" instead.",
-        );
-      }
-      return response.blob();
-  }
-}
-
-export async function customFetch<T = unknown>(
-  input: RequestInfo | URL,
-  options: CustomFetchOptions = {},
-): Promise<T> {
-  input = applyBaseUrl(input);
-  const { responseType = "auto", headers: headersInit, ...init } = options;
-
-  const method = resolveMethod(input, init.method);
-
-  if (init.body != null && (method === "GET" || method === "HEAD")) {
-    throw new TypeError(`customFetch: ${method} requests cannot have a body.`);
-  }
-
-  const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
-
-  if (
-    typeof init.body === "string" &&
-    !headers.has("content-type") &&
-    looksLikeJson(init.body)
-  ) {
-    headers.set("content-type", "application/json");
-  }
-
-  if (responseType === "json" && !headers.has("accept")) {
-    headers.set("accept", DEFAULT_JSON_ACCEPT);
-  }
-
-  // Attach bearer token when an auth getter is configured and no
-  // Authorization header has been explicitly provided.
-  if (_authTokenGetter && !headers.has("authorization")) {
-    const token = await _authTokenGetter();
-    if (token) {
-      headers.set("authorization", `Bearer ${token}`);
-    }
-  }
-
-  const requestInfo = { method, url: resolveUrl(input) };
-
-  const response = await fetch(input, { ...init, method, headers });
-
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
     throw new ApiError(response, errorData, requestInfo);
