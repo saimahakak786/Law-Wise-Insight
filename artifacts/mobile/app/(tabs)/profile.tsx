@@ -10,6 +10,7 @@ import { useUser, useClerk } from '@clerk/expo';
 import { useRouter } from 'expo-router';
 import * as Haps from 'expo-haptics';
 import * as Haptics from 'expo-haptics';
+import AboutDeveloperModal from '@/components/AboutDeveloperModal';
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -135,32 +136,11 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      {/* About Developer Modal */}
-      <Modal
+      {/* About Developer Component Modal */}
+      <AboutDeveloperModal
         visible={showAboutModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowAboutModal(false)}
-      >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>About Developer</Text>
-            <Pressable onPress={() => setShowAboutModal(false)} style={styles.closeBtn}>
-              <Feather name="x" size={22} color={colors.foreground} />
-            </Pressable>
-          </View>
-          <ScrollView contentContainerStyle={{ padding: 20, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
-            <View style={[styles.avatarLarge, { marginBottom: 16 }]}>
-              <Feather name="code" size={32} color="#070D24" />
-            </View>
-            <Text style={[styles.profileName, { color: colors.foreground, fontSize: 18 }]}>LawVise Engineering</Text>
-            <Text style={[styles.profileEmail, { color: '#C9A84C', marginTop: 4 }]}>Multi-Jurisdictional Legal Intelligence</Text>
-            <Text style={[styles.termsText, { color: colors.mutedForeground, textAlign: 'center', marginTop: 20, lineHeight: 22 }]}>
-              LawVise is engineered to empower legal professionals globally across US, UK, UAE, and Indian jurisdictions. Combining state-of-the-art AI reasoning with airtight secure vault storage, LawVise optimizes drafting, case analysis, and research workflows.
-            </Text>
-          </ScrollView>
-        </View>
-      </Modal>
+        onClose={() => setShowAboutModal(false)}
+      />
 
       {/* Subscription Paywall Modal with UPI, Cards, and Wallets */}
       <Modal
@@ -265,5 +245,5 @@ const styles = StyleSheet.create({
   termsText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 20 },
   paymentOptionCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, borderWidth: 1, gap: 14 },
   paymentTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },
-  paymentDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
+  paymentDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 }
 });
