@@ -75,7 +75,13 @@ export default function HomeScreen() {
             <Text style={styles.heroBtnText}>Get Started</Text>
           </Pressable>
         </View>
-        <Feather name="shield" size={64} color="#C9A84C" style={{ opacity: 0.3 }} />
+        <LinearGradient
+          colors={['#C9A84C33', '#C9A84C11']}
+          style={styles.heroLogoBadge}
+        >
+          <Feather name="shield" size={36} color="#C9A84C" />
+          <Feather name="cpu" size={16} color="#E8C87A" style={styles.subLogoIcon} />
+        </LinearGradient>
       </LinearGradient>
 
       {/* Secure Document Vault Banner */}
@@ -188,6 +194,21 @@ const styles = StyleSheet.create({
   heroSub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#8B9CC5', marginBottom: 14, lineHeight: 18 },
   heroBtn: { backgroundColor: '#C9A84C', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 16, alignSelf: 'flex-start' },
   heroBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#070D24' },
+  heroLogoBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#C9A84C40',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  subLogoIcon: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+  },
   vaultBanner: {
     marginHorizontal: 20,
     borderRadius: 14,
