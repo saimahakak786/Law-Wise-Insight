@@ -47,13 +47,20 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>Good day,</Text>
           <Text style={styles.name}>{firstName}</Text>
         </View>
-        <LinearGradient
-          colors={['#C9A84C', '#E8C87A']}
-          style={styles.avatarBadge}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push('/(tabs)/profile' as any);
+          }}
         >
-          <Text style={styles.avatarText}>{firstName.charAt(0).toUpperCase()}</Text>
-        </LinearGradient>
+          <LinearGradient
+            colors={['#C9A84C', '#E8C87A']}
+            style={styles.avatarBadge}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          >
+            <Text style={styles.avatarText}>{firstName.charAt(0).toUpperCase()}</Text>
+          </LinearGradient>
+        </Pressable>
       </View>
 
       {/* Jurisdiction Selector */}
