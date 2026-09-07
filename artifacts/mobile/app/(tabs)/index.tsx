@@ -19,6 +19,8 @@ const QUICK_ACTIONS = [
   { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft' },
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
   { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research' },
+  { id: 'tracker', label: 'Case\nTracker', icon: 'briefcase' as const, route: '/(tabs)/cases' },
+  { id: 'matcher', label: 'Case\nMatcher', icon: 'git-commit' as const, route: '/(tabs)/fact-matcher' },
 ];
 
 export default function HomeScreen() {
