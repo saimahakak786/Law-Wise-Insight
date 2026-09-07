@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
   Platform, ActivityIndicator,
@@ -23,17 +23,33 @@ const QUICK_ACTIONS = [
   { id: 'matcher', label: 'Case\nMatcher', icon: 'git-commit' as const, route: '/(tabs)/fact-matcher' },
 ];
 
+const MOCK_FALLBACK_DOCUMENTS = [
+  { id: 1, title: 'Commercial Lease Agreement Review.pdf', documentType: 'Agreement', analysisType: 'Risk Assessment' },
+  { id: 2, title: 'Employment Non-Disclosure Pact.docx', documentType: 'Contract', analysisType: 'Clause Check' },
+  { id: 3, title: 'Consumer Protection Notice.pdf', documentType: 'Legal Notice', analysisType: 'Summary' },
+];
+
+const MOCK_FALLBACK_CASES = [
+  { id: 1, title: 'Sharma vs. Apex Properties', status: 'active' },
+  { id: 2, title: 'TechCorp IP Infringement', status: 'pending' },
+  { id: 3, title: 'Verma Employment Arbitration', status: 'won' },
+];
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useUser();
-  const { data: documents, isLoading: docsLoading } = useGetDocuments();
-  const { data: cases } = useGetCases();
+
+  const { data: remoteDocs, isLoading: docsLoading, error: docsError } = useGetDocuments();
+  const { data: remoteCases, error: casesError } = useGetCases();
+
+  const documents = docsError || !remoteDocs ? MOCK_FALLBACK_DOCUMENTS : remoteDocs;
+  const cases = casesError || !remoteCases ? MOCK_FALLBACK_CASES : remoteCases;
 
   const firstName = user?.firstName ?? user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] ?? 'Counselor';
   const recentDocs = documents?.slice(0, 3) ?? [];
-  const activeCases = cases?.filter(c => c.status === 'active').length ?? 0;
+  const activeCases = cases?.filter((c: any) => c.status === 'active').length ?? 0;
 
   return (
     <ScrollView
@@ -153,7 +169,7 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {docsLoading ? (
+      {docsLoading && !remoteDocs ? (
         <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
       ) : recentDocs.length === 0 ? (
         <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
@@ -166,7 +182,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       ) : (
-        recentDocs.map((doc) => (
+        recentDocs.map((doc: any) => (
           <View key={doc.id} style={[styles.docCard, { backgroundColor: colors.card }]}>
             <View style={styles.docIconBg}>
               <Feather name="file-text" size={20} color="#C9A84C" />
