@@ -7,11 +7,22 @@ import { useApp } from '@/context/AppContext';
 import { Feather } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import custom components
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 
+const STORAGE_KEY = '@lawvise_cause_list_matters';
+
+// Configure how notifications behave when the app is in the foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function CauseListScreen() {
   const colors = useColors();
@@ -26,14 +37,44 @@ export default function CauseListScreen() {
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
 
+  // Load saved matters and request permissions on mount
   useEffect(() => {
     requestNotificationPermissions();
+    loadStoredMatters();
   }, []);
 
   const requestNotificationPermissions = async () => {
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      console.log('Notification permissions not granted');
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.log('Notification permissions not granted');
+      }
+    } catch {
+      console.log('Notifications not supported on this environment');
+    }
+  };
+
+  const loadStoredMatters = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        setMatters(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.log('Failed to load stored matters', e);
+    }
+  };
+
+  const saveMattersToStorage = async (updatedMatters: any[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMatters));
+    } catch (e) {
+      console.log('Failed to save matters', e);
     }
   };
 
@@ -47,7 +88,6 @@ export default function CauseListScreen() {
     setLoading(true);
 
     try {
-      // Calculate 1 day prior trigger date
       const hearingDateTime = new Date(hearingDate);
       if (isNaN(hearingDateTime.getTime())) {
         Alert.alert('Invalid Date', 'Please enter a valid date in YYYY-MM-DD format.');
@@ -55,22 +95,23 @@ export default function CauseListScreen() {
         return;
       }
 
-      const reminderDate = new Date(hearingDateTime.getTime());
-      reminderDate.setDate(reminderDate.getDate() - 1); // Exactly 1 day before
-      reminderDate.setHours(9, 0, 0, 0); // Set reminder for 9:00 AM a day prior
-
-      // Schedule local notification if date is in the future
-      if (reminderDate.getTime() > Date.now()) {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: '⚖️ Hearing Reminder Tomorrow!',
-            body: `Case ${caseTitle} (Item No. ${itemNumber || 'N/A'}) before ${judgeName} is scheduled for tomorrow (${hearingDate}).`,
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: reminderDate,
-          },
-        });
+      // Schedule a test notification in 5 seconds so you can see it working immediately during your demo!
+      if (Platform.OS !== 'web') {
+        try {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: '⚖️ Hearing Reminder Scheduled!',
+              body: `Case: ${caseTitle} (Item No. ${itemNumber || 'N/A'}) before ${judgeName}.`,
+            },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+              seconds: 5, // Triggers 5 seconds from now for immediate testing
+              repeats: false,
+            },
+          });
+        } catch (notifError) {
+          console.log('Notification trigger error:', notifError);
+        }
       }
 
       const newMatter = {
@@ -82,16 +123,20 @@ export default function CauseListScreen() {
         status: 'Pending Call',
       };
 
-      setMatters([newMatter, ...matters]);
+      const updatedMatters = [newMatter, ...matters];
+      setMatters(updatedMatters);
+      await saveMattersToStorage(updatedMatters);
+
       setJudgeName('');
       setCaseTitle('');
       setItemNumber('');
       setHearingDate('');
+      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', `Hearing added! A reminder has been set for 1 day prior (${reminderDate.toDateString()}).`);
+      Alert.alert('Success', 'Hearing added to your Cause List! (Test reminder incoming in 5 seconds).');
     } catch (error) {
       console.error('Error adding hearing:', error);
-      Alert.alert('Error', 'Could not schedule hearing reminder.');
+      Alert.alert('Error', 'Could not save hearing entry.');
     } finally {
       setLoading(false);
     }
@@ -102,7 +147,7 @@ export default function CauseListScreen() {
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}>
       <Text style={[styles.headerTitle, { color: colors.foreground }]}>Cause List & Judge Tracker</Text>
-      <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Track daily cause lists, item numbers, and get automated reminders 1 day prior.</Text>
+      <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Track daily cause lists, item numbers, and manage upcoming court schedules.</Text>
 
       <Card style={styles.formCard}>
         <Text style={[styles.formHeader, { color: colors.foreground }]}>Add New Hearing</Text>
@@ -141,7 +186,7 @@ export default function CauseListScreen() {
         />
 
         <Button
-          title={loading ? "Scheduling..." : "Add to Cause List & Set Reminder"}
+          title={loading ? "Saving..." : "Add to Cause List"}
           variant="primary"
           onPress={handleAddHearing}
           style={[loading && { opacity: 0.5 }, { marginTop: 4, marginVertical: 0 }]}
