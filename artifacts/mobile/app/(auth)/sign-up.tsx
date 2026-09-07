@@ -19,7 +19,6 @@ import * as Haptics from 'expo-haptics';
 // Import custom components
 import Button from '../../components/Button';
 
-
 export default function SignUpPage() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -43,7 +42,8 @@ export default function SignUpPage() {
     const { error } = await signUp.password({ emailAddress: email, password });
     if (!error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await signUp.verifications.sendEmailCode();
+      // Correct Clerk method to trigger the initial email verification code
+      await signUp.verifications.prepareEmailAddressVerification({ strategy: 'email_code' });
     }
   };
 
@@ -58,7 +58,7 @@ export default function SignUpPage() {
 
   const handleResendCode = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    signUp.verifications.sendEmailCode();
+    signUp.verifications.prepareEmailAddressVerification({ strategy: 'email_code' });
   };
 
   const handleTogglePassword = () => {
@@ -90,7 +90,7 @@ export default function SignUpPage() {
               const cleaned = text.replace(/[^0-9]/g, '').slice(0, 6);
               setCode(cleaned);
             }}
-            keyboardType="number-format"
+            keyboardType="number-pad"
             maxLength={6}
             autoFocus
           />
