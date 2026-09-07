@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,7 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+  const otpInputRef = useRef<TextInput>(null);
 
   // Forgot password state
   const [forgotStep, setForgotStep] = useState<ForgotStep>('idle');
@@ -151,30 +152,57 @@ export default function SignInPage() {
 
   if (signIn.status === 'needs_client_trust') {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 40, paddingHorizontal: 24 }]}>
+      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
         <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 24 }} />
         <Text style={styles.title}>Verify Identity</Text>
         <Text style={styles.subtitle}>Enter the verification code sent to your email</Text>
-        <TextInput
-          style={[styles.input, { height: 64, textAlign: 'center', fontSize: 24, letterSpacing: 8, marginBottom: 12 }]}
-          value={code}
-          onChangeText={setCode}
-          placeholder="000000"
-          placeholderTextColor="#8B9CC5"
-          keyboardType="numeric"
-          maxLength={6}
-          autoFocus
-        />
+
+        {/* Segmented OTP Boxes Container */}
+        <Pressable style={styles.otpContainer} onPress={() => otpInputRef.current?.focus()}>
+          <TextInput
+            ref={otpInputRef}
+            style={styles.hiddenInput}
+            value={code}
+            onChangeText={(text) => {
+              const cleaned = text.replace(/[^0-9]/g, '').slice(0, 6);
+              setCode(cleaned);
+            }}
+            keyboardType="number-pad"
+            maxLength={6}
+            autoFocus
+          />
+          <View style={styles.boxesRow}>
+            {Array(6).fill(0).map((_, index) => {
+              const digit = code[index] || '';
+              const isFocused = code.length === index;
+
+              return (
+                <View 
+                  key={index} 
+                  style={[
+                    styles.otpBox, 
+                    isFocused && styles.otpBoxActive,
+                    digit !== '' && styles.otpBoxFilled
+                  ]}
+                >
+                  <Text style={styles.otpBoxText}>{digit}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </Pressable>
+
         {errors.fields.code && (
           <Text style={styles.error}>{errors.fields.code.message}</Text>
         )}
         
-        <View style={{ width: '100%', marginTop: 8 }}>
+        <View style={{ width: '100%', marginTop: 16 }}>
           <Button
             title={fetchStatus === 'fetching' ? "Verifying..." : "Verify Identity"}
             variant="primary"
             onPress={handleVerify}
-            disabled={fetchStatus === 'fetching'}
+            disabled={code.length < 6 || fetchStatus === 'fetching'}
+            style={code.length < 6 || fetchStatus === 'fetching' ? styles.disabledBtn : undefined}
           />
         </View>
 
@@ -401,6 +429,7 @@ export default function SignInPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#070D24' },
+  centerContent: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   content: { paddingHorizontal: 24 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 40 },
   logoText: { fontFamily: 'Inter_700Bold', fontSize: 24, color: '#C9A84C', letterSpacing: 1 },
@@ -424,19 +453,49 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#FFFFFF',
   },
-  input: {
+  /* OTP Segmented Box Styles */
+  otpContainer: {
     width: '100%',
-    backgroundColor: '#131D3D',
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  boxesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: 320,
+  },
+  otpBox: {
+    width: 45,
+    height: 56,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#1B2448',
-    paddingHorizontal: 16,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 15,
+    backgroundColor: '#131D3D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpBoxActive: {
+    borderColor: '#C9A84C',
+  },
+  otpBoxFilled: {
+    borderColor: '#C9A84C',
+    backgroundColor: '#19244D',
+  },
+  otpBoxText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 22,
     color: '#FFFFFF',
   },
   eyeBtn: { padding: 4 },
   error: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#EF4444', marginBottom: 8, marginTop: -4 },
+  disabledBtn: { opacity: 0.5 },
   forgotBtn: { alignSelf: 'flex-end', marginBottom: 16, marginTop: -4 },
   forgotText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#C9A84C' },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24, gap: 12 },
