@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -72,6 +72,18 @@ export default function SignUpPage() {
     signUp.unverifiedFields.includes('email_address') &&
     signUp.missingFields.length === 0
   ) {
+    // Automatically trigger code dispatch on initial view mount to prevent missing first code
+    useEffect(() => {
+      const sendInitialCode = async () => {
+        try {
+          await signUp.verifications.prepareEmailAddressVerification({ strategy: 'email_code' });
+        } catch {
+          // Fallback handled silently or via UI
+        }
+      };
+      sendInitialCode();
+    }, [signUp]);
+
     return (
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
         <Feather name="mail" size={48} color="#C9A84C" style={{ marginBottom: 24 }} />
