@@ -33,7 +33,7 @@ export default function CauseListScreen() {
   const [judgeName, setJudgeName] = useState('');
   const [caseTitle, setCaseTitle] = useState('');
   const [itemNumber, setItemNumber] = useState('');
-  const [hearingDate, setHearingDate] = useState(''); // Format: YYYY-MM-DD
+  const [hearingDate, setHearingDate] = useState(''); // Format: DD-MM-YYYY
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
 
@@ -78,6 +78,21 @@ export default function CauseListScreen() {
     }
   };
 
+  // Helper to parse DD-MM-YYYY or DD/MM/YYYY into a valid Date object
+  const parseDateInput = (dateStr: string) => {
+    const cleanStr = dateStr.trim();
+    const parts = cleanStr.split(/[-/]/);
+    
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      // Reconstruct as YYYY-MM-DD for JavaScript Date object
+      if (year.length === 4) {
+        return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+      }
+    }
+    return new Date(dateStr); // Fallback standard parse
+  };
+
   const handleAddHearing = async () => {
     if (!judgeName.trim() || !caseTitle.trim() || !hearingDate.trim()) {
       Alert.alert('Missing Fields', 'Please fill in the Judge Name, Case Title, and Hearing Date.');
@@ -88,27 +103,31 @@ export default function CauseListScreen() {
     setLoading(true);
 
     try {
-      const hearingDateTime = new Date(hearingDate);
+      const hearingDateTime = parseDateInput(hearingDate);
       if (isNaN(hearingDateTime.getTime())) {
-        Alert.alert('Invalid Date', 'Please enter a valid date in YYYY-MM-DD format.');
+        Alert.alert('Invalid Date', 'Please enter a valid date in DD-MM-YYYY format (e.g., 15-09-2026).');
         setLoading(false);
         return;
       }
 
-      // Schedule a test notification in 5 seconds so you can see it working immediately during your demo!
+      // Schedule notification for 24 hours before the hearing date with sound enabled
       if (Platform.OS !== 'web') {
         try {
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: '⚖️ Hearing Reminder Scheduled!',
-              body: `Case: ${caseTitle} (Item No. ${itemNumber || 'N/A'}) before ${judgeName}.`,
-            },
-            trigger: {
-              type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-              seconds: 5, // Triggers 5 seconds from now for immediate testing
-              repeats: false,
-            },
-          });
+          const reminderTime = new Date(hearingDateTime.getTime() - 24 * 60 * 60 * 1000);
+          
+          if (reminderTime.getTime() > Date.now()) {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: '⚖️ Hearing Reminder',
+                body: `Tomorrow: Case ${caseTitle} (Item No. ${itemNumber || 'N/A'}) before ${judgeName}.`,
+                sound: true, // Enables audio alert
+              },
+              trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DATE,
+                date: reminderTime,
+              },
+            });
+          }
         } catch (notifError) {
           console.log('Notification trigger error:', notifError);
         }
@@ -133,7 +152,7 @@ export default function CauseListScreen() {
       setHearingDate('');
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Hearing added to your Cause List! (Test reminder incoming in 5 seconds).');
+      Alert.alert('Success', 'Hearing added! 24-hour sound reminder scheduled.');
     } catch (error) {
       console.error('Error adding hearing:', error);
       Alert.alert('Error', 'Could not save hearing entry.');
@@ -179,7 +198,7 @@ export default function CauseListScreen() {
 
         <TextInput
           style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="Hearing Date (YYYY-MM-DD)"
+          placeholder="Hearing Date (DD-MM-YYYY)"
           placeholderTextColor={colors.mutedForeground}
           value={hearingDate}
           onChangeText={setHearingDate}
