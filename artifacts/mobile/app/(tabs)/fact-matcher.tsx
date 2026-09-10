@@ -4,6 +4,7 @@ import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
+import { fetch } from 'expo/fetch';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
