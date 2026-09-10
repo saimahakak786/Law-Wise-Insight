@@ -163,6 +163,22 @@ export default function SignInPage() {
 
   // Verification State (e.g., needs_client_trust or MFA challenge)
   if (signIn.status === 'needs_client_trust' || signIn.status === 'needs_second_factor') {
+    // Automatically trigger code dispatch on initial view mount
+    useEffect(() => {
+      const sendInitialCode = async () => {
+        try {
+          if (authType === 'email') {
+            await signIn.mfa.sendEmailCode();
+          } else {
+            await signIn.mfa.sendPhoneCode();
+          }
+        } catch {
+          // Fallback handled silently or via UI
+        }
+      };
+      sendInitialCode();
+    }, [authType, signIn]);
+
     return (
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
         <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 24 }} />
@@ -218,7 +234,22 @@ export default function SignInPage() {
           />
         </View>
 
-        <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); authType === 'email' ? signIn.mfa.sendEmailCode() : signIn.mfa.sendPhoneCode(); }} style={styles.linkBtn}>
+        <Pressable 
+          onPress={async () => { 
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
+            try {
+              if (authType === 'email') {
+                await signIn.mfa.sendEmailCode();
+              } else {
+                await signIn.mfa.sendPhoneCode();
+              }
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch {
+              // Handle error if needed
+            }
+          }} 
+          style={styles.linkBtn}
+        >
           <Text style={styles.linkText}>Resend code</Text>
         </Pressable>
       </View>
