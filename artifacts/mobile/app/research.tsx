@@ -39,13 +39,17 @@ export default function ResearchScreen() {
 
     try {
       const token = await getToken();
-      const domain = process.env.EXPO_PUBLIC_DOMAIN;
+      const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
       const researchType = selectedType.toLowerCase().replace(' ', '_');
       const response = await fetch(`https://${domain}/api/lawvise/research`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ query: query.trim(), jurisdiction, researchType }),
       });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Network response failed or body missing');
+      }
 
       const reader = (response.body as any)?.getReader();
       if (!reader) throw new Error('No stream');
