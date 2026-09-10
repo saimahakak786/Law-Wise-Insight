@@ -30,9 +30,9 @@ const MOCK_FALLBACK_DOCUMENTS = [
 ];
 
 const MOCK_FALLBACK_CASES = [
-  { id: 1, title: 'Sharma vs. Apex Properties', status: 'active' },
-  { id: 2, title: 'TechCorp IP Infringement', status: 'pending' },
-  { id: 3, title: 'Verma Employment Arbitration', status: 'won' },
+  { id: 1, title: 'Sharma vs. Apex Properties', status: 'active', nextHearing: 'Tomorrow, 10:30 AM' },
+  { id: 2, title: 'TechCorp IP Infringement', status: 'pending', nextHearing: 'Sep 15, 2:00 PM' },
+  { id: 3, title: 'Verma Employment Arbitration', status: 'active', nextHearing: 'Sep 18, 11:00 AM' },
 ];
 
 export default function HomeScreen() {
@@ -49,7 +49,7 @@ export default function HomeScreen() {
 
   const firstName = user?.firstName ?? user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] ?? 'Counselor';
   const recentDocs = documents?.slice(0, 3) ?? [];
-  const activeCases = cases?.filter((c: any) => c.status === 'active').length ?? 0;
+  const activeCases = cases?.filter((c: any) => c.status === 'active') ?? [];
 
   return (
     <ScrollView
@@ -125,14 +125,50 @@ export default function HomeScreen() {
         <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
       </Pressable>
 
+      {/* Active Case Reminders / Cause List */}
+      <View style={styles.sectionHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Feather name="clock" size={16} color="#C9A84C" />
+          <Text style={[styles.sectionTitleText, { color: colors.foreground }]}>Active Case Reminders</Text>
+        </View>
+        <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/cases' as any); }}>
+          <Text style={[styles.seeAll, { color: colors.primary }]}>View all</Text>
+        </Pressable>
+      </View>
+
+      {activeCases.length === 0 ? (
+        <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No active case reminders scheduled.</Text>
+        </View>
+      ) : (
+        activeCases.map((item: any) => (
+          <Pressable
+            key={item.id}
+            style={({ pressed }) => [styles.reminderCard, { backgroundColor: colors.card, opacity: pressed ? 0.9 : 1 }]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/cases' as any); }}
+          >
+            <View style={styles.reminderIconBg}>
+              <Feather name="briefcase" size={18} color="#C9A84C" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.reminderTitle, { color: colors.foreground }]} numberOfLines={1}>{item.title}</Text>
+              <Text style={[styles.reminderTime, { color: '#C9A84C' }]}>
+                Hearing: {item.nextHearing ?? 'Scheduled'}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+          </Pressable>
+        ))
+      )}
+
       {/* Stats */}
-      <View style={styles.statsRow}>
+      <View style={[styles.statsRow, { marginTop: 8 }]}>
         <View style={[styles.statCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.statNum, { color: colors.primary }]}>{documents?.length ?? 0}</Text>
           <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Documents</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card }]}>
-          <Text style={[styles.statNum, { color: colors.primary }]}>{activeCases}</Text>
+          <Text style={[styles.statNum, { color: colors.primary }]}>{activeCases.length}</Text>
           <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Active Cases</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card }]}>
@@ -163,7 +199,7 @@ export default function HomeScreen() {
 
       {/* Recent Documents */}
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent Documents</Text>
+        <Text style={[styles.sectionTitleText, { color: colors.foreground }]}>Recent Documents</Text>
         <Pressable onPress={() => router.push('/(tabs)/analyze')}>
           <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
         </Pressable>
@@ -266,15 +302,20 @@ const styles = StyleSheet.create({
   statLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, marginTop: 2 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, paddingHorizontal: 20, marginBottom: 12 },
+  sectionTitleText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
   seeAll: { fontFamily: 'Inter_500Medium', fontSize: 13 },
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 10, marginBottom: 24 },
   actionCard: { width: '47%', borderRadius: 14, padding: 16, gap: 10 },
   actionIconBg: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   actionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, lineHeight: 18 },
-  emptyCard: { marginHorizontal: 20, borderRadius: 14, padding: 28, alignItems: 'center', gap: 10 },
-  emptyText: { fontFamily: 'Inter_400Regular', fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  emptyCard: { marginHorizontal: 20, borderRadius: 14, padding: 20, alignItems: 'center', gap: 10, marginBottom: 20 },
+  emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center' },
   emptyBtn: { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, marginTop: 6 },
   emptyBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#070D24' },
+  reminderCard: { marginHorizontal: 20, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8, borderWidth: 1, borderColor: '#C9A84C20' },
+  reminderIconBg: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#C9A84C18', alignItems: 'center', justifyContent: 'center' },
+  reminderTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
+  reminderTime: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 2 },
   docCard: { marginHorizontal: 20, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
   docIconBg: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#C9A84C18', alignItems: 'center', justifyContent: 'center' },
   docTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
