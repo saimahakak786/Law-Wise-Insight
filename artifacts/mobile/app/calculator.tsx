@@ -9,6 +9,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
+import { fetch } from 'expo/fetch';
 import * as Haptics from 'expo-haptics';
 
 // Import custom components
