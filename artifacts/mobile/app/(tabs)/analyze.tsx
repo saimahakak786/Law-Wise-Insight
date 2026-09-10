@@ -107,7 +107,7 @@ export default function AnalyzeScreen() {
         });
 
         const token = await getToken();
-        const domain = process.env.EXPO_PUBLIC_DOMAIN;
+        const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
         const response = await fetch(`https://${domain}/api/lawvise/upload`, {
           method: 'POST',
           headers: {
@@ -124,6 +124,8 @@ export default function AnalyzeScreen() {
         if (response.ok) {
           const data = await response.json() as { extractedText: string };
           extracted = data.extractedText;
+        } else {
+          throw new Error('Upload failed');
         }
       } catch {
         // Fallback simulated text extraction if upload endpoint fails
@@ -172,7 +174,7 @@ export default function AnalyzeScreen() {
         });
 
         const token = await getToken();
-        const domain = process.env.EXPO_PUBLIC_DOMAIN;
+        const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
         const response = await fetch(`https://${domain}/api/lawvise/upload`, {
           method: 'POST',
           headers: {
@@ -189,6 +191,8 @@ export default function AnalyzeScreen() {
         if (response.ok) {
           const data = await response.json() as { extractedText: string };
           extracted = data.extractedText;
+        } else {
+          throw new Error('Upload failed');
         }
       } catch {
         extracted = `[Scanned Document OCR Text]\n\nIN WITNESS WHEREOF, the parties hereto have executed this instrument under ${jurisdiction} jurisdiction.\nSubject to standard covenants, indemnities, and termination clauses.`;
@@ -223,7 +227,7 @@ export default function AnalyzeScreen() {
 
     try {
       const token = await getToken();
-      const domain = process.env.EXPO_PUBLIC_DOMAIN;
+      const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
       const response = await fetch(`https://${domain}/api/lawvise/analyze`, {
         method: 'POST',
         headers: {
@@ -238,6 +242,10 @@ export default function AnalyzeScreen() {
           language,
         }),
       });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Network response failed or body missing');
+      }
 
       const reader = (response.body as any)?.getReader();
       if (!reader) throw new Error('No response stream');
@@ -260,6 +268,7 @@ export default function AnalyzeScreen() {
         }
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setIsAnalyzing(false);
     } catch {
       // Offline fallback mock stream for flawless live demonstration
       const analysisLabel = ANALYSIS_TYPES.find(a => a.id === analysisType)?.label ?? 'Comprehensive Analysis';
@@ -283,8 +292,6 @@ export default function AnalyzeScreen() {
         }
       }, 25);
       return;
-    } finally {
-      setIsAnalyzing(false);
     }
 
     // Auto-save to vault
