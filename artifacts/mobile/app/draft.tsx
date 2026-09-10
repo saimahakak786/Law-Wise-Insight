@@ -72,6 +72,10 @@ export default function DraftScreen() {
         body: JSON.stringify({ documentType: selectedType, jurisdiction, language, details: details || null }),
       });
 
+      if (!response.ok || !response.body) {
+        throw new Error('Network response failed or body missing');
+      }
+
       const reader = (response.body as any)?.getReader();
       if (!reader) throw new Error('No stream');
       const decoder = new TextDecoder();
@@ -93,6 +97,7 @@ export default function DraftScreen() {
         }
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setIsDrafting(false);
     } catch {
       // Offline fallback mock stream for seamless live demonstration
       const docLabel = DOC_TYPES.find((d) => d.id === selectedType)?.label ?? selectedType;
@@ -105,7 +110,6 @@ export default function DraftScreen() {
         `DATED THIS 7TH DAY OF SEPTEMBER, 2026.\n\n` +
         `COUNSEL FOR THE APPLICANT\n(Generated via LawVise Secure Offline Engine)`;
 
-      // Simulate typing effect chunk by chunk
       let index = 0;
       const interval = setInterval(() => {
         setDraft(mockText.slice(0, index));
@@ -117,9 +121,6 @@ export default function DraftScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       }, 30);
-      return;
-    } finally {
-      setIsDrafting(false);
     }
   };
 
