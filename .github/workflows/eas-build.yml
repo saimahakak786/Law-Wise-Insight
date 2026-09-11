@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v2
         with:
           version: 9
 
@@ -38,7 +38,7 @@ jobs:
         env:
           EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
           EXPO_PUBLIC_DOMAIN: law-wise-insight.onrender.com
-          GRADLE_OPTS: "-Xmx5120m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=false"
+          GRADLE_OPTS: -Xmx5120m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=false
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
