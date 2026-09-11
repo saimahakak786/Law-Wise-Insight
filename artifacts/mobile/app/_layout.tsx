@@ -7,7 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
-import { setBaseUrl } from '@workspace/api-client-react';
+import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
 import { AppProvider } from '@/context/AppContext';
 import {
   Inter_400Regular,
@@ -69,6 +69,24 @@ function RootLayoutNav() {
   );
 }
 
+// Component to register the Clerk token getter with the API client
+function TokenSync() {
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    setAuthTokenGetter(async () => {
+      try {
+        return await getToken();
+      } catch (err) {
+        console.error('Failed to retrieve Clerk token for API request:', err);
+        return null;
+      }
+    });
+  }, [getToken]);
+
+  return null;
+}
+
 // Inner component with timeout fallback so users never get stuck indefinitely on boot
 function InitializingGate() {
   const { isLoaded } = useAuth();
@@ -108,7 +126,12 @@ function InitializingGate() {
     );
   }
 
-  return <RootLayoutNav />;
+  return (
+    <>
+      <TokenSync />
+      <RootLayoutNav />
+    </>
+  );
 }
 
 export default function RootLayout() {
