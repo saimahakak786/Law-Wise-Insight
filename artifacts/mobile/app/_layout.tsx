@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ClerkProvider, useAuth } from '@clerk/expo';
-import { tokenCache } from '@clerk/expo/token-cache';
+import * as SecureStore from 'expo-secure-store';
 import { setBaseUrl } from '@workspace/api-client-react';
 import { AppProvider } from '@/context/AppContext';
 import {
@@ -30,6 +30,25 @@ if (domain) setBaseUrl(`https://${domain}`);
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk';
 
+// Robust custom token cache using expo-secure-store to prevent bundling/runtime resolution issues
+const tokenCache = {
+  async getToken(key: string) {
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (err) {
+      console.error('SecureStore get item error:', err);
+      return null;
+    }
+  },
+  async saveToken(key: string, value: string) {
+    try {
+      return await SecureStore.setItemAsync(key, value);
+    } catch (err) {
+      console.error('SecureStore save item error:', err);
+    }
+  },
+};
+
 function RootLayoutNav() {
   return (
     <Stack 
@@ -50,14 +69,41 @@ function RootLayoutNav() {
   );
 }
 
-// Inner component to safely check Clerk's loading state and show a loader
+// Inner component with timeout fallback so users never get stuck indefinitely on boot
 function InitializingGate() {
   const { isLoaded } = useAuth();
-  
-  if (!isLoaded) {
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isLoaded) {
+        setTimedOut(true);
+      }
+    }, 6000);
+
+    return () => clearTimeout(timer);
+  }, [isLoaded]);
+
+  if (!isLoaded && !timedOut) {
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color="#C9A84C" />
+      </View>
+    );
+  }
+
+  if (timedOut && !isLoaded) {
+    return (
+      <View style={styles.loaderContainer}>
+        <Text style={{ color: '#FF6B6B', fontSize: 16, textAlign: 'center', marginBottom: 12, paddingHorizontal: 24 }}>
+          Connection or initialization timed out.
+        </Text>
+        <TouchableOpacity 
+          style={{ backgroundColor: '#C9A84C', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
+          onPress={() => setTimedOut(false)}
+        >
+          <Text style={{ color: '#070D24', fontWeight: 'bold' }}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
