@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
   TextInput, ActivityIndicator, Platform, Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -137,7 +138,11 @@ export default function CalculatorScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <View style={[styles.header, { paddingTop: padTop }]}>
         <Pressable onPress={() => router.back()} style={styles.closeBtn}>
           <Feather name="x" size={22} color={colors.mutedForeground} />
@@ -163,7 +168,11 @@ export default function CalculatorScreen() {
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={{ padding: 20, paddingBottom: 220 }} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {tab === 'limitation' ? (
           <>
             <Text style={[styles.sectionDesc, { color: colors.mutedForeground }]}>
@@ -323,7 +332,7 @@ export default function CalculatorScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
