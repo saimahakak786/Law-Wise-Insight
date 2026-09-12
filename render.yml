@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: law-wise-insight
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npx pnpm install --no-frozen-lockfile && cd artifacts/api-server && npx pnpm add drizzle-orm drizzle-kit && npx drizzle-kit push --config=../../lib/db/drizzle.config.ts && cd ../.. && pnpm --prefix artifacts/api-server run build
+    startCommand: pnpm --prefix artifacts/api-server start
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
