@@ -109,18 +109,20 @@ export default function CauseListScreen() {
         setLoading(false);
         return;
       }
-
-      // Schedule notification for 24 hours before the hearing date with sound enabled
+// Schedule notification: 24 hours before hearing, or immediately if less than 24hrs away
       if (Platform.OS !== 'web') {
         try {
-          const reminderTime = new Date(hearingDateTime.getTime() - 24 * 60 * 60 * 1000);
-          
-          if (reminderTime.getTime() > Date.now()) {
+          const idealReminderTime = new Date(hearingDateTime.getTime() - 24 * 60 * 60 * 1000);
+          const reminderTime = idealReminderTime.getTime() > Date.now()
+            ? idealReminderTime
+            : new Date(Date.now() + 5000);
+
+          if (hearingDateTime.getTime() > Date.now()) {
             await Notifications.scheduleNotificationAsync({
               content: {
                 title: '⚖️ Hearing Reminder',
-                body: `Tomorrow: Case ${caseTitle} (Item No. ${itemNumber || 'N/A'}) before ${judgeName}.`,
-                sound: true, // Enables audio alert
+                body: `Case ${caseTitle} (Item No. ${itemNumber || 'N/A'}) before ${judgeName} — Hearing: ${hearingDate}`,
+                sound: true,
               },
               trigger: {
                 type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -132,6 +134,7 @@ export default function CauseListScreen() {
           console.log('Notification trigger error:', notifError);
         }
       }
+      
 
       const newMatter = {
         id: Date.now().toString(),
