@@ -27,7 +27,8 @@ export async function streamAI(
       logger.warn({ err }, "OpenRouter failed, trying Gemini...");
     }
   }
-  if (genAI) {
+    if (OPENROUTER_API_KEY) {
+
     try {
       return await streamGemini(systemPrompt, userPrompt, onChunk);
     } catch (err) {
