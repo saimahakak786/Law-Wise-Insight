@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 
-const STORAGE_KEY = '@lawvise_cause_list_matters';
+const STORAGE_KEY = '@lawwise_cause_list_matters';
 
 // Configure how notifications behave when the app is in the foreground
 Notifications.setNotificationHandler({
