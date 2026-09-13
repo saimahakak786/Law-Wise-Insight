@@ -20,7 +20,7 @@ export async function streamAI(
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  if (OPENROUTER_API_KEY) {
+  if (GEMINI_API_KEY) {
     try {
       return await streamOpenRouter(systemPrompt, userPrompt, onChunk);
     } catch (err) {
