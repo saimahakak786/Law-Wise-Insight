@@ -13,31 +13,31 @@ if (GEMINI_API_KEY) {
 }
 
 /**
- * Stream AI response through providers: Gemini → OpenRouter → xAI Grok (fallback chain)
+ * Stream AI response through providers: OpenRouter → Gemini → xAI Grok (fallback chain)
  */
 export async function streamAI(
   systemPrompt: string,
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  if (genAI) {
-    try {
-      return await streamGemini(systemPrompt, userPrompt, onChunk);
-    } catch (err) {
-      logger.warn({ err }, "Gemini stream failed, trying OpenRouter");
-    }
-  }
   if (OPENROUTER_API_KEY) {
     try {
       return await streamOpenRouter(systemPrompt, userPrompt, onChunk);
     } catch (err) {
-      logger.warn({ err }, "OpenRouter failed, trying xAI Grok");
+      logger.warn({ err }, "OpenRouter failed, trying Gemini...");
+    }
+  }
+  if (genAI) {
+    try {
+      return await streamGemini(systemPrompt, userPrompt, onChunk);
+    } catch (err) {
+      logger.warn({ err }, "Gemini stream failed, trying xAI Grok");
     }
   }
   if (XAI_API_KEY) {
     return await streamXAI(systemPrompt, userPrompt, onChunk);
   }
-  throw new Error("No AI provider available. Set GEMINI_API_KEY, OPENROUTER_API_KEY, or XAI_API_KEY.");
+  throw new Error("No AI provider available. Set OPENROUTER_API_KEY, GEMINI_API_KEY, or XAI_API_KEY.");
 }
 
 /** Non-streaming call — collects all chunks and returns full text */
@@ -47,7 +47,7 @@ export async function callAI(systemPrompt: string, userPrompt: string): Promise<
   return chunks.join("");
 }
 
-// ─── Gemini (Primary) ────────────────────────────────────────────────────────
+// ─── Gemini (Secondary) ──────────────────────────────────────────────────────
 
 async function streamGemini(
   systemPrompt: string,
@@ -71,7 +71,7 @@ async function streamGemini(
   return fullText;
 }
 
-// ─── OpenRouter (Secondary) ──────────────────────────────────────────────────
+// ─── OpenRouter (Primary) ────────────────────────────────────────────────────
 
 async function streamOpenRouter(
   systemPrompt: string,
