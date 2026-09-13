@@ -5,7 +5,7 @@ import { streamAI } from "../../lib/ai";
 
 const router = Router();
 
-const SYSTEM_BASE = `You are LawVise, an expert AI legal assistant with comprehensive knowledge of laws worldwide, with particular expertise in Indian law (IPC, CrPC, CPC, Constitution of India, and all major Indian statutes).
+const SYSTEM_BASE = `You are Lawwise, an expert AI legal assistant with comprehensive knowledge of laws worldwide, with particular expertise in Indian law (IPC, CrPC, CPC, Constitution of India, and all major Indian statutes).
 
 Guidelines:
 - Provide accurate, helpful legal information in clear, plain language
