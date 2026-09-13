@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "cross-env NODE_ENV=development node --enable-source-maps dist/index.js",
-    "build": "node ./build.js",
+    "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
