@@ -17,7 +17,7 @@ async function extractTextWithGemini(fileBase64: string, mimeType: string, promp
   return result.response.text();
 }
 
-router.post("/lawvise/upload", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/upload", requireAuth, async (req, res): Promise<void> => {
   const parsed = UploadDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
