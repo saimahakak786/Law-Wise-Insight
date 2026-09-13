@@ -14,7 +14,7 @@ router.post("/lawvise/calculate/limitation", requireAuth, async (req, res): Prom
 
   const { caseType, jurisdiction, eventDate } = parsed.data;
 
-  const systemPrompt = `You are LawVise, an expert in limitation periods under ${jurisdiction} law. Provide accurate limitation period information based on the Limitation Act and relevant statutes. Respond with ONLY a valid JSON object — no markdown, no code blocks, no extra text. JSON format: { "periodYears": number, "description": string, "deadline": string_or_null, "notes": string }`;
+  const systemPrompt = `You are Lawwise, an expert in limitation periods under ${jurisdiction} law. Provide accurate limitation period information based on the Limitation Act and relevant statutes. Respond with ONLY a valid JSON object — no markdown, no code blocks, no extra text. JSON format: { "periodYears": number, "description": string, "deadline": string_or_null, "notes": string }`;
 
   const userPrompt = `Case type: ${caseType}\nJurisdiction: ${jurisdiction}\n${eventDate ? `Date of cause of action: ${eventDate}` : "Event date not provided"}\n\nWhat is the limitation period? Calculate deadline if date provided.`;
 
@@ -39,7 +39,7 @@ router.post("/lawvise/calculate/court-fee", requireAuth, async (req, res): Promi
 
   const { courtType, caseType, jurisdiction, claimAmount } = parsed.data;
 
-  const systemPrompt = `You are LawVise, an expert in court fees and legal costs under ${jurisdiction} law. Provide accurate court fee estimates based on the Court Fees Act and relevant rules. Respond with ONLY a valid JSON object — no markdown, no code blocks, no extra text. JSON format: { "baseFee": number, "additionalFees": [{"name": string, "amount": number}], "totalFee": number, "description": string }. All amounts in INR or local currency.`;
+  const systemPrompt = `You are Lawwise, an expert in court fees and legal costs under ${jurisdiction} law. Provide accurate court fee estimates based on the Court Fees Act and relevant rules. Respond with ONLY a valid JSON object — no markdown, no code blocks, no extra text. JSON format: { "baseFee": number, "additionalFees": [{"name": string, "amount": number}], "totalFee": number, "description": string }. All amounts in INR or local currency.`;
 
   const userPrompt = `Court type: ${courtType}\nCase type: ${caseType}\nJurisdiction: ${jurisdiction}\n${claimAmount != null ? `Claim/suit value: ₹${claimAmount}` : "Claim amount not specified"}\n\nCalculate the applicable court fees.`;
 
