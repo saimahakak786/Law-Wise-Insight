@@ -11,7 +11,7 @@ function parseId(raw: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-router.get("/lawvise/folders", requireAuth, async (req, res): Promise<void> => {
+router.get("/lawwise/folders", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const folders = await db
     .select()
@@ -20,7 +20,7 @@ router.get("/lawvise/folders", requireAuth, async (req, res): Promise<void> => {
   res.json(folders);
 });
 
-router.post("/lawvise/folders", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/folders", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const parsed = CreateFolderBody.safeParse(req.body);
   if (!parsed.success) {
@@ -35,7 +35,7 @@ router.post("/lawvise/folders", requireAuth, async (req, res): Promise<void> => 
   res.status(201).json(folder);
 });
 
-router.patch("/lawvise/folders/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/lawwise/folders/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
@@ -62,7 +62,7 @@ router.patch("/lawvise/folders/:id", requireAuth, async (req, res): Promise<void
   res.json(updated);
 });
 
-router.delete("/lawvise/folders/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/lawwise/folders/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
