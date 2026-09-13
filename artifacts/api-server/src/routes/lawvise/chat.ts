@@ -36,11 +36,11 @@ router.post("/lawvise/chat", requireAuth, async (req, res): Promise<void> => {
 
   const historyContext =
     history && history.length > 0
-      ? history.map((m) => `${m.role === "user" ? "User" : "LawVise"}: ${m.content}`).join("\n\n") +
+      ? history.map((m) => `${m.role === "user" ? "User" : "Lawwise"}: ${m.content}`).join("\n\n") +
         "\n\n"
       : "";
 
-  const userPrompt = `${historyContext}User: ${message}\n\nLawVise:`;
+  const userPrompt = `${historyContext}User: ${message}\n\nLawwise:`;
 
   try {
     await streamAI(systemPrompt, userPrompt, (text) => {
