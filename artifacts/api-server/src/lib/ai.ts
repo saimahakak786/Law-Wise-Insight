@@ -56,7 +56,8 @@ async function streamGemini(
   onChunk: (text: string) => void
 ): Promise<string> {
   const model = genAI!.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    const model = genAI!.getGenerativeModel({
+    model: "gemini-3.6-flash",
     systemInstruction: systemPrompt,
     generationConfig: { maxOutputTokens: 8192 },
   });
