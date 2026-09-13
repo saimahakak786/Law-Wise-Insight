@@ -13,7 +13,7 @@ function buildAnalysisSystemPrompt(
 ): string {
   const lang = language ?? "English";
   const juris = jurisdiction ? `The document is governed by ${jurisdiction} law.` : "";
-  const base = `You are LawVise, an expert AI legal analyst. ${juris} Always respond in ${lang}. Use clear headings and structured formatting.`;
+  const base = `You are Lawwise, an expert AI legal analyst. ${juris} Always respond in ${lang}. Use clear headings and structured formatting.`;
 
   switch (analysisType) {
     case "summarize":
@@ -38,7 +38,7 @@ function buildAnalysisSystemPrompt(
   }
 }
 
-router.post("/lawvise/analyze", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/analyze", requireAuth, async (req, res): Promise<void> => {
   const parsed = AnalyzeDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
