@@ -11,7 +11,7 @@ function parseId(raw: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-router.get("/lawvise/cases", requireAuth, async (req, res): Promise<void> => {
+router.get("/lawwise/cases", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const cases = await db
     .select()
@@ -21,7 +21,7 @@ router.get("/lawvise/cases", requireAuth, async (req, res): Promise<void> => {
   res.json(cases);
 });
 
-router.post("/lawvise/cases", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/cases", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const parsed = CreateCaseBody.safeParse(req.body);
   if (!parsed.success) {
@@ -36,7 +36,7 @@ router.post("/lawvise/cases", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(legalCase);
 });
 
-router.patch("/lawvise/cases/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/lawwise/cases/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
@@ -63,7 +63,7 @@ router.patch("/lawvise/cases/:id", requireAuth, async (req, res): Promise<void> 
   res.json(updated);
 });
 
-router.delete("/lawvise/cases/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/lawwise/cases/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
