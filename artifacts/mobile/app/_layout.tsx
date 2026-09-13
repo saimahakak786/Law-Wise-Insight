@@ -28,6 +28,7 @@ const queryClient = new QueryClient({
 setBaseUrl('https://law-wise-insight.onrender.com');
 
 
+
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk';
 
 // Robust custom token cache using expo-secure-store to prevent bundling/runtime resolution issues
