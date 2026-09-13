@@ -11,7 +11,7 @@ function parseId(raw: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-router.get("/lawvise/documents", requireAuth, async (req, res): Promise<void> => {
+router.get("/lawwise/documents", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const { folderId, search } = req.query;
 
@@ -36,7 +36,7 @@ router.get("/lawvise/documents", requireAuth, async (req, res): Promise<void> =>
   res.json(docs);
 });
 
-router.post("/lawvise/documents", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/documents", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const parsed = SaveDocumentBody.safeParse(req.body);
   if (!parsed.success) {
@@ -51,7 +51,7 @@ router.post("/lawvise/documents", requireAuth, async (req, res): Promise<void> =
   res.status(201).json(doc);
 });
 
-router.patch("/lawvise/documents/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/lawwise/documents/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
@@ -78,7 +78,7 @@ router.patch("/lawvise/documents/:id", requireAuth, async (req, res): Promise<vo
   res.json(updated);
 });
 
-router.delete("/lawvise/documents/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/lawwise/documents/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
