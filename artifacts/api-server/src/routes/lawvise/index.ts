@@ -10,7 +10,7 @@ import researchRouter from "./research";
 import foldersRouter from "./folders";
 import settingsRouter from "./settings";
 import notificationsRouter from "./notifications";
-
+import matchRouter from "./match";
 const router: Router = Router();
 
 router.use(analyzeRouter);
@@ -24,5 +24,5 @@ router.use(researchRouter);
 router.use(foldersRouter);
 router.use(settingsRouter);
 router.use(notificationsRouter);
-
+router.use(matchRouter);
 export default router;
