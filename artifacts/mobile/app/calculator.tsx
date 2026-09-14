@@ -225,7 +225,7 @@ export default function CalculatorScreen() {
                 <View style={styles.resultRow}>
                   <Feather name="clock" size={20} color="#C9A84C" />
                   <View>
-                    <Text style={styles.resultMainValue}>{limResult.periodYears} {(limResult.periodYears as number) === 1 ? 'Year' : 'Years'}</Text>
+                    <Text style={styles.resultMainValue}>{formatPeriod(limResult.periodYears)}</Text>
                     <Text style={[styles.resultMainLabel, { color: colors.mutedForeground }]}>Limitation Period</Text>
                   </View>
                 </View>
