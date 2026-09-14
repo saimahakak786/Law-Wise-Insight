@@ -39,7 +39,6 @@ export default function SignInPage() {
   const { signIn, errors, fetchStatus } = useSignIn();
   const { startSSOFlow } = useSSO();
 
-  const [authType, setAuthType] = useState<'email' | 'phone'>('email');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -69,11 +68,7 @@ export default function SignInPage() {
     if (!identifier || !password) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const payload = authType === 'email' 
-      ? { emailAddress: identifier.trim(), password } 
-      : { phoneNumber: identifier.trim(), password };
-
-    const { error } = await signIn.password(payload);
+    const { error } = await signIn.password({ emailAddress: identifier.trim(), password });
     if (error) return;
 
     if (signIn.status === 'complete') {
@@ -85,11 +80,7 @@ export default function SignInPage() {
   const handleVerify = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
-    if (authType === 'email') {
-      await signIn.mfa.verifyEmailCode({ code });
-    } else {
-      await signIn.mfa.verifyPhoneCode({ code });
-    }
+    await signIn.mfa.verifyEmailCode({ code });
 
     if (signIn.status === 'complete') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -122,13 +113,12 @@ export default function SignInPage() {
   }, [startSSOFlow, router]);
 
   const handleSendResetCode = async () => {
-    if (!forgotIdentifier.trim()) { setForgotError('Please enter your email or phone.'); return; }
+    if (!forgotIdentifier.trim()) { setForgotError('Please enter your email.'); return; }
     setForgotError('');
     setForgotStep('sending');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      const strategy = forgotIdentifier.includes('@') ? 'reset_password_email_code' : 'reset_password_sms_code';
-      await signIn.create({ strategy, identifier: forgotIdentifier.trim() });
+      await signIn.create({ strategy: 'reset_password_email_code', identifier: forgotIdentifier.trim() });
       setForgotStep('reset_password');
     } catch (e: any) {
       setForgotError(e?.errors?.[0]?.message ?? 'Failed to send reset code. Please try again.');
@@ -142,9 +132,8 @@ export default function SignInPage() {
     setForgotStep('resetting');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const strategy = forgotIdentifier.includes('@') ? 'reset_password_email_code' : 'reset_password_sms_code';
       const result = await signIn.attemptFirstFactor({
-        strategy,
+        strategy: 'reset_password_email_code',
         code: resetCode,
         password: newPassword,
       });
@@ -163,27 +152,22 @@ export default function SignInPage() {
 
   // Verification State (e.g., needs_client_trust or MFA challenge)
   if (signIn.status === 'needs_client_trust' || signIn.status === 'needs_second_factor') {
-    // Automatically trigger code dispatch on initial view mount
     useEffect(() => {
       const sendInitialCode = async () => {
         try {
-          if (authType === 'email') {
-            await signIn.mfa.sendEmailCode();
-          } else {
-            await signIn.mfa.sendPhoneCode();
-          }
+          await signIn.mfa.sendEmailCode();
         } catch {
           // Fallback handled silently or via UI
         }
       };
       sendInitialCode();
-    }, [authType, signIn]);
+    }, [signIn]);
 
     return (
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
         <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 24 }} />
         <Text style={styles.title}>Verify Identity</Text>
-        <Text style={styles.subtitle}>Enter the verification code sent to your {authType}</Text>
+        <Text style={styles.subtitle}>Enter the verification code sent to your email</Text>
 
         {/* Segmented OTP Boxes Container */}
         <Pressable style={styles.otpContainer} onPress={() => otpInputRef.current?.focus()}>
@@ -238,11 +222,7 @@ export default function SignInPage() {
           onPress={async () => { 
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
             try {
-              if (authType === 'email') {
-                await signIn.mfa.sendEmailCode();
-              } else {
-                await signIn.mfa.sendPhoneCode();
-              }
+              await signIn.mfa.sendEmailCode();
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch {
               // Handle error if needed
@@ -270,7 +250,7 @@ export default function SignInPage() {
             <Text style={styles.logoText}>LawVise</Text>
           </View>
           <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.subtitle}>Enter your email or phone number to get a code</Text>
+          <Text style={styles.subtitle}>Enter your email to get a code</Text>
 
           <View style={styles.inputWrapper}>
             <Feather name="mail" size={18} color="#8B9CC5" style={styles.inputIcon} />
@@ -278,10 +258,11 @@ export default function SignInPage() {
               style={[styles.inputField, { flex: 1 }]}
               value={forgotIdentifier}
               onChangeText={setForgotIdentifier}
-              placeholder="Email or Phone Number"
+              placeholder="Email address"
               placeholderTextColor="#8B9CC5"
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="email-address"
               autoFocus
             />
           </View>
@@ -317,7 +298,7 @@ export default function SignInPage() {
             <Text style={styles.logoText}>LawVise</Text>
           </View>
           <Text style={styles.title}>Enter New Password</Text>
-          <Text style={styles.subtitle}>Check your messages for the reset code</Text>
+          <Text style={styles.subtitle}>Check your email for the reset code</Text>
 
           <View style={styles.inputWrapper}>
             <Feather name="hash" size={18} color="#8B9CC5" style={styles.inputIcon} />
@@ -384,35 +365,16 @@ export default function SignInPage() {
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in to your legal workspace</Text>
 
-        {/* Toggle Option Tabs */}
-        <View style={styles.tabContainer}>
-          <Pressable
-            style={[styles.tab, authType === 'email' && styles.activeTab]}
-            onPress={() => { setAuthType('email'); setIdentifier(''); }}
-          >
-            <Feather name="mail" size={16} color={authType === 'email' ? '#070D24' : '#8B9CC5'} />
-            <Text style={[styles.tabText, authType === 'email' && styles.activeTabText]}>Email</Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.tab, authType === 'phone' && styles.activeTab]}
-            onPress={() => { setAuthType('phone'); setIdentifier(''); }}
-          >
-            <Feather name="phone" size={16} color={authType === 'phone' ? '#070D24' : '#8B9CC5'} />
-            <Text style={[styles.tabText, authType === 'phone' && styles.activeTabText]}>Phone Number</Text>
-          </Pressable>
-        </View>
-
-        {/* Dynamic Identifier Input */}
+        {/* Email Identifier Input */}
         <View style={styles.inputWrapper}>
-          <Feather name={authType === 'email' ? "mail" : "phone"} size={18} color="#8B9CC5" style={styles.inputIcon} />
+          <Feather name="mail" size={18} color="#8B9CC5" style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             value={identifier}
             onChangeText={setIdentifier}
-            placeholder={authType === 'email' ? "Email address" : "+1 (555) 000-0000"}
+            placeholder="Email address"
             placeholderTextColor="#8B9CC5"
-            keyboardType={authType === 'email' ? "email-address" : "phone-pad"}
+            keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -497,37 +459,6 @@ const styles = StyleSheet.create({
   title: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#FFFFFF', marginBottom: 8 },
   subtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, color: '#8B9CC5', marginBottom: 24 },
   
-  /* Tab Toggle Styles */
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#131D3D',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1B2448',
-    marginBottom: 16,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  activeTab: {
-    backgroundColor: '#C9A84C',
-  },
-  tabText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-    color: '#8B9CC5',
-  },
-  activeTabText: {
-    color: '#070D24',
-  },
-
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
