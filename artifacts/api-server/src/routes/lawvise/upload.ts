@@ -9,7 +9,7 @@ const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 async function extractTextWithGemini(fileBase64: string, mimeType: string, prompt: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
   const result = await model.generateContent([
     { inlineData: { mimeType, data: fileBase64 } },
     prompt,
