@@ -5,7 +5,7 @@ import { callAI } from "../../lib/ai";
 
 const router = Router();
 
-router.post("/lawvise/calculate/limitation", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/calculator/limitation", requireAuth, async (req, res): Promise<void> => {
   const parsed = CalculateLimitationBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -30,7 +30,7 @@ router.post("/lawvise/calculate/limitation", requireAuth, async (req, res): Prom
   }
 });
 
-router.post("/lawvise/calculate/court-fee", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/calculator/court-fee", requireAuth, async (req, res): Promise<void> => {
   const parsed = CalculateCourtFeeBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
