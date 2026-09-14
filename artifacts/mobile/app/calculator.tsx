@@ -137,6 +137,18 @@ export default function CalculatorScreen() {
     }
   };
 
+  const formatPeriod = (years: number): string => {
+    if (years >= 1) {
+      return `${years} ${years === 1 ? 'Year' : 'Years'}`;
+    }
+    const months = Math.round(years * 12);
+    if (months >= 1) {
+      return `${months} ${months === 1 ? 'Month' : 'Months'}`;
+    }
+    const days = Math.round(years * 365);
+    return `${days} ${days === 1 ? 'Day' : 'Days'}`;
+  };
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
