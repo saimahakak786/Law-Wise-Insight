@@ -5,7 +5,7 @@ import { streamAI } from "../../lib/ai";
 
 const router = Router();
 
-router.post("/lawvise/draft", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/draft", requireAuth, async (req, res): Promise<void> => {
   const parsed = DraftDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
