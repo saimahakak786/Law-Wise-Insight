@@ -322,8 +322,10 @@ export default function CasesScreen() {
               <Text style={[styles.modalCancel, { color: colors.mutedForeground }]}>Cancel</Text>
             </Pressable>
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>{editingId ? 'Edit Case' : 'New Case'}</Text>
-            <Pressable onPress={handleSave} disabled={!form.title.trim()}>
-              <Text style={[styles.modalSave, { color: form.title.trim() ? '#C9A84C' : colors.mutedForeground }]}>Save</Text>
+            <Pressable onPress={handleSave} disabled={!form.title.trim() || createCase.isPending || updateCase.isPending}>
+              <Text style={[styles.modalSave, { color: form.title.trim() ? '#C9A84C' : colors.mutedForeground }]}>
+                {createCase.isPending || updateCase.isPending ? 'Saving...' : 'Save'}
+              </Text>
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
