@@ -23,7 +23,11 @@ export default function ProfileScreen() {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
 
-  const firstName = user?.firstName ?? 'Counselor';
+  // Fallback to email handle or 'User' if firstName isn't set yet (instead of 'Counselor')
+  const emailFallback = user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] ?? 'User';
+  const formattedFallback = emailFallback.charAt(0).toUpperCase() + emailFallback.slice(1);
+
+  const firstName = user?.firstName ?? formattedFallback;
   const lastName = user?.lastName ?? '';
   const email = user?.emailAddresses?.[0]?.emailAddress ?? 'counsel@lawvise.com';
 
@@ -48,7 +52,7 @@ export default function ProfileScreen() {
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <View style={styles.avatarLarge}>
           <Text style={styles.avatarLargeText}>
-            {firstName.charAt(0).toUpperCase()}{lastName.charAt(0).toUpperCase()}
+            {firstName.charAt(0).toUpperCase()}{lastName ? lastName.charAt(0).toUpperCase() : ''}
           </Text>
         </View>
         <Text style={[styles.profileName, { color: colors.foreground }]}>{firstName} {lastName}</Text>
