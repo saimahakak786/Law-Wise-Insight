@@ -108,7 +108,7 @@ export default function AnalyzeScreen() {
 
         const token = await getToken();
         const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
-        const response = await fetch(`https://${domain}/api/lawvise/upload`, {
+        const response = await fetch(`https://${domain}/api/lawwise/upload`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -175,7 +175,7 @@ export default function AnalyzeScreen() {
 
         const token = await getToken();
         const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
-        const response = await fetch(`https://${domain}/api/lawvise/upload`, {
+        const response = await fetch(`https://${domain}/api/lawwise/upload`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -228,7 +228,7 @@ export default function AnalyzeScreen() {
     try {
       const token = await getToken();
       const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
-      const response = await fetch(`https://${domain}/api/lawvise/analyze`, {
+      const response = await fetch(`https://${domain}/api/lawwise/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
