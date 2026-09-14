@@ -1,51 +1,57 @@
 import React from 'react';
-import { StyleSheet, Text, View, Modal, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 
-export default function AboutDeveloperModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+interface AboutDeveloperModalProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+export default function AboutDeveloperModal({ visible, onClose }: AboutDeveloperModalProps) {
   const colors = useColors();
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           
-          {/* Header with Close Button */}
-          <View style={styles.headerRow}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>About Developer</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Feather name="x" size={20} color={colors.foreground} />
-            </TouchableOpacity>
+          {/* Close Button */}
+          <Pressable onPress={onClose} style={styles.closeBtn}>
+            <Feather name="x" size={20} color={colors.mutedForeground} />
+          </Pressable>
+
+          {/* Icon Badge */}
+          <View style={[styles.iconWrap, { backgroundColor: '#C9A84C18', borderColor: '#C9A84C30' }]}>
+            <Feather name="shield" size={24} color="#C9A84C" />
           </View>
 
-          {/* Scrollable Content to prevent clipping */}
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            
-            {/* Shield / Icon Badge */}
-            <View style={styles.iconContainer}>
-              <Feather name="shield" size={28} color="#C9A84C" />
-            </View>
+          {/* Title */}
+          <Text style={styles.modalTitle}>About Developer</Text>
 
-            {/* Subdued intro text leading into your name */}
-            <Text style={[styles.bodyText, { color: colors.mutedForeground }]}>
-              LawVise was envisioned, designed, and engineered under the direction of legal expert
-            </Text>
+          {/* Developer / Firm Details */}
+          <View style={styles.profileSection}>
+            <Text style={styles.expertName}>Advocate Saima Hakak</Text>
+            <Text style={styles.firmName}>Saima Hakak & Associates</Text>
+          </View>
 
-            {/* Prominent Name Placement in the middle */}
-            <Text style={[styles.developerName, { color: colors.foreground }]}>
-              Advocate Saima Hakak
-            </Text>
-            <Text style={styles.firmName}>
-              Saima Hakak & Associates
-            </Text>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-            {/* Rest of the descriptive text */}
-            <Text style={[styles.bodyText, { color: colors.mutedForeground, marginTop: 12 }]}>
-              Multi-Jurisdictional Legal Intelligence. Built to empower legal professionals globally across US, UK, UAE, and Indian jurisdictions, combining state-of-the-art AI reasoning with airtight secure vault storage.
-            </Text>
+          {/* Concise, High-Impact Professional Bio */}
+          <Text style={[styles.bioText, { color: colors.mutedForeground }]}>
+            Principal legal architect specializing in multi-jurisdictional AI compliance, legal intelligence, and secure vault systems across US, UK, UAE, and Indian frameworks.
+          </Text>
 
-          </ScrollView>
+          {/* Action Button */}
+          <Pressable style={styles.actionButton} onPress={onClose}>
+            <Text style={styles.actionButtonText}>Close</Text>
+          </Pressable>
+
         </View>
       </View>
     </Modal>
@@ -60,59 +66,77 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  modalContainer: {
+  card: {
     width: '100%',
-    maxHeight: '80%',
-    borderRadius: 16,
-    padding: 20,
+    maxWidth: 360,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(201, 168, 76, 0.3)',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    padding: 24,
     alignItems: 'center',
-    marginBottom: 16,
+    position: 'relative',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    padding: 4,
+  },
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
   },
   modalTitle: {
     fontFamily: 'Inter_700Bold',
     fontSize: 18,
+    color: '#FFFFFF',
+    marginBottom: 16,
   },
-  closeButton: {
-    padding: 4,
-  },
-  scrollContent: {
-    alignItems: 'center',
-    paddingBottom: 20,
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#C9A84C20',
-    justifyContent: 'center',
+  profileSection: {
     alignItems: 'center',
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#C9A84C40',
   },
-  developerName: {
+  expertName: {
     fontFamily: 'Inter_700Bold',
     fontSize: 20,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  firmName: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
     color: '#C9A84C',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  bodyText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
+  firmName: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: '#8B9CC5',
+    letterSpacing: 0.5,
     textAlign: 'center',
+  },
+  divider: {
+    width: '100%',
+    height: 1,
+    marginBottom: 16,
+  },
+  bioText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
     lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  actionButton: {
+    width: '100%',
+    backgroundColor: '#C9A84C',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+    color: '#070D24',
   },
 });
