@@ -16,6 +16,7 @@ import JurisdictionSelector from '@/components/JurisdictionSelector';
 const QUICK_ACTIONS = [
   { id: 'analyze', label: 'Analyze\nDocument', icon: 'file-text' as const, route: '/(tabs)/analyze' },
   { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat' },
+  { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/cases' },
   { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft' },
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
   { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research' },
@@ -125,7 +126,27 @@ export default function HomeScreen() {
         <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
       </Pressable>
 
-      {/* Active Case Reminders / Cause List */}
+      {/* Quick Actions (Now including Cause List & Reminders prominently) */}
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
+      <View style={styles.actionsGrid}>
+        {QUICK_ACTIONS.map((action) => (
+          <Pressable
+            key={action.id}
+            style={({ pressed }) => [styles.actionCard, { backgroundColor: colors.card, opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(action.route as any); }}
+          >
+            <LinearGradient
+              colors={['#C9A84C22', '#C9A84C08']}
+              style={styles.actionIconBg}
+            >
+              <Feather name={action.icon} size={24} color="#C9A84C" />
+            </LinearGradient>
+            <Text style={[styles.actionLabel, { color: colors.foreground }]}>{action.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Active Case Reminders / Cause List Preview */}
       <View style={styles.sectionHeader}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Feather name="clock" size={16} color="#C9A84C" />
@@ -175,26 +196,6 @@ export default function HomeScreen() {
           <Text style={[styles.statNum, { color: colors.primary }]}>{cases?.length ?? 0}</Text>
           <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Total Cases</Text>
         </View>
-      </View>
-
-      {/* Quick Actions */}
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
-      <View style={styles.actionsGrid}>
-        {QUICK_ACTIONS.map((action) => (
-          <Pressable
-            key={action.id}
-            style={({ pressed }) => [styles.actionCard, { backgroundColor: colors.card, opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(action.route as any); }}
-          >
-            <LinearGradient
-              colors={['#C9A84C22', '#C9A84C08']}
-              style={styles.actionIconBg}
-            >
-              <Feather name={action.icon} size={24} color="#C9A84C" />
-            </LinearGradient>
-            <Text style={[styles.actionLabel, { color: colors.foreground }]}>{action.label}</Text>
-          </Pressable>
-        ))}
       </View>
 
       {/* Recent Documents */}
