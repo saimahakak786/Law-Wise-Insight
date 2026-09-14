@@ -16,7 +16,7 @@ Guidelines:
 - Be empathetic, professional, and solution-oriented
 - For Indian legal queries, cite relevant sections (e.g., "Section 302 IPC", "Order 7 Rule 1 CPC")`;
 
-router.post("/lawvise/chat", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/chat", requireAuth, async (req, res): Promise<void> => {
   const parsed = LegalChatBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
