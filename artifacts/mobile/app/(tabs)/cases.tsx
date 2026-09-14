@@ -133,7 +133,7 @@ export default function CasesScreen() {
   const [localCases, setLocalCases] = useState<CaseItem[]>(MOCK_FALLBACK_CASES);
   const [useLocalFallback, setUseLocalFallback] = useState(false);
 
-  const cases = remoteError || !remoteCases ? localCases : remoteCases;
+  const cases = (remoteError || !remoteCases || useLocalFallback) ? localCases : remoteCases;
   const isLoading = remoteLoading && !useLocalFallback && !remoteCases;
 
   const [filter, setFilter] = useState<CaseStatus | 'all'>('all');
