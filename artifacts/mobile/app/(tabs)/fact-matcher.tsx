@@ -214,7 +214,7 @@ export default function FactMatcherScreen() {
         onSubscribe={() => {
           setIsProUser(true); 
           setShowUpgradeModal(false);
-          Alert.alert('Welcome to LawVise Pro!', 'Fact Matcher & Precedent Finder are now fully unlocked.');
+          Alert.alert('Welcome to Lawwise Pro!', 'Fact Matcher & Precedent Finder are now fully unlocked.');
         }}
       />
     </View>
