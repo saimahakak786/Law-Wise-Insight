@@ -16,6 +16,7 @@ import JurisdictionSelector from '@/components/JurisdictionSelector';
 const QUICK_ACTIONS = [
   { id: 'analyze', label: 'Analyze\nDocument', icon: 'file-text' as const, route: '/(tabs)/analyze' },
   { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat' },
+  { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/clientintake' },
   { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/cases' },
   { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft' },
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
