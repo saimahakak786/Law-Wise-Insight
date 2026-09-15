@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, ScrollView, Alert, Platform } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import { Feather } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
@@ -27,7 +26,6 @@ Notifications.setNotificationHandler({
 export default function CauseListScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { getToken } = useAuth();
   const { jurisdiction } = useApp();
 
   const [judgeName, setJudgeName] = useState('');
@@ -78,19 +76,17 @@ export default function CauseListScreen() {
     }
   };
 
-  // Helper to parse DD-MM-YYYY or DD/MM/YYYY into a valid Date object
   const parseDateInput = (dateStr: string) => {
     const cleanStr = dateStr.trim();
     const parts = cleanStr.split(/[-/]/);
     
     if (parts.length === 3) {
       const [day, month, year] = parts;
-      // Reconstruct as YYYY-MM-DD for JavaScript Date object
       if (year.length === 4) {
         return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
       }
     }
-    return new Date(dateStr); // Fallback standard parse
+    return new Date(dateStr);
   };
 
   const handleAddHearing = async () => {
@@ -109,7 +105,7 @@ export default function CauseListScreen() {
         setLoading(false);
         return;
       }
-// Schedule notification: 24 hours before hearing, or immediately if less than 24hrs away
+
       if (Platform.OS !== 'web') {
         try {
           const idealReminderTime = new Date(hearingDateTime.getTime() - 24 * 60 * 60 * 1000);
@@ -134,7 +130,6 @@ export default function CauseListScreen() {
           console.log('Notification trigger error:', notifError);
         }
       }
-      
 
       const newMatter = {
         id: Date.now().toString(),
@@ -164,63 +159,100 @@ export default function CauseListScreen() {
     }
   };
 
-  const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
+  const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}>
-      <Text style={[styles.headerTitle, { color: colors.foreground }]}>Cause List & Judge Tracker</Text>
-      <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Track daily cause lists, item numbers, and manage upcoming court schedules.</Text>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: colors.background }]} 
+      contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header Section */}
+      <View style={styles.headerContainer}>
+        <View style={styles.titleRow}>
+          <Feather name="calendar" size={22} color="#C9A84C" />
+          <Text style={styles.screenTitle}>Cause List & Tracker</Text>
+        </View>
+        <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
+          Track daily cause lists, item numbers, and manage upcoming court schedules under {jurisdiction} law.
+        </Text>
+      </View>
 
-      <Card style={styles.formCard}>
-        <Text style={[styles.formHeader, { color: colors.foreground }]}>Add New Hearing</Text>
+      {/* Form Card */}
+      <Card style={[styles.formCard, { borderColor: colors.border }]}>
+        <Text style={styles.sectionHeaderLabel}>SCHEDULE NEW HEARING</Text>
         
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="Judge Name (e.g., Justice R.K. Agrawal)"
-          placeholderTextColor={colors.mutedForeground}
-          value={judgeName}
-          onChangeText={setJudgeName}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>Judge Name</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="e.g., Justice R.K. Agrawal"
+            placeholderTextColor={colors.mutedForeground}
+            value={judgeName}
+            onChangeText={setJudgeName}
+          />
+        </View>
         
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="Case Title / Number (e.g., Suit 102/2026)"
-          placeholderTextColor={colors.mutedForeground}
-          value={caseTitle}
-          onChangeText={setCaseTitle}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>Case Title / Number</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="e.g., Suit 102/2026"
+            placeholderTextColor={colors.mutedForeground}
+            value={caseTitle}
+            onChangeText={setCaseTitle}
+          />
+        </View>
         
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="Item Number (e.g., 24)"
-          placeholderTextColor={colors.mutedForeground}
-          keyboardType="numeric"
-          value={itemNumber}
-          onChangeText={setItemNumber}
-        />
+        <View style={styles.rowInputs}>
+          <View style={[styles.inputGroup, { flex: 1 }]}>
+            <Text style={[styles.inputLabel, { color: colors.foreground }]}>Item Number</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+              placeholder="e.g., 24"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="numeric"
+              value={itemNumber}
+              onChangeText={setItemNumber}
+            />
+          </View>
 
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="Hearing Date (DD-MM-YYYY)"
-          placeholderTextColor={colors.mutedForeground}
-          value={hearingDate}
-          onChangeText={setHearingDate}
-        />
+          <View style={[styles.inputGroup, { flex: 1.2 }]}>
+            <Text style={[styles.inputLabel, { color: colors.foreground }]}>Hearing Date</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+              placeholder="DD-MM-YYYY"
+              placeholderTextColor={colors.mutedForeground}
+              value={hearingDate}
+              onChangeText={setHearingDate}
+            />
+          </View>
+        </View>
 
         <Button
-          title={loading ? "Saving..." : "Add to Cause List"}
+          title={loading ? "Saving Hearing..." : "Add to Cause List"}
           variant="primary"
           onPress={handleAddHearing}
-          style={[loading && { opacity: 0.5 }, { marginTop: 4, marginVertical: 0 }]}
+          style={[loading && { opacity: 0.5 }, { marginTop: 4, marginVertical: 0, backgroundColor: '#C9A84C' }]}
         />
       </Card>
 
-      <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Tracked Matters ({matters.length})</Text>
+      {/* Tracked Matters Section */}
+      <View style={styles.resultsHeaderRow}>
+        <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Tracked Matters</Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countBadgeText}>{matters.length}</Text>
+        </View>
+      </View>
+
       {matters.length === 0 ? (
-        <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No hearings tracked yet. Add one above.</Text>
+        <Card style={[styles.emptyCard, { borderColor: colors.border }]}>
+          <Feather name="folder" size={24} color={colors.mutedForeground} style={{ marginBottom: 8 }} />
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No hearings tracked yet. Schedule a matter above to enable automated notifications.</Text>
+        </Card>
       ) : (
         matters.map((item) => (
-          <Card key={item.id} style={styles.trackedCard}>
+          <Card key={item.id} style={[styles.trackedCard, { borderColor: colors.border }]}>
             <View style={styles.cardRow}>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>Item No. {item.itemNumber}</Text>
@@ -238,25 +270,34 @@ export default function CauseListScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, marginTop: 10 },
-  subTitle: { fontFamily: 'Inter_400Regular', fontSize: 14, marginBottom: 20, marginTop: 5 },
-  formCard: { marginVertical: 0, marginBottom: 24, padding: 16 },
-  formHeader: { fontFamily: 'Inter_600SemiBold', fontSize: 16, marginBottom: 12 },
+  headerContainer: { marginBottom: 20 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  formCard: { marginVertical: 0, marginBottom: 24, padding: 16, borderRadius: 12, borderWidth: 1 },
+  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 14 },
+  inputGroup: { marginBottom: 12 },
+  inputLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, marginBottom: 6 },
+  rowInputs: { flexDirection: 'row', gap: 10 },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 15,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 48,
+    fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    marginBottom: 12,
   },
-  resultsHeader: { fontFamily: 'Inter_700Bold', fontSize: 18, marginBottom: 12 },
-  emptyText: { fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginBottom: 20 },
-  trackedCard: { marginVertical: 0, marginBottom: 12, padding: 14 },
-  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  resultsHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  resultsHeader: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  countBadge: { backgroundColor: '#C9A84C20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: '#C9A84C40' },
+  countBadgeText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_700Bold' },
+  emptyCard: { padding: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1 },
+  emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', lineHeight: 18 },
+  trackedCard: { marginVertical: 0, marginBottom: 12, padding: 16, borderRadius: 12, borderWidth: 1 },
+  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   badge: { backgroundColor: '#C9A84C20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#C9A84C40' },
   badgeText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   dateText: { fontSize: 13, color: '#C9A84C', fontFamily: 'Inter_600SemiBold' },
-  caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, marginBottom: 4 },
+  caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 4 },
   judgeText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
 });
