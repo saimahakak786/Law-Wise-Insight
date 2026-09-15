@@ -13,7 +13,6 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import UpgradeModal from '../../components/UpgradeModal';
 
-
 export default function FactMatcherScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -143,7 +142,7 @@ export default function FactMatcherScreen() {
     }
   };
 
-  const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
+  const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -151,12 +150,22 @@ export default function FactMatcherScreen() {
         style={[styles.container, { backgroundColor: colors.background }, !isProUser && { opacity: 0.35 }]} 
         contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
         pointerEvents={isProUser ? 'auto' : 'none'}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Fact Matcher & Precedent Finder</Text>
-        <Text style={[styles.subTitle, { color: colors.mutedForeground }]}>Input case scenario details to instantly discover matching case laws and legal principles.</Text>
+        {/* Header Section */}
+        <View style={styles.headerContainer}>
+          <View style={styles.titleRow}>
+            <Feather name="git-merge" size={22} color="#C9A84C" />
+            <Text style={styles.screenTitle}>Fact Matcher & Precedents</Text>
+          </View>
+          <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
+            Input case scenarios to instantly discover matching case laws and legal principles under {jurisdiction} law.
+          </Text>
+        </View>
 
-        <Card style={styles.formCard}>
-          <Text style={[styles.formHeader, { color: colors.foreground }]}>Case Scenario / Facts</Text>
+        {/* Form Card */}
+        <Card style={[styles.formCard, { borderColor: colors.border }]}>
+          <Text style={styles.sectionHeaderLabel}>CASE SCENARIO / FACTS</Text>
           
           <TextInput
             style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
@@ -173,11 +182,17 @@ export default function FactMatcherScreen() {
             title={loading ? "Analyzing Precedents..." : "Find Matching Precedents"}
             variant="primary"
             onPress={handleMatchCases}
-            style={[loading && { opacity: 0.5 }, { marginVertical: 0 }]}
+            style={[loading && { opacity: 0.5 }, { marginVertical: 0, backgroundColor: '#C9A84C' }]}
           />
         </Card>
 
-        <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Matched Precedents ({results.length})</Text>
+        {/* Results Header */}
+        <View style={styles.resultsHeaderRow}>
+          <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Matched Precedents</Text>
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeText}>{results.length}</Text>
+          </View>
+        </View>
         
         {loading && (
           <View style={styles.loaderContainer}>
@@ -187,10 +202,13 @@ export default function FactMatcherScreen() {
         )}
 
         {!loading && results.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No precedents matched yet. Enter facts above to search.</Text>
+          <Card style={[styles.emptyCard, { borderColor: colors.border }]}>
+            <Feather name="search" size={24} color={colors.mutedForeground} style={{ marginBottom: 8 }} />
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No precedents matched yet. Enter case facts above to run the search analysis.</Text>
+          </Card>
         ) : (
           results.map((item) => (
-            <Card key={item.id ?? item.citation} style={styles.resultCard}>
+            <Card key={item.id ?? item.citation} style={[styles.resultCard, { borderColor: colors.border }]}>
               <View style={styles.cardRow}>
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{item.citation}</Text>
@@ -209,7 +227,6 @@ export default function FactMatcherScreen() {
         visible={showUpgradeModal}
         onClose={() => {
           setShowUpgradeModal(false);
-          // Optional: navigate back or keep modal forcing subscription
         }}
         onSubscribe={() => {
           setIsProUser(true); 
@@ -223,28 +240,34 @@ export default function FactMatcherScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, marginTop: 10 },
-  subTitle: { fontFamily: 'Inter_400Regular', fontSize: 14, marginBottom: 20, marginTop: 5 },
-  formCard: { marginVertical: 0, marginBottom: 24, padding: 16 },
-  formHeader: { fontFamily: 'Inter_600SemiBold', fontSize: 16, marginBottom: 12 },
+  headerContainer: { marginBottom: 20 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  formCard: { marginVertical: 0, marginBottom: 24, padding: 16, borderRadius: 12, borderWidth: 1 },
+  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 12 },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: 'Inter_400Regular',
     minHeight: 130,
     marginBottom: 16,
   },
-  resultsHeader: { fontFamily: 'Inter_700Bold', fontSize: 18, marginBottom: 12 },
+  resultsHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  resultsHeader: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  countBadge: { backgroundColor: '#C9A84C20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: '#C9A84C40' },
+  countBadgeText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_700Bold' },
   loaderContainer: { alignItems: 'center', paddingVertical: 30, gap: 10 },
-  loaderText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
-  emptyText: { fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginBottom: 20 },
-  resultCard: { marginVertical: 0, marginBottom: 12, padding: 16 },
+  loaderText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  emptyCard: { padding: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1 },
+  emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', lineHeight: 18 },
+  resultCard: { marginVertical: 0, marginBottom: 12, padding: 16, borderRadius: 12, borderWidth: 1 },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   badge: { backgroundColor: '#C9A84C20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#C9A84C40' },
   badgeText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   matchScore: { fontSize: 13, color: '#C9A84C', fontFamily: 'Inter_700Bold' },
-  caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, marginBottom: 6 },
-  principleText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 20 },
+  caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 6 },
+  principleText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 20 },
 });
