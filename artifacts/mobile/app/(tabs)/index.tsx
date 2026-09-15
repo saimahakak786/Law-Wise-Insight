@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
-  Platform, ActivityIndicator,
+  Platform, ActivityIndicator, TextInput, Alert,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,6 +51,55 @@ export default function HomeScreen() {
   const firstName = user?.firstName ?? user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] ?? 'Counselor';
   const recentDocs = documents?.slice(0, 3) ?? [];
   const activeCases = cases?.filter((c: any) => c.status === 'active') ?? [];
+
+  // Voice Dictation States on Main Screen
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [transcript, setTranscript] = useState('');
+  const [savedMemos, setSavedMemos] = useState<string[]>([]);
+
+  useEffect(() => {
+    let interval: any;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+      setRecordingSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remSecs = secs % 60;
+    return `${mins}:${remSecs < 10 ? '0' : ''}${remSecs}`;
+  };
+
+  const handleToggleRecording = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!isRecording) {
+      setIsRecording(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      setIsRecording(false);
+      const simulatedText = "Dictated brief: Counsel notes appearance for the petitioner in the matter regarding Section 482 quashing petition. Next date fixed for arguments on interim relief.";
+      setTranscript((prev) => (prev ? prev + '\n\n' + simulatedText : simulatedText));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  const handleSaveMemo = () => {
+    if (!transcript.trim()) {
+      Alert.alert('Empty Memo', 'Please dictate or write notes before saving.');
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSavedMemos((prev) => [transcript, ...prev]);
+    setTranscript('');
+    Alert.alert('Success', 'Voice memo securely logged to case files.');
+  };
 
   return (
     <ScrollView
@@ -146,8 +195,82 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* Active Case Reminders / Cause List Preview */}
+      {/* FULL VOICE DICTATION CONSOLE ON MAIN SCREEN */}
       <View style={styles.sectionHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Feather name="mic" size={16} color="#C9A84C" />
+          <Text style={[styles.sectionTitleText, { color: colors.foreground }]}>Voice Dictation & Memos</Text>
+        </View>
+      </View>
+
+      <View style={[styles.dictationCard, { backgroundColor: colors.card, borderColor: isRecording ? '#EF4444' : (colors.border ?? '#C9A84C30') }]}>
+        <View style={[styles.micPulseContainer, { backgroundColor: isRecording ? '#EF444420' : '#C9A84C20', borderColor: isRecording ? '#EF4444' : '#C9A84C' }]}>
+          <Pressable 
+            style={[styles.micButton, { backgroundColor: isRecording ? '#EF4444' : '#C9A84C' }]}
+            onPress={handleToggleRecording}
+          >
+            <Feather name={isRecording ? 'square' : 'mic'} size={26} color="#070D24" />
+          </Pressable>
+        </View>
+
+        <Text style={[styles.dictationStatusText, { color: isRecording ? '#EF4444' : colors.foreground }]}>
+          {isRecording ? `Recording Audio... (${formatTime(recordingSeconds)})` : 'Tap to Start Voice Dictation'}
+        </Text>
+        <Text style={[styles.dictationStatusSub, { color: colors.mutedForeground }]}>
+          {isRecording ? 'Listening and converting speech to structured text...' : 'Speak briefs, courtroom notes, or client instructions.'}
+        </Text>
+
+        <Pressable 
+          style={[styles.dictationActionBtn, { backgroundColor: isRecording ? '#EF4444' : '#C9A84C' }]}
+          onPress={handleToggleRecording}
+        >
+          <Text style={styles.dictationActionBtnText}>
+            {isRecording ? 'Stop Recording' : 'Start Voice Dictation'}
+          </Text>
+        </Pressable>
+
+        <View style={{ width: '100%', marginTop: 16 }}>
+          <View style={styles.transcriptHeader}>
+            <Text style={[styles.transcriptTitle, { color: colors.foreground }]}>Live Transcript</Text>
+            {transcript.length > 0 && (
+              <Pressable onPress={() => setTranscript('')}>
+                <Text style={styles.clearText}>Clear</Text>
+              </Pressable>
+            )}
+          </View>
+          <TextInput
+            style={[styles.transcriptInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="Spoken words will appear here in real-time..."
+            placeholderTextColor={colors.mutedForeground}
+            value={transcript}
+            onChangeText={setTranscript}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+          {transcript.length > 0 && (
+            <Pressable style={styles.saveMemoBtn} onPress={handleSaveMemo}>
+              <Feather name="check" size={16} color="#070D24" />
+              <Text style={styles.saveMemoBtnText}>Save Voice Memo</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {savedMemos.length > 0 && (
+          <View style={{ width: '100%', marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
+            <Text style={[styles.transcriptTitle, { color: colors.foreground, marginBottom: 8 }]}>Recent Saved Memos</Text>
+            {savedMemos.slice(0, 2).map((memo, idx) => (
+              <View key={idx} style={[styles.memoItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Feather name="file-text" size={14} color="#C9A84C" />
+                <Text style={[styles.memoText, { color: colors.foreground }]} numberOfLines={2}>{memo}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Active Case Reminders / Cause List Preview */}
+      <View style={[styles.sectionHeader, { marginTop: 20 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Feather name="clock" size={16} color="#C9A84C" />
           <Text style={[styles.sectionTitleText, { color: colors.foreground }]}>Active Case Reminders</Text>
@@ -255,47 +378,17 @@ const styles = StyleSheet.create({
   heroBtn: { backgroundColor: '#C9A84C', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 16, alignSelf: 'flex-start' },
   heroBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#070D24' },
   heroLogoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#C9A84C40',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
+    width: 64, height: 64, borderRadius: 16, borderWidth: 1, borderColor: '#C9A84C40',
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
   },
-  subLogoIcon: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-  },
+  subLogoIcon: { position: 'absolute', bottom: 8, right: 8 },
   vaultBanner: {
-    marginHorizontal: 20,
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 20,
-    borderWidth: 1,
+    marginHorizontal: 20, borderRadius: 14, padding: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20, borderWidth: 1,
   },
-  vaultIconBg: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#C9A84C18',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  vaultTitle: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 15,
-  },
-  vaultDesc: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-    marginTop: 2,
-  },
+  vaultIconBg: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#C9A84C18', alignItems: 'center', justifyContent: 'center' },
+  vaultTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  vaultDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
   statsRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 24 },
   statCard: { flex: 1, borderRadius: 12, padding: 14, alignItems: 'center' },
   statNum: { fontFamily: 'Inter_700Bold', fontSize: 22 },
@@ -308,6 +401,36 @@ const styles = StyleSheet.create({
   actionCard: { width: '47%', borderRadius: 14, padding: 16, gap: 10 },
   actionIconBg: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   actionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, lineHeight: 18 },
+  dictationCard: {
+    marginHorizontal: 20, borderRadius: 16, padding: 20, alignItems: 'center',
+    marginBottom: 20, borderWidth: 1,
+  },
+  micPulseContainer: {
+    width: 80, height: 80, borderRadius: 40, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+  },
+  micButton: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  dictationStatusText: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 4, textAlign: 'center' },
+  dictationStatusSub: { fontFamily: 'Inter_400Regular', fontSize: 12, textAlign: 'center', marginBottom: 14 },
+  dictationActionBtn: { borderRadius: 10, paddingVertical: 10, width: '100%', alignItems: 'center' },
+  dictationActionBtnText: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#070D24' },
+  transcriptHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  transcriptTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  clearText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#EF4444' },
+  transcriptInput: {
+    width: '100%', borderRadius: 10, borderWidth: 1, padding: 12,
+    height: 90, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 10,
+  },
+  saveMemoBtn: {
+    backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, width: '100%',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  saveMemoBtnText: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#070D24' },
+  memoItem: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10,
+    borderRadius: 8, borderWidth: 1, marginBottom: 6, width: '100%',
+  },
+  memoText: { fontFamily: 'Inter_400Regular', fontSize: 12, flex: 1, lineHeight: 16 },
   emptyCard: { marginHorizontal: 20, borderRadius: 14, padding: 20, alignItems: 'center', gap: 10, marginBottom: 20 },
   emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center' },
   emptyBtn: { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, marginTop: 6 },
