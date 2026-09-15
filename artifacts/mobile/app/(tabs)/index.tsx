@@ -36,7 +36,7 @@ const MOCK_FALLBACK_CASES = [
   { id: 3, title: 'Verma Employment Arbitration', status: 'active', nextHearing: 'Sep 18, 11:00 AM' },
 ];
 
-// Max duration limit per dictation session (e.g., 2 minutes = 120 seconds)
+// Max duration limit per dictation session (2 minutes = 120 seconds)
 const MAX_RECORDING_SECONDS = 120;
 
 export default function HomeScreen() {
@@ -55,22 +55,21 @@ export default function HomeScreen() {
   const recentDocs = documents?.slice(0, 3) ?? [];
   const activeCases = cases?.filter((c: any) => c.status === 'active') ?? [];
 
-  // Voice Dictation States & 3 Free Tier Tracking
+  // Voice Dictation & Structuring States
   const [isRecording, setIsRecording] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [transcript, setTranscript] = useState('');
   const [savedMemos, setSavedMemos] = useState<string[]>([]);
   
-  // Set to 3 Free Dictations
   const [freeDictationsLeft, setFreeDictationsLeft] = useState(3);
-  const [isProUser, setIsProUser] = useState(false); // Toggle to true if user upgrades
+  const [isProUser, setIsProUser] = useState(false);
 
   useEffect(() => {
     let interval: any;
     if (isRecording) {
       interval = setInterval(() => {
         setRecordingSeconds((prev) => {
-          // Auto-stop if user hits the duration limit and is not Pro
           if (!isProUser && prev + 1 >= MAX_RECORDING_SECONDS) {
             clearInterval(interval);
             handleAutoStopRecording();
@@ -86,16 +85,30 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [isRecording, isProUser]);
 
+  const formatRawTranscriptToLegalBrief = (rawText: string) => {
+    // Simulate AI structuring messy voice notes into a professional legal format
+    return `⚖️ [AI STRUCTURED COURT BRIEF]
+• Appearance: Counsel noted for petitioner.
+• Core Submission: ${rawText || 'Seeking urgent interim relief & stay on execution proceedings.'}
+• Court Directions: Notice issued, reply affidavit to be filed within 2 weeks.
+• Next Hearing: Listed for further consideration next month.`;
+  };
+
   const handleAutoStopRecording = () => {
     setIsRecording(false);
-    const simulatedText = "Dictated brief: Max free duration reached (2 mins). Counsel notes appearance for petitioner regarding interim relief.";
-    setTranscript((prev) => (prev ? prev + '\n\n' + simulatedText : simulatedText));
+    setIsFormatting(true);
     
+    setTimeout(() => {
+      const structuredBrief = formatRawTranscriptToLegalBrief("Max free duration reached. Client instructions noted regarding property dispute.");
+      setTranscript(structuredBrief);
+      setIsFormatting(false);
+    }, 800);
+
     if (!isProUser) {
       setFreeDictationsLeft((prev) => Math.max(0, prev - 1));
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert('Time Limit Reached', 'Free dictations are capped at 2 minutes per session. Upgrade to Pro for unlimited length.');
+    Alert.alert('Time Limit Reached', 'Free dictations are capped at 2 minutes. Upgrade to Pro for unlimited length.');
   };
 
   const formatTime = (secs: number) => {
@@ -107,12 +120,11 @@ export default function HomeScreen() {
   const handleToggleRecording = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // Check if free dictations have run out and user is not Pro
     if (!isProUser && freeDictationsLeft <= 0 && !isRecording) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert(
         'Pro Feature Required',
-        'You have used all 3 of your free trial dictations. Upgrade to LawVise Pro for unlimited secure voice dictations and AI legal transcription.',
+        'You have used your 3 free trial dictations. Upgrade to LawVise Pro for unlimited secure voice dictations and automatic legal brief structuring.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Unlock Unlimited Pro', onPress: () => setIsProUser(true) }
@@ -126,10 +138,16 @@ export default function HomeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       setIsRecording(false);
-      const simulatedText = "Dictated brief: Counsel notes appearance for the petitioner regarding interim relief application. Matter adjourned to next Wednesday.";
-      setTranscript((prev) => (prev ? prev + '\n\n' + simulatedText : simulatedText));
-      
-      // Deduct from free dictations if not Pro
+      setIsFormatting(true);
+
+      // Simulate intelligent AI parsing of spoken words
+      setTimeout(() => {
+        const rawSpeech = "Counsel appeared for the petitioner regarding interim relief application. Matter argued at length. Bench granted protection and listed next Wednesday.";
+        const structuredBrief = formatRawTranscriptToLegalBrief(rawSpeech);
+        setTranscript((prev) => (prev ? prev + '\n\n' + structuredBrief : structuredBrief));
+        setIsFormatting(false);
+      }, 1000);
+
       if (!isProUser) {
         setFreeDictationsLeft((prev) => Math.max(0, prev - 1));
       }
@@ -140,13 +158,13 @@ export default function HomeScreen() {
 
   const handleSaveMemo = () => {
     if (!transcript.trim()) {
-      Alert.alert('Empty Memo', 'Please dictate or write notes before saving.');
+      Alert.alert('Empty Memo', 'Please dictate notes before saving.');
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSavedMemos((prev) => [transcript, ...prev]);
     setTranscript('');
-    Alert.alert('Success', 'Voice memo securely logged to case files.');
+    Alert.alert('Success', 'Structured brief securely logged to your case files.');
   };
 
   return (
@@ -243,11 +261,11 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* FULL VOICE DICTATION CONSOLE (3 Free Trials, Max 2 mins each) */}
+      {/* AI VOICE DICTATION & COURTROOM BRIEF GENERATOR */}
       <View style={styles.sectionHeader}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Feather name="mic" size={16} color="#C9A84C" />
-          <Text style={[styles.sectionTitleText, { color: colors.foreground }]}>Voice Dictation & Memos</Text>
+          <Text style={[styles.sectionTitleText, { color: colors.foreground }]}>Courtroom Voice Dictation</Text>
         </View>
         <View style={[styles.tierBadge, { backgroundColor: isProUser ? '#C9A84C25' : '#1B2448' }]}>
           <Feather name={isProUser ? 'award' : 'lock'} size={12} color="#C9A84C" />
@@ -268,10 +286,10 @@ export default function HomeScreen() {
         </View>
 
         <Text style={[styles.dictationStatusText, { color: isRecording ? '#EF4444' : colors.foreground }]}>
-          {isRecording ? `Recording Audio... (${formatTime(recordingSeconds)} / 2:00)` : 'Tap to Start Voice Dictation'}
+          {isRecording ? `Recording Audio... (${formatTime(recordingSeconds)} / 2:00)` : 'Tap to Dictate Courtroom Notes'}
         </Text>
         <Text style={[styles.dictationStatusSub, { color: colors.mutedForeground }]}>
-          {isRecording ? 'Listening and converting speech to structured text...' : (freeDictationsLeft > 0 || isProUser ? 'Speak briefs, courtroom notes, or client instructions (2m max per free trial).' : 'All free trials used. Upgrade to Pro for unlimited length.')}
+          {isRecording ? 'Listening...' : 'Spoken words are automatically structured into professional court summaries.'}
         </Text>
 
         <Pressable 
@@ -279,44 +297,53 @@ export default function HomeScreen() {
           onPress={handleToggleRecording}
         >
           <Text style={styles.dictationActionBtnText}>
-            {isRecording ? 'Stop Recording' : (freeDictationsLeft > 0 || isProUser ? 'Start Voice Dictation (Max 2m)' : 'Unlock Unlimited Pro')}
+            {isRecording ? 'Stop & Structure Brief' : (freeDictationsLeft > 0 || isProUser ? 'Start Voice Dictation (Max 2m)' : 'Unlock Unlimited Pro')}
           </Text>
         </Pressable>
 
         <View style={{ width: '100%', marginTop: 16 }}>
           <View style={styles.transcriptHeader}>
-            <Text style={[styles.transcriptTitle, { color: colors.foreground }]}>Live Transcript</Text>
+            <Text style={[styles.transcriptTitle, { color: colors.foreground }]}>Structured Output</Text>
             {transcript.length > 0 && (
               <Pressable onPress={() => setTranscript('')}>
                 <Text style={styles.clearText}>Clear</Text>
               </Pressable>
             )}
           </View>
-          <TextInput
-            style={[styles.transcriptInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-            placeholder="Spoken words will appear here in real-time..."
-            placeholderTextColor={colors.mutedForeground}
-            value={transcript}
-            onChangeText={setTranscript}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-          {transcript.length > 0 && (
+          
+          {isFormatting ? (
+            <View style={[styles.formattingBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <ActivityIndicator color="#C9A84C" size="small" />
+              <Text style={[styles.formattingText, { color: colors.mutedForeground }]}>AI structuring notes into legal format...</Text>
+            </View>
+          ) : (
+            <TextInput
+              style={[styles.transcriptInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+              placeholder="Structured legal brief will appear here automatically..."
+              placeholderTextColor={colors.mutedForeground}
+              value={transcript}
+              onChangeText={setTranscript}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+            />
+          )}
+
+          {transcript.length > 0 && !isFormatting && (
             <Pressable style={styles.saveMemoBtn} onPress={handleSaveMemo}>
               <Feather name="check" size={16} color="#070D24" />
-              <Text style={styles.saveMemoBtnText}>Save Voice Memo</Text>
+              <Text style={styles.saveMemoBtnText}>Save to Case File</Text>
             </Pressable>
           )}
         </View>
 
         {savedMemos.length > 0 && (
           <View style={{ width: '100%', marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
-            <Text style={[styles.transcriptTitle, { color: colors.foreground, marginBottom: 8 }]}>Recent Saved Memos</Text>
+            <Text style={[styles.transcriptTitle, { color: colors.foreground, marginBottom: 8 }]}>Saved Structured Memos</Text>
             {savedMemos.slice(0, 2).map((memo, idx) => (
               <View key={idx} style={[styles.memoItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
                 <Feather name="file-text" size={14} color="#C9A84C" />
-                <Text style={[styles.memoText, { color: colors.foreground }]} numberOfLines={2}>{memo}</Text>
+                <Text style={[styles.memoText, { color: colors.foreground }]} numberOfLines={3}>{memo}</Text>
               </View>
             ))}
           </View>
@@ -476,9 +503,14 @@ const styles = StyleSheet.create({
   transcriptHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   transcriptTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
   clearText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#EF4444' },
+  formattingBox: {
+    width: '100%', borderRadius: 10, borderWidth: 1, padding: 20,
+    height: 110, alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10,
+  },
+  formattingText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
   transcriptInput: {
     width: '100%', borderRadius: 10, borderWidth: 1, padding: 12,
-    height: 90, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 10,
+    height: 120, fontFamily: 'Inter_400Regular', fontSize: 12, marginBottom: 10, lineHeight: 18,
   },
   saveMemoBtn: {
     backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, width: '100%',
@@ -489,7 +521,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10,
     borderRadius: 8, borderWidth: 1, marginBottom: 6, width: '100%',
   },
-  memoText: { fontFamily: 'Inter_400Regular', fontSize: 12, flex: 1, lineHeight: 16 },
+  memoText: { fontFamily: 'Inter_400Regular', fontSize: 11, flex: 1, lineHeight: 15 },
   emptyCard: { marginHorizontal: 20, borderRadius: 14, padding: 20, alignItems: 'center', gap: 10, marginBottom: 20 },
   emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center' },
   emptyBtn: { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, marginTop: 6 },
