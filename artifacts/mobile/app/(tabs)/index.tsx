@@ -61,8 +61,8 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Good day,</Text>
-          <Text style={styles.name}>{firstName}</Text>
+          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Good day,</Text>
+          <Text style={[styles.name, { color: colors.foreground }]}>{firstName}</Text>
         </View>
         <Pressable
           onPress={() => {
@@ -110,7 +110,7 @@ export default function HomeScreen() {
 
       {/* Secure Document Vault Banner */}
       <Pressable
-        style={({ pressed }) => [styles.vaultBanner, { backgroundColor: colors.card, opacity: pressed ? 0.9 : 1 }]}
+        style={({ pressed }) => [styles.vaultBanner, { backgroundColor: colors.card, borderColor: colors.border ?? '#C9A84C30', opacity: pressed ? 0.9 : 1 }]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           router.push('/(tabs)/cases' as any);
@@ -126,7 +126,7 @@ export default function HomeScreen() {
         <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
       </Pressable>
 
-      {/* Quick Actions (Now including Cause List & Reminders prominently) */}
+      {/* Quick Actions */}
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
       <View style={styles.actionsGrid}>
         {QUICK_ACTIONS.map((action) => (
@@ -165,7 +165,7 @@ export default function HomeScreen() {
         activeCases.map((item: any) => (
           <Pressable
             key={item.id}
-            style={({ pressed }) => [styles.reminderCard, { backgroundColor: colors.card, opacity: pressed ? 0.9 : 1 }]}
+            style={({ pressed }) => [styles.reminderCard, { backgroundColor: colors.card, borderColor: colors.border ?? '#C9A84C20', opacity: pressed ? 0.9 : 1 }]}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/cases' as any); }}
           >
             <View style={styles.reminderIconBg}>
@@ -241,8 +241,8 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 },
-  greeting: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#8B9CC5' },
-  name: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  greeting: { fontFamily: 'Inter_400Regular', fontSize: 14 },
+  name: { fontFamily: 'Inter_700Bold', fontSize: 22 },
   avatarBadge: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#070D24' },
   heroBanner: {
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   heroLeft: { flex: 1 },
   heroTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#FFFFFF', marginBottom: 6 },
-  heroSub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#8B9CC5', marginBottom: 14, lineHeight: 18 },
+  heroSub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#CBD5E1', marginBottom: 14, lineHeight: 18 },
   heroBtn: { backgroundColor: '#C9A84C', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 16, alignSelf: 'flex-start' },
   heroBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#070D24' },
   heroLogoBadge: {
@@ -278,7 +278,6 @@ const styles = StyleSheet.create({
     gap: 14,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#C9A84C30',
   },
   vaultIconBg: {
     width: 44,
@@ -313,7 +312,7 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center' },
   emptyBtn: { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, marginTop: 6 },
   emptyBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#070D24' },
-  reminderCard: { marginHorizontal: 20, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8, borderWidth: 1, borderColor: '#C9A84C20' },
+  reminderCard: { marginHorizontal: 20, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8, borderWidth: 1 },
   reminderIconBg: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#C9A84C18', alignItems: 'center', justifyContent: 'center' },
   reminderTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
   reminderTime: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 2 },
