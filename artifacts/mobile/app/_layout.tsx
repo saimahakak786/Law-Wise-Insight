@@ -27,7 +27,16 @@ const queryClient = new QueryClient({
 
 setBaseUrl('https://law-wise-insight.onrender.com');
 
+// Clean, eye-friendly light theme constants (like ink on paper)
+const APP_BACKGROUND = '#F8FAFC'; // Soft off-white / light paper tone
+const TEXT_PRIMARY = '#0F172A';    // Deep charcoal / near-black ink text (zero strain)
+const ACCENT_PRIMARY = '#1E3A8A';  // Professional deep legal blue
 
+// Apply default dark ink text styling globally across React Native Text components
+if ((Text as any).defaultProps == null) {
+  (Text as any).defaultProps = {};
+}
+(Text as any).defaultProps.style = [{ color: TEXT_PRIMARY }, (Text as any).defaultProps.style];
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk';
 
@@ -56,7 +65,7 @@ function RootLayoutNav() {
       screenOptions={{ 
         headerShown: false, 
         animation: 'fade_from_bottom',
-        contentStyle: { backgroundColor: '#070D24' } 
+        contentStyle: { backgroundColor: APP_BACKGROUND } 
       }}
     >
       <Stack.Screen name="index" options={{ animation: 'none' }} />
@@ -106,7 +115,7 @@ function InitializingGate() {
   if (!isLoaded && !timedOut) {
     return (
       <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#C9A84C" />
+        <ActivityIndicator size="large" color={ACCENT_PRIMARY} />
       </View>
     );
   }
@@ -114,14 +123,14 @@ function InitializingGate() {
   if (timedOut && !isLoaded) {
     return (
       <View style={styles.loaderContainer}>
-        <Text style={{ color: '#FF6B6B', fontSize: 16, textAlign: 'center', marginBottom: 12, paddingHorizontal: 24 }}>
+        <Text style={{ color: '#DC2626', fontSize: 16, textAlign: 'center', marginBottom: 12, paddingHorizontal: 24 }}>
           Connection or initialization timed out.
         </Text>
         <TouchableOpacity 
-          style={{ backgroundColor: '#C9A84C', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
+          style={{ backgroundColor: ACCENT_PRIMARY, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
           onPress={() => setTimedOut(false)}
         >
-          <Text style={{ color: '#070D24', fontWeight: 'bold' }}>Retry</Text>
+          <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -154,11 +163,11 @@ export default function RootLayout() {
   if (!publishableKey) {
     SplashScreen.hideAsync();
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#070D24', padding: 24 }}>
-        <Text style={{ color: '#FF6B6B', fontSize: 16, textAlign: 'center', marginBottom: 12 }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: APP_BACKGROUND, padding: 24 }}>
+        <Text style={{ color: '#DC2626', fontSize: 16, textAlign: 'center', marginBottom: 12 }}>
           Missing Clerk publishable key
         </Text>
-        <Text style={{ color: '#8B9CC5', fontSize: 13, textAlign: 'center' }}>
+        <Text style={{ color: '#64748B', fontSize: 13, textAlign: 'center' }}>
           EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY was not set at build time.
         </Text>
       </View>
@@ -187,7 +196,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   loaderContainer: {
     flex: 1,
-    backgroundColor: '#070D24',
+    backgroundColor: APP_BACKGROUND,
     alignItems: 'center',
     justifyContent: 'center',
   },
