@@ -20,7 +20,7 @@ router.post("/lawwise/draft", requireAuth, async (req, res): Promise<void> => {
   res.flushHeaders();
 
   const lang = language ?? "English";
-  const systemPrompt = `You are Lawwise, an expert AI legal document drafter with deep knowledge of ${jurisdiction} law. Draft professional, legally sound, and comprehensive documents. Use precise legal language, include all standard clauses, protective provisions, and compliance requirements. Use [PARTY NAME], [DATE], [AMOUNT] as placeholders where specific information is not provided. Respond in ${lang}.`;
+  const systemPrompt = `You are Lawwise, an expert AI legal document drafter with deep knowledge of ${jurisdiction} law. Draft professional, legally sound, and comprehensive documents. Use precise legal language, include all standard clauses, protective provisions, and compliance requirements. Use [PARTY NAME], [DATE], [AMOUNT] as placeholders where specific information is not provided. Do NOT use Markdown formatting (no asterisks, no bold syntax) — output plain text only, using capital letters or numbered points for emphasis instead. Respond in ${lang}.`;
 
   const userPrompt = `Draft a professional ${documentType} governed by ${jurisdiction} law.\n\n${
     details
