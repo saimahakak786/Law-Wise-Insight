@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, Pressable, FlatList, StyleSheet,
   Modal, TextInput, ScrollView, ActivityIndicator,
-  Platform, Alert,
+  Platform, Alert, Share,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -230,6 +230,29 @@ export default function CasesScreen() {
     ]);
   };
 
+  // Export Portfolio Report via Native Share Sheet
+  const handleExportPortfolio = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!cases || cases.length === 0) {
+      Alert.alert('Empty Portfolio', 'No cases available to export.');
+      return;
+    }
+
+    const reportText = `⚖️ LAWVISE CASE PORTFOLIO REPORT\nGenerated on ${new Date().toLocaleDateString()}\n\n` +
+      cases.map((c, idx) => 
+        `${idx + 1}. ${c.title}\n   Case No: ${c.caseNumber || 'N/A'}\n   Court: ${c.court || 'N/A'}\n   Status: ${STATUS_LABELS[c.status]}\n   Next Hearing: ${c.hearingDate || 'None'}\n   Next Action: ${c.nextAction || 'None'}\n`
+      ).join('\n');
+
+    try {
+      await Share.share({
+        message: reportText,
+        title: 'LawVise Case Portfolio Report',
+      });
+    } catch {
+      Alert.alert('Error', 'Could not export portfolio report.');
+    }
+  };
+
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   return (
@@ -240,13 +263,18 @@ export default function CasesScreen() {
           <Feather name="briefcase" size={22} color="#C9A84C" />
           <Text style={styles.title}>Case Portfolio</Text>
         </View>
-        <Pressable style={styles.addBtn} onPress={openAddModal}>
-          <Feather name="plus" size={20} color="#070D24" />
-        </Pressable>
+        <View style={styles.headerActionRow}>
+          <Pressable style={styles.exportBtn} onPress={handleExportPortfolio}>
+            <Feather name="share-2" size={18} color="#C9A84C" />
+          </Pressable>
+          <Pressable style={styles.addBtn} onPress={openAddModal}>
+            <Feather name="plus" size={20} color="#070D24" />
+          </Pressable>
+        </View>
       </View>
 
       <Text style={[styles.screenSub, { color: colors.mutedForeground, paddingHorizontal: 20 }]}>
-        Track your active litigations, court hearing dates, and priority case items.
+        Track litigations, court hearing dates, and priority counsel action items.
       </Text>
 
       {/* Filter Tabs */}
@@ -295,40 +323,45 @@ export default function CasesScreen() {
               </Pressable>
             </View>
           }
-          renderItem={({ item }) => (
-            <Pressable
-              style={[styles.caseCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onLongPress={() => handleDelete(item.id, item.title)}
-              onPress={() => openEditModal(item)}
-            >
-              <View style={styles.caseCardLeft}>
-                <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280' }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.caseTitle, { color: colors.foreground }]} numberOfLines={1}>{item.title}</Text>
-                  {item.caseNumber && (
-                    <Text style={[styles.caseMeta, { color: '#C9A84C', marginBottom: 2 }]}>#{item.caseNumber}</Text>
-                  )}
-                  {item.court && (
-                    <View style={styles.caseMetaRow}>
-                      <Feather name="map-pin" size={12} color={colors.mutedForeground} />
-                      <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{item.court}</Text>
-                    </View>
-                  )}
-                  {item.hearingDate && (
-                    <View style={styles.caseMetaRow}>
-                      <Feather name="calendar" size={12} color="#C9A84C" />
-                      <Text style={[styles.metaText, { color: '#C9A84C' }]}>Next: {item.hearingDate}</Text>
-                    </View>
-                  )}
+          renderItem={({ item }) => {
+            const hasUrgentHearing = item.hearingDate && !item.hearingDate.toLowerCase().includes('completed');
+            return (
+              <Pressable
+                style={[styles.caseCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onLongPress={() => handleDelete(item.id, item.title)}
+                onPress={() => openEditModal(item)}
+              >
+                <View style={styles.caseCardLeft}>
+                  <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280' }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.caseTitle, { color: colors.foreground }]} numberOfLines={1}>{item.title}</Text>
+                    {item.caseNumber && (
+                      <Text style={[styles.caseMeta, { color: '#C9A84C', marginBottom: 2 }]}>#{item.caseNumber}</Text>
+                    )}
+                    {item.court && (
+                      <View style={styles.caseMetaRow}>
+                        <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+                        <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{item.court}</Text>
+                      </View>
+                    )}
+                    {item.hearingDate && (
+                      <View style={styles.caseMetaRow}>
+                        <Feather name="calendar" size={12} color={hasUrgentHearing ? '#EF4444' : '#C9A84C'} />
+                        <Text style={[styles.metaText, { color: hasUrgentHearing ? '#EF4444' : '#C9A84C', fontFamily: hasUrgentHearing ? 'Inter_600SemiBold' : 'Inter_400Regular' }]}>
+                          Next: {item.hearingDate} {hasUrgentHearing ? '⚠️' : ''}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280') + '20', borderColor: (STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280') + '40' }]}>
-                <Text style={[styles.statusBadgeText, { color: STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280' }]}>
-                  {STATUS_LABELS[item.status as CaseStatus]}
-                </Text>
-              </View>
-            </Pressable>
-          )}
+                <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280') + '20', borderColor: (STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280') + '40' }]}>
+                  <Text style={[styles.statusBadgeText, { color: STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280' }]}>
+                    {STATUS_LABELS[item.status as CaseStatus]}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          }}
         />
       )}
 
@@ -429,7 +462,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 6 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  headerActionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 16 },
+  exportBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#C9A84C20', borderWidth: 1, borderColor: '#C9A84C40', alignItems: 'center', justifyContent: 'center' },
   addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center' },
   filterRow: { paddingHorizontal: 20, gap: 8, paddingBottom: 16, flexDirection: 'row' },
   filterTab: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1 },
