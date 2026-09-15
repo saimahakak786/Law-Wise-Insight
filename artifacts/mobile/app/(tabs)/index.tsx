@@ -36,6 +36,9 @@ const MOCK_FALLBACK_CASES = [
   { id: 3, title: 'Verma Employment Arbitration', status: 'active', nextHearing: 'Sep 18, 11:00 AM' },
 ];
 
+// Max duration limit per dictation session (e.g., 2 minutes = 120 seconds)
+const MAX_RECORDING_SECONDS = 120;
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -52,24 +55,48 @@ export default function HomeScreen() {
   const recentDocs = documents?.slice(0, 3) ?? [];
   const activeCases = cases?.filter((c: any) => c.status === 'active') ?? [];
 
-  // Voice Dictation States on Main Screen
+  // Voice Dictation States & 3 Free Tier Tracking
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [transcript, setTranscript] = useState('');
   const [savedMemos, setSavedMemos] = useState<string[]>([]);
+  
+  // Set to 3 Free Dictations
+  const [freeDictationsLeft, setFreeDictationsLeft] = useState(3);
+  const [isProUser, setIsProUser] = useState(false); // Toggle to true if user upgrades
 
   useEffect(() => {
     let interval: any;
     if (isRecording) {
       interval = setInterval(() => {
-        setRecordingSeconds((prev) => prev + 1);
+        setRecordingSeconds((prev) => {
+          // Auto-stop if user hits the duration limit and is not Pro
+          if (!isProUser && prev + 1 >= MAX_RECORDING_SECONDS) {
+            clearInterval(interval);
+            handleAutoStopRecording();
+            return MAX_RECORDING_SECONDS;
+          }
+          return prev + 1;
+        });
       }, 1000);
     } else {
       clearInterval(interval);
       setRecordingSeconds(0);
     }
     return () => clearInterval(interval);
-  }, [isRecording]);
+  }, [isRecording, isProUser]);
+
+  const handleAutoStopRecording = () => {
+    setIsRecording(false);
+    const simulatedText = "Dictated brief: Max free duration reached (2 mins). Counsel notes appearance for petitioner regarding interim relief.";
+    setTranscript((prev) => (prev ? prev + '\n\n' + simulatedText : simulatedText));
+    
+    if (!isProUser) {
+      setFreeDictationsLeft((prev) => Math.max(0, prev - 1));
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert('Time Limit Reached', 'Free dictations are capped at 2 minutes per session. Upgrade to Pro for unlimited length.');
+  };
 
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
@@ -79,13 +106,34 @@ export default function HomeScreen() {
 
   const handleToggleRecording = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Check if free dictations have run out and user is not Pro
+    if (!isProUser && freeDictationsLeft <= 0 && !isRecording) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        'Pro Feature Required',
+        'You have used all 3 of your free trial dictations. Upgrade to LawVise Pro for unlimited secure voice dictations and AI legal transcription.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Unlock Unlimited Pro', onPress: () => setIsProUser(true) }
+        ]
+      );
+      return;
+    }
+
     if (!isRecording) {
       setIsRecording(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       setIsRecording(false);
-      const simulatedText = "Dictated brief: Counsel notes appearance for the petitioner in the matter regarding Section 482 quashing petition. Next date fixed for arguments on interim relief.";
+      const simulatedText = "Dictated brief: Counsel notes appearance for the petitioner regarding interim relief application. Matter adjourned to next Wednesday.";
       setTranscript((prev) => (prev ? prev + '\n\n' + simulatedText : simulatedText));
+      
+      // Deduct from free dictations if not Pro
+      if (!isProUser) {
+        setFreeDictationsLeft((prev) => Math.max(0, prev - 1));
+      }
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
@@ -195,11 +243,17 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* FULL VOICE DICTATION CONSOLE ON MAIN SCREEN */}
+      {/* FULL VOICE DICTATION CONSOLE (3 Free Trials, Max 2 mins each) */}
       <View style={styles.sectionHeader}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Feather name="mic" size={16} color="#C9A84C" />
           <Text style={[styles.sectionTitleText, { color: colors.foreground }]}>Voice Dictation & Memos</Text>
+        </View>
+        <View style={[styles.tierBadge, { backgroundColor: isProUser ? '#C9A84C25' : '#1B2448' }]}>
+          <Feather name={isProUser ? 'award' : 'lock'} size={12} color="#C9A84C" />
+          <Text style={styles.tierBadgeText}>
+            {isProUser ? 'Pro (Unlimited)' : `${freeDictationsLeft} Free Left (Max 2m)`}
+          </Text>
         </View>
       </View>
 
@@ -214,10 +268,10 @@ export default function HomeScreen() {
         </View>
 
         <Text style={[styles.dictationStatusText, { color: isRecording ? '#EF4444' : colors.foreground }]}>
-          {isRecording ? `Recording Audio... (${formatTime(recordingSeconds)})` : 'Tap to Start Voice Dictation'}
+          {isRecording ? `Recording Audio... (${formatTime(recordingSeconds)} / 2:00)` : 'Tap to Start Voice Dictation'}
         </Text>
         <Text style={[styles.dictationStatusSub, { color: colors.mutedForeground }]}>
-          {isRecording ? 'Listening and converting speech to structured text...' : 'Speak briefs, courtroom notes, or client instructions.'}
+          {isRecording ? 'Listening and converting speech to structured text...' : (freeDictationsLeft > 0 || isProUser ? 'Speak briefs, courtroom notes, or client instructions (2m max per free trial).' : 'All free trials used. Upgrade to Pro for unlimited length.')}
         </Text>
 
         <Pressable 
@@ -225,7 +279,7 @@ export default function HomeScreen() {
           onPress={handleToggleRecording}
         >
           <Text style={styles.dictationActionBtnText}>
-            {isRecording ? 'Stop Recording' : 'Start Voice Dictation'}
+            {isRecording ? 'Stop Recording' : (freeDictationsLeft > 0 || isProUser ? 'Start Voice Dictation (Max 2m)' : 'Unlock Unlimited Pro')}
           </Text>
         </Pressable>
 
@@ -397,6 +451,11 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, paddingHorizontal: 20, marginBottom: 12 },
   sectionTitleText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
   seeAll: { fontFamily: 'Inter_500Medium', fontSize: 13 },
+  tierBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10,
+    paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#C9A84C40',
+  },
+  tierBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C' },
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 10, marginBottom: 24 },
   actionCard: { width: '47%', borderRadius: 14, padding: 16, gap: 10 },
   actionIconBg: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
