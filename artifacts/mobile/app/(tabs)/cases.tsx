@@ -86,7 +86,7 @@ const MOCK_FALLBACK_CASES: CaseItem[] = [
   {
     id: 1,
     title: 'Sharma vs. Apex Properties',
-    caseNumber: 'CS/452/2025',
+    caseNumber: 'CS/452/2026',
     court: 'Delhi High Court',
     status: 'active',
     description: 'Property dispute regarding commercial lease agreement covenant breaches.',
@@ -135,11 +135,23 @@ export default function CasesScreen() {
   const isLoading = remoteLoading && !useLocalFallback && !remoteCases;
 
   const [filter, setFilter] = useState<CaseStatus | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<CaseFormData>(defaultForm);
 
-  const filtered = cases?.filter((c) => filter === 'all' || c.status === filter) ?? [];
+  // Filter by status tab & search query text (title, caseNumber, or court)
+  const filtered = cases?.filter((c) => {
+    const matchesStatus = filter === 'all' || c.status === filter;
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return matchesStatus;
+    
+    const matchesTitle = c.title?.toLowerCase().includes(query) ?? false;
+    const matchesCaseNum = c.caseNumber?.toLowerCase().includes(query) ?? false;
+    const matchesCourt = c.court?.toLowerCase().includes(query) ?? false;
+
+    return matchesStatus && (matchesTitle || matchesCaseNum || matchesCourt);
+  }) ?? [];
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetCasesQueryKey() });
 
@@ -277,6 +289,25 @@ export default function CasesScreen() {
         Track litigations, court hearing dates, and priority counsel action items.
       </Text>
 
+      {/* Real-time Search Input Bar */}
+      <View style={[styles.searchContainer, { paddingHorizontal: 20, marginBottom: 14 }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search by title, case no, or court..."
+            placeholderTextColor={colors.mutedForeground}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </Pressable>
+          )}
+        </View>
+      </View>
+
       {/* Filter Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
         {FILTER_OPTIONS.map((f) => {
@@ -317,10 +348,18 @@ export default function CasesScreen() {
             <View style={[styles.emptyCard, { borderColor: colors.border }]}>
               <Feather name="folder-minus" size={24} color={colors.mutedForeground} style={{ marginBottom: 8 }} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No cases found</Text>
-              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>Track your legal matters and upcoming schedule above.</Text>
-              <Pressable style={styles.emptyBtn} onPress={openAddModal}>
-                <Text style={styles.emptyBtnText}>Add First Case</Text>
-              </Pressable>
+              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
+                {searchQuery ? `No matches found for "${searchQuery}"` : 'Track your legal matters and upcoming schedule above.'}
+              </Text>
+              {searchQuery ? (
+                <Pressable style={styles.emptyBtn} onPress={() => setSearchQuery('')}>
+                  <Text style={styles.emptyBtnText}>Clear Search</Text>
+                </Pressable>
+              ) : (
+                <Pressable style={styles.emptyBtn} onPress={openAddModal}>
+                  <Text style={styles.emptyBtnText}>Add First Case</Text>
+                </Pressable>
+              )}
             </View>
           }
           renderItem={({ item }) => {
@@ -463,7 +502,10 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   headerActionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 16 },
+  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 12 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, height: 42, borderRadius: 12, borderWidth: 1, gap: 8 },
+  searchInput: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 13, height: '100%' },
+  clearSearchBtn: { padding: 4 },
   exportBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#C9A84C20', borderWidth: 1, borderColor: '#C9A84C40', alignItems: 'center', justifyContent: 'center' },
   addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center' },
   filterRow: { paddingHorizontal: 20, gap: 8, paddingBottom: 16, flexDirection: 'row' },
