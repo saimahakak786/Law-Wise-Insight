@@ -24,7 +24,6 @@ export default function SignUpPage() {
   const { signUp, errors, fetchStatus } = useSignUp();
 
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
@@ -36,24 +35,23 @@ export default function SignUpPage() {
   };
 
   const handleSignUp = async () => {
-    if (!email || !phoneNumber || password.length < 8) return;
+    if (!email || password.length < 8) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const { error } = await signUp.create({
-      emailAddress: email,
-      phoneNumber: phoneNumber,
+      emailAddress: email.trim(),
       password,
     });
     if (!error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Prepare verification for phone number via SMS code
-      await signUp.preparePhoneNumberVerification({ strategy: 'phone_code' });
+      // Prepare verification for email address via code
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
     }
   };
 
   const handleVerify = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await signUp.attemptPhoneNumberVerification({ code });
+    await signUp.attemptEmailAddressVerification({ code });
     if (signUp.status === 'complete') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await signUp.finalize({ navigate });
@@ -62,7 +60,7 @@ export default function SignUpPage() {
 
   const handleResendCode = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    signUp.preparePhoneNumberVerification({ strategy: 'phone_code' });
+    signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
   };
 
   const handleTogglePassword = () => {
@@ -70,16 +68,16 @@ export default function SignUpPage() {
     setShowPassword((v) => !v);
   };
 
-  // Verification step for phone number
+  // Verification step for email address
   if (
     signUp.status === 'missing_requirements' &&
-    signUp.unverifiedFields.includes('phone_number') &&
+    signUp.unverifiedFields.includes('email_address') &&
     signUp.missingFields.length === 0
   ) {
     useEffect(() => {
       const sendInitialCode = async () => {
         try {
-          await signUp.preparePhoneNumberVerification({ strategy: 'phone_code' });
+          await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
         } catch {
           // Fallback handled silently or via UI
         }
@@ -89,10 +87,10 @@ export default function SignUpPage() {
 
     return (
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
-        <Feather name="phone" size={48} color="#C9A84C" style={{ marginBottom: 24 }} />
-        <Text style={styles.title}>Verify your phone</Text>
+        <Feather name="mail" size={48} color="#C9A84C" style={{ marginBottom: 24 }} />
+        <Text style={styles.title}>Verify your email</Text>
         <Text style={styles.subtitle}>
-          We sent a 6-digit code via SMS to{'\n'}<Text style={{ color: '#C9A84C' }}>{phoneNumber}</Text>
+          We sent a 6-digit code to{'\n'}<Text style={{ color: '#C9A84C' }}>{email}</Text>
         </Text>
 
         {/* Segmented OTP Boxes Container */}
@@ -193,24 +191,6 @@ export default function SignUpPage() {
           <Text style={styles.error}>{errors.fields.emailAddress.message}</Text>
         )}
 
-        {/* Phone Number */}
-        <View style={styles.inputWrapper}>
-          <Feather name="phone" size={18} color="#8B9CC5" style={styles.inputIcon} />
-          <TextInput
-            style={[styles.inputField]}
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            placeholder="Phone number (e.g. +1234567890)"
-            placeholderTextColor="#8B9CC5"
-            keyboardType="phone-pad"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-        {errors.fields.phoneNumber && (
-          <Text style={styles.error}>{errors.fields.phoneNumber.message}</Text>
-        )}
-
         {/* Password */}
         <View style={styles.inputWrapper}>
           <Feather name="lock" size={18} color="#8B9CC5" style={styles.inputIcon} />
@@ -237,8 +217,8 @@ export default function SignUpPage() {
           title={fetchStatus === 'fetching' ? "Creating Account..." : "Create Account"}
           variant="primary"
           onPress={handleSignUp}
-          disabled={!email || !phoneNumber || password.length < 8 || fetchStatus === 'fetching'}
-          style={[(!email || !phoneNumber || password.length < 8 || fetchStatus === 'fetching') && styles.disabledBtn, { marginTop: 8 }]}
+          disabled={!email || password.length < 8 || fetchStatus === 'fetching'}
+          style={[(!email || password.length < 8 || fetchStatus === 'fetching') && styles.disabledBtn, { marginTop: 8 }]}
         />
 
         <Text style={styles.terms}>
