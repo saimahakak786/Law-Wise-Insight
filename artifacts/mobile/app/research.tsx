@@ -28,7 +28,7 @@ export default function ResearchScreen() {
   const [hasResult, setHasResult] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
+  const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   const handleResearch = async () => {
     if (!query.trim()) { Alert.alert('Enter Query', 'Please enter a research query.'); return; }
@@ -73,7 +73,6 @@ export default function ResearchScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      // Offline fallback streaming mock for robust presentation reliability
       const fallbackText = `LEGAL RESEARCH MEMORANDUM\n\n` +
         `JURISDICTION: ${jurisdiction.toUpperCase()}\n` +
         `QUERY TYPE: ${selectedType.toUpperCase()}\n` +
@@ -102,56 +101,65 @@ export default function ResearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: padTop, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color="#C9A84C" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Legal Research</Text>
-        <View style={{ width: 30 }} />
-      </View>
-
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
         onContentSizeChange={() => hasResult && scrollRef.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Query Input */}
-        <Text style={[styles.label, { color: colors.foreground }]}>Research Query</Text>
-        <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather name="search" size={18} color={colors.mutedForeground} style={styles.queryIcon} />
-          <TextInput
-            style={[styles.queryInput, { color: colors.foreground }]}
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search laws, case laws, statutes..."
-            placeholderTextColor={colors.mutedForeground}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-          />
+        {/* Header Section */}
+        <View style={styles.headerContainer}>
+          <View style={styles.titleRow}>
+            <Feather name="book-open" size={22} color="#C9A84C" />
+            <Text style={styles.screenTitle}>Legal Research Hub</Text>
+          </View>
+          <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
+            Analyze case laws, statutes, and judicial precedents instantly.
+          </Text>
         </View>
 
-        {/* Research Type Chips */}
-        <Text style={[styles.label, { color: colors.foreground }]}>Research Type</Text>
-        <View style={styles.chipsRow}>
-          {RESEARCH_TYPES.map((type) => (
-            <Pressable
-              key={type}
-              style={[
-                styles.chip,
-                { backgroundColor: selectedType === type ? '#C9A84C20' : colors.card, borderColor: selectedType === type ? '#C9A84C' : colors.border },
-              ]}
-              onPress={() => setSelectedType(type)}
-            >
-              <Text style={[styles.chipText, { color: selectedType === type ? '#C9A84C' : colors.foreground }]}>{type}</Text>
-            </Pressable>
-          ))}
+        {/* Step 1: Research Query Input */}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionHeaderLabel}>1. RESEARCH QUERY</Text>
+          <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather name="search" size={18} color={colors.mutedForeground} style={styles.queryIcon} />
+            <TextInput
+              style={[styles.queryInput, { color: colors.foreground }]}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search laws, case laws, statutes..."
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
         </View>
 
-        {/* Jurisdiction */}
+        {/* Step 2: Research Type Selection */}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionHeaderLabel}>2. RESEARCH SCOPE</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChipsContainer}>
+            {RESEARCH_TYPES.map((type) => {
+              const isSelected = selectedType === type;
+              return (
+                <Pressable
+                  key={type}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: isSelected ? '#C9A84C' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
+                  ]}
+                  onPress={() => setSelectedType(type)}
+                >
+                  <Text style={[styles.chipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{type}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Jurisdiction Details */}
         <View style={styles.jurisdictionRow}>
           <Feather name="globe" size={13} color={colors.mutedForeground} />
           <Text style={[styles.jurisdictionText, { color: colors.mutedForeground }]}>Jurisdiction: {jurisdiction}</Text>
@@ -163,26 +171,28 @@ export default function ResearchScreen() {
           onPress={handleResearch}
           disabled={!query.trim() || isResearching}
         >
-          {isResearching
-            ? <ActivityIndicator color="#070D24" />
-            : <>
-                <Feather name="search" size={20} color="#070D24" />
-                <Text style={styles.researchBtnText}>Research</Text>
-              </>}
+          {isResearching ? (
+            <ActivityIndicator color="#070D24" />
+          ) : (
+            <>
+              <Feather name="zap" size={18} color="#070D24" />
+              <Text style={styles.researchBtnText}>Run Legal Research</Text>
+            </>
+          )}
         </Pressable>
 
-        {/* Result Display */}
+        {/* Result Display Section */}
         {hasResult && (
           <View style={[styles.resultContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.resultHeader}>
-              <Feather name="book-open" size={16} color="#C9A84C" />
-              <Text style={[styles.resultHeaderText, { color: colors.foreground }]}>Research Results</Text>
+              <Feather name="file-text" size={16} color="#C9A84C" />
+              <Text style={[styles.resultHeaderText, { color: colors.foreground }]}>Research Memorandum</Text>
               {isResearching && <ActivityIndicator color="#C9A84C" size="small" />}
             </View>
             {isResearching && !result ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color="#C9A84C" />
-                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Researching {selectedType.toLowerCase()}...</Text>
+                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Synthesizing {selectedType.toLowerCase()} insights...</Text>
               </View>
             ) : null}
             <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
@@ -195,35 +205,34 @@ export default function ResearchScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1,
-  },
-  backBtn: { padding: 4 },
-  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#FFFFFF', flex: 1 },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 15, marginBottom: 10 },
+  headerContainer: { marginBottom: 20 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  sectionBlock: { marginBottom: 20 },
+  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 10 },
   queryWrapper: {
     flexDirection: 'row', borderRadius: 12, borderWidth: 1,
-    padding: 12, marginBottom: 20, alignItems: 'flex-start',
+    padding: 14, alignItems: 'flex-start',
   },
   queryIcon: { marginRight: 10, marginTop: 2 },
   queryInput: {
-    flex: 1, fontFamily: 'Inter_400Regular', fontSize: 15,
-    lineHeight: 22, minHeight: 72,
+    flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14,
+    lineHeight: 22, minHeight: 70,
   },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  horizontalChipsContainer: { gap: 8 },
   chip: {
-    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1.5,
+    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1,
   },
-  chipText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  chipText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
   jurisdictionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   jurisdictionText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   researchBtn: {
-    backgroundColor: '#C9A84C', borderRadius: 14, height: 56,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 24,
+    backgroundColor: '#C9A84C', borderRadius: 12, height: 52,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24,
   },
-  researchBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#070D24' },
-  resultContainer: { borderRadius: 14, borderWidth: 1, padding: 16 },
+  researchBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
+  resultContainer: { borderRadius: 12, borderWidth: 1, padding: 16 },
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   resultHeaderText: { fontFamily: 'Inter_700Bold', fontSize: 15, flex: 1 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
