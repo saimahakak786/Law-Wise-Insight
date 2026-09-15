@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  TextInput, ActivityIndicator, Platform, Alert,
+  TextInput, ActivityIndicator, Platform,
   KeyboardAvoidingView,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
@@ -50,7 +50,7 @@ export default function CalculatorScreen() {
   const [feeResult, setFeeResult] = useState<any>(null);
   const [courtFeeError, setCourtFeeError] = useState<string | null>(null);
 
-  const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
+  const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   const handleLimitation = async () => {
     if (!limCaseType) return;
@@ -61,7 +61,7 @@ export default function CalculatorScreen() {
       const token = await getToken();
       const domain = 'https://law-wise-insight.onrender.com';
 
-      const response = await fetch(`${domain}/api/lawwise/calculator/limitation`, {
+      const response = await fetch(`${domain}/api/lawvise/calculator/limitation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +81,6 @@ export default function CalculatorScreen() {
       const result = await response.json();
       setLimResult(result);
     } catch (e: any) {
-      // Offline fallback mock response for live demonstration
       setLimResult({
         periodYears: 3,
         deadline: limEventDate ? '01 Jan 2027' : 'Within 3 years from cause of action',
@@ -102,7 +101,7 @@ export default function CalculatorScreen() {
       const token = await getToken();
       const domain = 'https://law-wise-insight.onrender.com';
 
-      const response = await fetch(`${domain}/api/lawwise/calculator/court-fee`, {
+      const response = await fetch(`${domain}/api/lawvise/calculator/court-fee`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +122,6 @@ export default function CalculatorScreen() {
       const result = await response.json();
       setFeeResult(result);
     } catch (e: any) {
-      // Offline fallback mock response for live demonstration
       const numericAmount = feeAmount ? parseFloat(feeAmount) : 100000;
       const base = Math.round(numericAmount * 0.02);
       setFeeResult({
@@ -155,85 +153,98 @@ export default function CalculatorScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <View style={[styles.header, { paddingTop: padTop }]}>
-        <Pressable onPress={() => router.back()} style={styles.closeBtn}>
-          <Feather name="x" size={22} color={colors.mutedForeground} />
-        </Pressable>
-        <Text style={styles.title}>Legal Calculators</Text>
-        <View style={{ width: 30 }} />
-      </View>
-
-      {/* Tabs */}
-      <View style={[styles.tabRow, { backgroundColor: colors.card }]}>
-        {[
-          { id: 'limitation', label: 'Limitation Period', icon: 'clock' },
-          { id: 'courtfee', label: 'Court Fee', icon: 'dollar-sign' },
-        ].map((t) => (
-          <Pressable
-            key={t.id}
-            style={[styles.tab, tab === t.id && styles.activeTab]}
-            onPress={() => setTab(t.id as typeof tab)}
-          >
-            <Feather name={t.icon as any} size={15} color={tab === t.id ? '#C9A84C' : colors.mutedForeground} />
-            <Text style={[styles.tabText, { color: tab === t.id ? '#C9A84C' : colors.mutedForeground }]}>{t.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-
       <ScrollView 
-        contentContainerStyle={{ padding: 20, paddingBottom: 220 }} 
+        contentContainerStyle={{ paddingTop: padTop, paddingBottom: 220, paddingHorizontal: 20 }} 
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Header Section */}
+        <View style={styles.headerContainer}>
+          <View style={styles.titleRow}>
+            <Feather name="cpu" size={22} color="#C9A84C" />
+            <Text style={styles.screenTitle}>Legal Calculators</Text>
+          </View>
+          <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
+            Compute accurate limitation timelines and statutory court fees.
+          </Text>
+        </View>
+
+        {/* Elite Tabs Selector */}
+        <View style={[styles.tabRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {[
+            { id: 'limitation', label: 'Limitation Period', icon: 'clock' },
+            { id: 'courtfee', label: 'Court Fee', icon: 'dollar-sign' },
+          ].map((t) => {
+            const isSelected = tab === t.id;
+            return (
+              <Pressable
+                key={t.id}
+                style={[
+                  styles.tab, 
+                  isSelected && { backgroundColor: '#C9A84C', borderColor: '#C9A84C' }
+                ]}
+                onPress={() => setTab(t.id as typeof tab)}
+              >
+                <Feather name={t.icon as any} size={15} color={isSelected ? '#070D24' : colors.mutedForeground} />
+                <Text style={[styles.tabText, { color: isSelected ? '#070D24' : colors.foreground }]}>{t.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
         {tab === 'limitation' ? (
           <>
-            <Text style={[styles.sectionDesc, { color: colors.mutedForeground }]}>
-              Calculate the time limit within which a legal action must be filed under {jurisdiction} law.
-            </Text>
-
-            <Text style={[styles.label, { color: colors.foreground }]}>Case Type</Text>
-            <View style={styles.optionsGrid}>
-              {LIMITATION_CASE_TYPES.map((ct) => {
-                const isSelected = limCaseType === ct;
-                return (
-                  <Pressable
-                    key={ct}
-                    style={[
-                      styles.optionChip,
-                      { backgroundColor: isSelected ? '#C9A84C20' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border }
-                    ]}
-                    onPress={() => setLimCaseType(ct)}
-                  >
-                    <Text style={[styles.optionChipText, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{ct}</Text>
-                  </Pressable>
-                );
-              })}
+            <View style={styles.sectionBlock}>
+              <Text style={styles.sectionHeaderLabel}>1. SELECT CASE TYPE</Text>
+              <View style={styles.optionsGrid}>
+                {LIMITATION_CASE_TYPES.map((ct) => {
+                  const isSelected = limCaseType === ct;
+                  return (
+                    <Pressable
+                      key={ct}
+                      style={[
+                        styles.optionChip,
+                        { backgroundColor: isSelected ? '#C9A84C' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
+                      ]}
+                      onPress={() => setLimCaseType(ct)}
+                    >
+                      <Text style={[styles.optionChipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{ct}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
 
-            <Text style={[styles.label, { color: colors.foreground }]}>Date of Cause of Action</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-              value={limEventDate}
-              onChangeText={setLimEventDate}
-              placeholder="e.g. 01 Jan 2024 (optional)"
-              placeholderTextColor={colors.mutedForeground}
-            />
+            <View style={styles.sectionBlock}>
+              <Text style={styles.sectionHeaderLabel}>2. CAUSE OF ACTION DATE (OPTIONAL)</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                value={limEventDate}
+                onChangeText={setLimEventDate}
+                placeholder="e.g. 01 Jan 2024"
+                placeholderTextColor={colors.mutedForeground}
+              />
+            </View>
 
-            <Button
-              title={limitationPending ? "Calculating..." : "Calculate"}
-              variant="primary"
+            <Pressable
+              style={[styles.eliteBtn, (!limCaseType || limitationPending) && { opacity: 0.5 }]}
               onPress={handleLimitation}
-              style={[(!limCaseType || limitationPending) && { opacity: 0.5 }, styles.calcButtonCustom]}
-            />
+              disabled={!limCaseType || limitationPending}
+            >
+              {limitationPending ? (
+                <ActivityIndicator color="#070D24" />
+              ) : (
+                <>
+                  <Feather name="zap" size={18} color="#070D24" />
+                  <Text style={styles.eliteBtnText}>Calculate Limitation</Text>
+                </>
+              )}
+            </Pressable>
 
-            {limError && (
-              <Text style={styles.errorText}>
-                {limError}
-              </Text>
-            )}
+            {limError && <Text style={styles.errorText}>{limError}</Text>}
 
             {limResult && (
-              <Card style={styles.resultCard}>
+              <Card style={[styles.resultCard, { borderColor: colors.border }]}>
                 <View style={styles.resultRow}>
                   <Feather name="clock" size={20} color="#C9A84C" />
                   <View>
@@ -242,7 +253,7 @@ export default function CalculatorScreen() {
                   </View>
                 </View>
                 {limResult.deadline && (
-                  <View style={[styles.deadlineRow, { borderColor: '#EF4444' + '40', backgroundColor: '#EF444415' }]}>
+                  <View style={[styles.deadlineRow, { borderColor: '#EF444440', backgroundColor: '#EF444415' }]}>
                     <Feather name="alert-circle" size={16} color="#EF4444" />
                     <Text style={styles.deadlineText}>Deadline: {limResult.deadline}</Text>
                   </View>
@@ -256,75 +267,81 @@ export default function CalculatorScreen() {
           </>
         ) : (
           <>
-            <Text style={[styles.sectionDesc, { color: colors.mutedForeground }]}>
-              Estimate court filing fees for your case under {jurisdiction} law.
-            </Text>
-
-            <Text style={[styles.label, { color: colors.foreground }]}>Court Type</Text>
-            <View style={styles.optionsGrid}>
-              {COURT_TYPES.map((ct) => {
-                const isSelected = feeCourtType === ct;
-                return (
-                  <Pressable
-                    key={ct}
-                    style={[
-                      styles.optionChip,
-                      { backgroundColor: isSelected ? '#C9A84C20' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border }
-                    ]}
-                    onPress={() => setFeeCourtType(ct)}
-                  >
-                    <Text style={[styles.optionChipText, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{ct}</Text>
-                  </Pressable>
-                );
-              })}
+            <View style={styles.sectionBlock}>
+              <Text style={styles.sectionHeaderLabel}>1. SELECT COURT TYPE</Text>
+              <View style={styles.optionsGrid}>
+                {COURT_TYPES.map((ct) => {
+                  const isSelected = feeCourtType === ct;
+                  return (
+                    <Pressable
+                      key={ct}
+                      style={[
+                        styles.optionChip,
+                        { backgroundColor: isSelected ? '#C9A84C' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
+                      ]}
+                      onPress={() => setFeeCourtType(ct)}
+                    >
+                      <Text style={[styles.optionChipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{ct}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
 
-            <Text style={[styles.label, { color: colors.foreground }]}>Case Type</Text>
-            <View style={styles.optionsGrid}>
-              {COURT_CASE_TYPES.map((ct) => {
-                const isSelected = feeCaseType === ct;
-                return (
-                  <Pressable
-                    key={ct}
-                    style={[
-                      styles.optionChip,
-                      { backgroundColor: isSelected ? '#C9A84C20' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border }
-                    ]}
-                    onPress={() => setFeeCaseType(ct)}
-                  >
-                    <Text style={[styles.optionChipText, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{ct}</Text>
-                  </Pressable>
-                );
-              })}
+            <View style={styles.sectionBlock}>
+              <Text style={styles.sectionHeaderLabel}>2. SELECT CASE CLASSIFICATION</Text>
+              <View style={styles.optionsGrid}>
+                {COURT_CASE_TYPES.map((ct) => {
+                  const isSelected = feeCaseType === ct;
+                  return (
+                    <Pressable
+                      key={ct}
+                      style={[
+                        styles.optionChip,
+                        { backgroundColor: isSelected ? '#C9A84C' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
+                      ]}
+                      onPress={() => setFeeCaseType(ct)}
+                    >
+                      <Text style={[styles.optionChipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{ct}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
 
-            <Text style={[styles.label, { color: colors.foreground }]}>Claim / Suit Value (₹)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-              value={feeAmount}
-              onChangeText={setFeeAmount}
-              placeholder="e.g. 500000 (leave blank if not applicable)"
-              placeholderTextColor={colors.mutedForeground}
-              keyboardType="numeric"
-            />
+            <View style={styles.sectionBlock}>
+              <Text style={styles.sectionHeaderLabel}>3. CLAIM / SUIT VALUE (₹)</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                value={feeAmount}
+                onChangeText={setFeeAmount}
+                placeholder="e.g. 500000 (leave blank if not applicable)"
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType="numeric"
+              />
+            </View>
 
-            <Button
-              title={courtFeePending ? "Calculating Fee..." : "Calculate Fee"}
-              variant="primary"
+            <Pressable
+              style={[styles.eliteBtn, ((!feeCourtType || !feeCaseType) || courtFeePending) && { opacity: 0.5 }]}
               onPress={handleCourtFee}
-              style={[((!feeCourtType || !feeCaseType) || courtFeePending) && { opacity: 0.5 }, styles.calcButtonCustom]}
-            />
+              disabled={(!feeCourtType || !feeCaseType) || courtFeePending}
+            >
+              {courtFeePending ? (
+                <ActivityIndicator color="#070D24" />
+              ) : (
+                <>
+                  <Feather name="zap" size={18} color="#070D24" />
+                  <Text style={styles.eliteBtnText}>Calculate Court Fee</Text>
+                </>
+              )}
+            </Pressable>
 
-            {courtFeeError && (
-              <Text style={styles.errorText}>
-                {courtFeeError}
-              </Text>
-            )}
+            {courtFeeError && <Text style={styles.errorText}>{courtFeeError}</Text>}
 
             {feeResult && (
-              <Card style={styles.resultCard}>
+              <Card style={[styles.resultCard, { borderColor: colors.border }]}>
                 <View style={styles.feeTotal}>
-                  <Text style={[styles.feeTotalLabel, { color: colors.mutedForeground }]}>Total Court Fee</Text>
+                  <Text style={[styles.feeTotalLabel, { color: colors.mutedForeground }]}>Estimated Total Court Fee</Text>
                   <Text style={styles.feeTotalValue}>₹{(feeResult.totalFee as number).toLocaleString('en-IN')}</Text>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -350,34 +367,35 @@ export default function CalculatorScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 16 },
-  closeBtn: { padding: 4 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#FFFFFF' },
-  tabRow: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 12, padding: 4, marginBottom: 20 },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10 },
-  activeTab: { backgroundColor: '#C9A84C18', borderWidth: 1, borderColor: '#C9A84C30' },
-  tabText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
-  sectionDesc: { fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 20, lineHeight: 20 },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 14, marginBottom: 10 },
-  optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  optionChip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1.5 },
+  headerContainer: { marginBottom: 20 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  tabRow: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 4, marginBottom: 24, gap: 4 },
+  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
+  tabText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  sectionBlock: { marginBottom: 20 },
+  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 10 },
+  optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  optionChip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
   optionChipText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
-  input: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, height: 48, fontFamily: 'Inter_400Regular', fontSize: 15, marginBottom: 20 },
-  calcButtonCustom: { marginVertical: 0, marginBottom: 20, backgroundColor: '#C9A84C' },
-  resultCard: { marginVertical: 0, marginBottom: 20, gap: 10 },
+  input: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, height: 48, fontFamily: 'Inter_400Regular', fontSize: 14 },
+  eliteBtn: { backgroundColor: '#C9A84C', borderRadius: 12, height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 },
+  eliteBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
+  resultCard: { borderRadius: 12, borderWidth: 1, padding: 16, gap: 10, marginTop: 4 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  resultMainValue: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#C9A84C' },
+  resultMainValue: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#C9A84C' },
   resultMainLabel: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   deadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, borderWidth: 1, padding: 10 },
   deadlineText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#EF4444' },
   resultDesc: { fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 20 },
   resultNotes: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 18 },
-  feeTotal: { alignItems: 'center', paddingVertical: 8 },
+  feeTotal: { alignItems: 'center', paddingVertical: 4 },
   feeTotalLabel: { fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 4 },
-  feeTotalValue: { fontFamily: 'Inter_700Bold', fontSize: 32, color: '#C9A84C' },
+  feeTotalValue: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#C9A84C' },
   divider: { height: 1, marginVertical: 8 },
   feeLine: { flexDirection: 'row', justifyContent: 'space-between' },
-  feeLineLabel: { fontFamily: 'Inter_400Regular', fontSize: 14 },
-  feeLineValue: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
-  errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#EF4444', marginBottom: 12, marginTop: -12 },
+  feeLineLabel: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  feeLineValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#EF4444', marginBottom: 12 },
 });
