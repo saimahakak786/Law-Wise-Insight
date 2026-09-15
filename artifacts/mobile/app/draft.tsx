@@ -17,7 +17,6 @@ import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import { useSaveDocument } from '@workspace/api-client-react';
 
-import Card from '@/components/Card';
 import Button from '@/components/Button';
 import VoiceDictation from '@/components/VoiceDictation';
 import UpgradeModal from '@/components/UpgradeModal';
@@ -45,7 +44,7 @@ export default function DraftScreen() {
   const { jurisdiction, language } = useApp();
   const saveDocument = useSaveDocument();
 
-  const [selectedType, setSelectedType] = useState('');
+  const [selectedType, setSelectedType] = useState('contract');
   const [details, setDetails] = useState('');
   const [isDrafting, setIsDrafting] = useState(false);
   const [draft, setDraft] = useState('');
@@ -99,7 +98,6 @@ export default function DraftScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setIsDrafting(false);
     } catch {
-      // Offline fallback mock stream for seamless live demonstration
       const docLabel = DOC_TYPES.find((d) => d.id === selectedType)?.label ?? selectedType;
       const mockText = `BEFORE THE COURT OF COMPETENT JURISDICTION AT ${jurisdiction.toUpperCase()}\n\n` +
         `IN THE MATTER OF:\n${docLabel.toUpperCase()}\n\n` +
@@ -108,7 +106,7 @@ export default function DraftScreen() {
         `2. That all representations and covenants stated herein are true to the best of counsel's knowledge.\n` +
         `3. That the respondent is hereby called upon to comply with statutory obligations within 15 days of receipt.\n\n` +
         `DATED THIS 7TH DAY OF SEPTEMBER, 2026.\n\n` +
-        `COUNSEL FOR THE APPLICANT\n(Generated via LawVise Secure Offline Engine)`;
+        `COUNSEL FOR THE APPLICANT\n(Generated via LawVise Secure Engine)`;
 
       let index = 0;
       const interval = setInterval(() => {
@@ -162,7 +160,7 @@ export default function DraftScreen() {
     Alert.alert('Copied', 'Draft copied to clipboard.');
   };
 
-  const padTop = insets.top + (Platform.OS === 'web' ? 67 : 20);
+  const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   if (showDraft) {
     return (
@@ -195,24 +193,9 @@ export default function DraftScreen() {
 
         {!isDrafting && draft ? (
           <View style={[styles.actionBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 }]}>
-            <Button
-              title="Copy"
-              variant="outline"
-              onPress={handleCopy}
-              style={styles.actionBtnCustom}
-            />
-            <Button
-              title="Share"
-              variant="outline"
-              onPress={handleShare}
-              style={styles.actionBtnCustom}
-            />
-            <Button
-              title={saveDocument.isPending ? "Saving..." : "Save to Vault"}
-              variant="primary"
-              onPress={handleSaveToVault}
-              style={[styles.actionBtnCustom, styles.primaryActionBtn]}
-            />
+            <Button title="Copy" variant="outline" onPress={handleCopy} style={styles.actionBtnCustom} />
+            <Button title="Share" variant="outline" onPress={handleShare} style={styles.actionBtnCustom} />
+            <Button title={saveDocument.isPending ? "Saving..." : "Save to Vault"} variant="primary" onPress={handleSaveToVault} style={[styles.actionBtnCustom, styles.primaryActionBtn]} />
           </View>
         ) : null}
       </View>
@@ -226,76 +209,92 @@ export default function DraftScreen() {
         contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40 }}
         bottomOffset={20}
       >
-        <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} style={styles.closeBtn}>
-            <Feather name="x" size={22} color={colors.mutedForeground} />
-          </Pressable>
-          <Text style={styles.screenTitle}>Draft Document</Text>
-          <View style={{ width: 30 }} />
+        {/* Header Title Section */}
+        <View style={styles.headerContainer}>
+          <View style={styles.titleRow}>
+            <Feather name="file-text" size={22} color="#C9A84C" />
+            <Text style={styles.screenTitle}>Legal Drafting Workspace</Text>
+          </View>
+          <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
+            Generate court-ready instruments and agreements instantly.
+          </Text>
         </View>
 
-        <Text style={[styles.label, { color: colors.foreground }]}>Document Type</Text>
-        <View style={styles.docTypeGrid}>
-          {DOC_TYPES.map((dt) => {
-            const isSelected = selectedType === dt.id;
-            return (
-              <Card
-                key={dt.id}
-                onPress={() => setSelectedType(dt.id)}
-                style={[
-                  styles.docTypeCard,
-                  { backgroundColor: colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
-                  isSelected && { backgroundColor: '#C9A84C20', borderColor: '#C9A84C' },
-                ]}
-              >
-                <Feather name={dt.icon as any} size={20} color={isSelected ? '#C9A84C' : colors.mutedForeground} />
-                <Text style={[styles.docTypeLabel, { color: isSelected ? '#C9A84C' : colors.foreground }]}>{dt.label}</Text>
-              </Card>
-            );
-          })}
+        {/* Step 1: Document Type Selector (Clean Horizontal Scroll) */}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionHeaderLabel}>1. SELECT DOCUMENT TYPE</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChipsContainer}>
+            {DOC_TYPES.map((dt) => {
+              const isSelected = selectedType === dt.id;
+              return (
+                <Pressable
+                  key={dt.id}
+                  style={[
+                    styles.docTypeChip,
+                    { backgroundColor: isSelected ? '#C9A84C' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
+                    isSelected && { backgroundColor: '#C9A84C' }
+                  ]}
+                  onPress={() => setSelectedType(dt.id)}
+                >
+                  <Feather name={dt.icon as any} size={14} color={isSelected ? '#070D24' : '#C9A84C'} />
+                  <Text style={[styles.docTypeChipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{dt.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
 
-        <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.label, { color: colors.foreground, paddingHorizontal: 0, marginBottom: 0 }]}>Details (Optional)</Text>
-          <View style={{ paddingHorizontal: 20 }}>
-            <VoiceDictation
-              isProUser={isProUser}
-              onTranscriptionComplete={(text) => {
-                setDetails((prev) => (prev ? prev + ' ' + text : text));
-              }}
-              onUpgradePress={() => {
-                setShowUpgradeModal(true);
-              }}
+        {/* Step 2: Details & Voice Dictation */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionHeaderLabel}>2. SPECIFICATION & DETAILS</Text>
+            <View style={{ paddingRight: 20 }}>
+              <VoiceDictation
+                isProUser={isProUser}
+                onTranscriptionComplete={(text) => {
+                  setDetails((prev) => (prev ? prev + ' ' + text : text));
+                }}
+                onUpgradePress={() => setShowUpgradeModal(true)}
+              />
+            </View>
+          </View>
+
+          <View style={{ paddingHorizontal: 20, marginTop: 6 }}>
+            <TextInput
+              style={[styles.detailsInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+              value={details}
+              onChangeText={setDetails}
+              placeholder="e.g. Landlord: John Smith, Tenant: Jane Doe, Rent: ₹25,000/month, Duration: 11 months..."
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
             />
           </View>
         </View>
 
-        <Text style={[styles.sublabel, { color: colors.mutedForeground }]}>
-          Provide specific terms, parties, amounts, or requirements for your document (or use Voice Dictation)
-        </Text>
-        <TextInput
-          style={[styles.detailsInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-          value={details}
-          onChangeText={setDetails}
-          placeholder="e.g. Landlord: John Smith, Tenant: Jane Doe, Rent: ₹25,000/month, Duration: 11 months..."
-          placeholderTextColor={colors.mutedForeground}
-          multiline
-          numberOfLines={5}
-          textAlignVertical="top"
-        />
-
+        {/* Jurisdiction Info Footer */}
         <View style={styles.infoRow}>
           <Feather name="globe" size={13} color={colors.mutedForeground} />
           <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{jurisdiction} Law • {language}</Text>
         </View>
 
+        {/* Action Button */}
         <View style={{ paddingHorizontal: 20 }}>
-          <Button
-            title="Generate Draft"
-            variant="primary"
+          <Pressable
+            style={[styles.eliteDraftBtn, (!selectedType || isDrafting) && { opacity: 0.5 }]}
             onPress={handleDraft}
-            style={[(!selectedType || isDrafting) && { opacity: 0.5 }]}
-          />
+            disabled={!selectedType || isDrafting}
+          >
+            {isDrafting ? (
+              <ActivityIndicator color="#070D24" />
+            ) : (
+              <>
+                <Feather name="zap" size={18} color="#070D24" />
+                <Text style={styles.eliteDraftBtnText}>Generate Legal Document</Text>
+              </>
+            )}
+          </Pressable>
         </View>
       </KeyboardAwareScrollView>
 
@@ -314,18 +313,21 @@ export default function DraftScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 24 },
-  closeBtn: { padding: 4 },
-  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#FFFFFF' },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 15, paddingHorizontal: 20, marginBottom: 12 },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 4 },
-  sublabel: { fontFamily: 'Inter_400Regular', fontSize: 13, paddingHorizontal: 20, marginBottom: 12, marginTop: -6 },
-  docTypeGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 10, marginBottom: 24 },
-  docTypeCard: { width: '47%', marginVertical: 0, padding: 14, gap: 8 },
-  docTypeLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 16 },
-  detailsInput: { marginHorizontal: 20, borderRadius: 12, borderWidth: 1, padding: 14, minHeight: 120, fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 22, marginBottom: 12 },
+  headerContainer: { paddingHorizontal: 20, marginBottom: 20 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  sectionBlock: { marginBottom: 20 },
+  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, paddingHorizontal: 20, marginBottom: 10 },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  horizontalChipsContainer: { paddingHorizontal: 20, gap: 8 },
+  docTypeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1 },
+  docTypeChipText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
+  detailsInput: { borderRadius: 12, borderWidth: 1, padding: 14, minHeight: 140, fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 22 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, marginBottom: 20 },
   infoText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  eliteDraftBtn: { backgroundColor: '#C9A84C', borderRadius: 12, height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  eliteDraftBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
   draftHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1 },
   backBtn: { padding: 4 },
   draftHeaderTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#FFFFFF' },
@@ -333,17 +335,7 @@ const styles = StyleSheet.create({
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
   loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
   draftText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24 },
-  actionBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingTop: 12,
-    borderTopWidth: 1,
-  },
-  actionBtnCustom: {
-    flex: 1,
-    marginVertical: 0,
-    paddingVertical: 10,
-  },
-  primaryActionBtn: {
-    backgroundColor: '#C9A84C',
-  },
+  actionBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1 },
+  actionBtnCustom: { flex: 1, marginVertical: 0, paddingVertical: 10 },
+  primaryActionBtn: { backgroundColor: '#C9A84C' },
 });
