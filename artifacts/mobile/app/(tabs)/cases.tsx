@@ -82,7 +82,6 @@ const defaultForm: CaseFormData = {
   nextAction: '',
 };
 
-// Initial offline fallback mock cases for flawless live demo demonstration
 const MOCK_FALLBACK_CASES: CaseItem[] = [
   {
     id: 1,
@@ -129,7 +128,6 @@ export default function CasesScreen() {
   const updateCase = useUpdateCase();
   const deleteCase = useDeleteCase();
 
-  // Local state fallback list to ensure zero downtime during presentation
   const [localCases, setLocalCases] = useState<CaseItem[]>(MOCK_FALLBACK_CASES);
   const [useLocalFallback, setUseLocalFallback] = useState(false);
 
@@ -146,12 +144,14 @@ export default function CasesScreen() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetCasesQueryKey() });
 
   const openAddModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditingId(null);
     setForm(defaultForm);
     setShowModal(true);
   };
 
   const openEditModal = (c: CaseItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditingId(c.id);
     setForm({
       title: c.title,
@@ -187,7 +187,6 @@ export default function CasesScreen() {
           await updateCase.mutateAsync({ id: String(editingId), data: payload });
           invalidate();
         } catch {
-          // Fallback local update
           setLocalCases(prev => prev.map(c => c.id === editingId ? { ...c, ...payload } : c));
           setUseLocalFallback(true);
         }
@@ -196,7 +195,6 @@ export default function CasesScreen() {
           await createCase.mutateAsync({ data: payload });
           invalidate();
         } catch {
-          // Fallback local create
           const newCase: CaseItem = {
             id: Date.now(),
             ...payload,
@@ -213,6 +211,7 @@ export default function CasesScreen() {
   };
 
   const handleDelete = (id: number, title: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert('Delete Case', `Delete "${title}"? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -231,36 +230,55 @@ export default function CasesScreen() {
     ]);
   };
 
-  const padTop = insets.top + (Platform.OS === 'web' ? 67 : 16);
+  const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: padTop }]}>
-        <Text style={styles.title}>Case Tracker</Text>
+        <View style={styles.titleRow}>
+          <Feather name="briefcase" size={22} color="#C9A84C" />
+          <Text style={styles.title}>Case Portfolio</Text>
+        </View>
         <Pressable style={styles.addBtn} onPress={openAddModal}>
-          <Feather name="plus" size={22} color="#070D24" />
+          <Feather name="plus" size={20} color="#070D24" />
         </Pressable>
       </View>
 
+      <Text style={[styles.screenSub, { color: colors.mutedForeground, paddingHorizontal: 20 }]}>
+        Track your active litigations, court hearing dates, and priority case items.
+      </Text>
+
       {/* Filter Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-        {FILTER_OPTIONS.map((f) => (
-          <Pressable
-            key={f}
-            style={[styles.filterTab, { backgroundColor: filter === f ? '#C9A84C' : colors.card, borderColor: filter === f ? '#C9A84C' : colors.border }]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterTabText, { color: filter === f ? '#070D24' : colors.mutedForeground }]}>
-              {f === 'all' ? 'All' : STATUS_LABELS[f]}
-            </Text>
-          </Pressable>
-        ))}
+        {FILTER_OPTIONS.map((f) => {
+          const isSelected = filter === f;
+          return (
+            <Pressable
+              key={f}
+              style={[
+                styles.filterTab, 
+                { backgroundColor: isSelected ? '#C9A84C' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border }
+              ]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setFilter(f);
+              }}
+            >
+              <Text style={[styles.filterTabText, { color: isSelected ? '#070D24' : colors.mutedForeground }]}>
+                {f === 'all' ? 'All' : STATUS_LABELS[f]}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
       {/* Cases List */}
       {isLoading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#C9A84C" />
+          <Text style={[styles.loaderText, { color: colors.mutedForeground }]}>Loading case records...</Text>
+        </View>
       ) : (
         <FlatList
           data={filtered}
@@ -268,10 +286,10 @@ export default function CasesScreen() {
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Feather name="briefcase" size={40} color={colors.mutedForeground} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No cases yet</Text>
-              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>Track your legal cases and hearing dates</Text>
+            <View style={[styles.emptyCard, { borderColor: colors.border }]}>
+              <Feather name="folder-minus" size={24} color={colors.mutedForeground} style={{ marginBottom: 8 }} />
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No cases found</Text>
+              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>Track your legal matters and upcoming schedule above.</Text>
               <Pressable style={styles.emptyBtn} onPress={openAddModal}>
                 <Text style={styles.emptyBtnText}>Add First Case</Text>
               </Pressable>
@@ -279,7 +297,7 @@ export default function CasesScreen() {
           }
           renderItem={({ item }) => (
             <Pressable
-              style={[styles.caseCard, { backgroundColor: colors.card }]}
+              style={[styles.caseCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onLongPress={() => handleDelete(item.id, item.title)}
               onPress={() => openEditModal(item)}
             >
@@ -288,23 +306,23 @@ export default function CasesScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.caseTitle, { color: colors.foreground }]} numberOfLines={1}>{item.title}</Text>
                   {item.caseNumber && (
-                    <Text style={[styles.caseMeta, { color: colors.mutedForeground }]}>#{item.caseNumber}</Text>
+                    <Text style={[styles.caseMeta, { color: '#C9A84C', marginBottom: 2 }]}>#{item.caseNumber}</Text>
                   )}
                   {item.court && (
                     <View style={styles.caseMetaRow}>
-                      <Feather name="map-pin" size={11} color={colors.mutedForeground} />
-                      <Text style={[styles.caseMeta, { color: colors.mutedForeground }]}>{item.court}</Text>
+                      <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+                      <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{item.court}</Text>
                     </View>
                   )}
                   {item.hearingDate && (
                     <View style={styles.caseMetaRow}>
-                      <Feather name="calendar" size={11} color="#C9A84C" />
-                      <Text style={[styles.caseMeta, { color: '#C9A84C' }]}>Next: {item.hearingDate}</Text>
+                      <Feather name="calendar" size={12} color="#C9A84C" />
+                      <Text style={[styles.metaText, { color: '#C9A84C' }]}>Next: {item.hearingDate}</Text>
                     </View>
                   )}
                 </View>
               </View>
-              <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280') + '22' }]}>
+              <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280') + '20', borderColor: (STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280') + '40' }]}>
                 <Text style={[styles.statusBadgeText, { color: STATUS_COLORS[item.status as CaseStatus] ?? '#6B7280' }]}>
                   {STATUS_LABELS[item.status as CaseStatus]}
                 </Text>
@@ -321,25 +339,25 @@ export default function CasesScreen() {
             <Pressable onPress={() => setShowModal(false)}>
               <Text style={[styles.modalCancel, { color: colors.mutedForeground }]}>Cancel</Text>
             </Pressable>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>{editingId ? 'Edit Case' : 'New Case'}</Text>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>{editingId ? 'Edit Case Record' : 'New Case Record'}</Text>
             <Pressable onPress={handleSave} disabled={!form.title.trim() || createCase.isPending || updateCase.isPending}>
               <Text style={[styles.modalSave, { color: form.title.trim() ? '#C9A84C' : colors.mutedForeground }]}>
                 {createCase.isPending || updateCase.isPending ? 'Saving...' : 'Save'}
               </Text>
             </Pressable>
           </View>
-          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {[
-              { key: 'title', label: 'Case Title *', placeholder: 'e.g. XYZ vs ABC' },
+              { key: 'title', label: 'Case Title / Parties *', placeholder: 'e.g. XYZ vs ABC' },
               { key: 'caseNumber', label: 'Case Number', placeholder: 'e.g. 123/2026' },
               { key: 'court', label: 'Court / Tribunal', placeholder: 'e.g. Delhi High Court' },
               { key: 'hearingDate', label: 'Next Hearing Date', placeholder: 'e.g. 15 Oct 2026' },
             ].map(({ key, label, placeholder }) => (
               <View key={key} style={styles.formField}>
-                <Text style={[styles.formLabel, { color: colors.mutedForeground }]}>{label}</Text>
+                <Text style={[styles.formLabel, { color: colors.foreground }]}>{label}</Text>
                 <TextInput
                   style={[styles.formInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-                  value={form[key as keyof CaseFormData]}
+                  value={form[key as keyof CaseFormData] as string}
                   onChangeText={(v) => setForm((p) => ({ ...p, [key]: v }))}
                   placeholder={placeholder}
                   placeholderTextColor={colors.mutedForeground}
@@ -347,7 +365,7 @@ export default function CasesScreen() {
               </View>
             ))}
 
-            <Text style={[styles.formLabel, { color: colors.mutedForeground, paddingHorizontal: 0 }]}>Status</Text>
+            <Text style={[styles.formLabel, { color: colors.foreground }]}>Status</Text>
             <View style={styles.statusGrid}>
               {(['active', 'pending', 'closed', 'won', 'lost'] as CaseStatus[]).map((s) => (
                 <Pressable
@@ -361,8 +379,7 @@ export default function CasesScreen() {
               ))}
             </View>
 
-            {/* Priority Selector */}
-            <Text style={[styles.formLabel, { color: colors.mutedForeground, paddingHorizontal: 0 }]}>Priority</Text>
+            <Text style={[styles.formLabel, { color: colors.foreground }]}>Priority Level</Text>
             <View style={[styles.statusGrid, { marginBottom: 16 }]}>
               {(['low', 'medium', 'high'] as const).map((p) => (
                 <Pressable
@@ -376,25 +393,24 @@ export default function CasesScreen() {
               ))}
             </View>
 
-            {/* Next Action */}
             <View style={styles.formField}>
-              <Text style={[styles.formLabel, { color: colors.mutedForeground }]}>Next Action</Text>
+              <Text style={[styles.formLabel, { color: colors.foreground }]}>Next Action Required</Text>
               <TextInput
                 style={[styles.formInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
                 value={form.nextAction}
                 onChangeText={(v) => setForm((p) => ({ ...p, nextAction: v }))}
-                placeholder="Next step or action required..."
+                placeholder="Next step or preparation needed..."
                 placeholderTextColor={colors.mutedForeground}
               />
             </View>
 
             <View style={styles.formField}>
-              <Text style={[styles.formLabel, { color: colors.mutedForeground }]}>Description</Text>
+              <Text style={[styles.formLabel, { color: colors.foreground }]}>Case Summary / Description</Text>
               <TextInput
                 style={[styles.formInput, styles.formTextArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
                 value={form.description}
                 onChangeText={(v) => setForm((p) => ({ ...p, description: v }))}
-                placeholder="Brief description of the case..."
+                placeholder="Brief summary of the case particulars..."
                 placeholderTextColor={colors.mutedForeground}
                 multiline
                 numberOfLines={4}
@@ -410,38 +426,43 @@ export default function CasesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 24, color: '#FFFFFF' },
-  addBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 6 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 16 },
+  addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center' },
   filterRow: { paddingHorizontal: 20, gap: 8, paddingBottom: 16, flexDirection: 'row' },
-  filterTab: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1 },
-  filterTabText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
-  list: { paddingHorizontal: 20, paddingTop: 4, gap: 10 },
-  caseCard: { borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  filterTab: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1 },
+  filterTabText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
+  list: { paddingHorizontal: 20, paddingTop: 4, gap: 12 },
+  caseCard: { borderRadius: 12, padding: 16, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   caseCardLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 },
-  statusDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5, flexShrink: 0 },
-  caseTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, marginBottom: 4 },
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6, flexShrink: 0 },
+  caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 4 },
+  caseMeta: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
   caseMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  caseMeta: { fontFamily: 'Inter_400Regular', fontSize: 12 },
-  statusBadge: { borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10 },
-  statusBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
-  emptyState: { alignItems: 'center', justifyContent: 'center', padding: 40, gap: 10, marginTop: 40 },
-  emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 20 },
-  emptyDesc: { fontFamily: 'Inter_400Regular', fontSize: 14, textAlign: 'center' },
-  emptyBtn: { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, marginTop: 8 },
-  emptyBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#070D24' },
+  metaText: { fontFamily: 'Inter_400Regular', fontSize: 12 },
+  statusBadge: { borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, borderWidth: 1 },
+  statusBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 11 },
+  loaderContainer: { alignItems: 'center', paddingVertical: 40, gap: 10 },
+  loaderText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  emptyCard: { padding: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, marginTop: 20 },
+  emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, marginBottom: 4 },
+  emptyDesc: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', marginBottom: 16 },
+  emptyBtn: { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20 },
+  emptyBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#070D24' },
   modalContainer: { flex: 1 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 20, borderBottomWidth: 1 },
-  modalTitle: { fontFamily: 'Inter_700Bold', fontSize: 17 },
-  modalCancel: { fontFamily: 'Inter_400Regular', fontSize: 16 },
-  modalSave: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
-  modalContent: { padding: 20, gap: 8, paddingBottom: 60 },
-  formField: { marginBottom: 12 },
-  formLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, marginBottom: 6 },
-  formInput: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 14, height: 48, fontFamily: 'Inter_400Regular', fontSize: 15 },
+  modalTitle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  modalCancel: { fontFamily: 'Inter_400Regular', fontSize: 15 },
+  modalSave: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
+  modalContent: { padding: 20, gap: 12, paddingBottom: 60 },
+  formField: { marginBottom: 4 },
+  formLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginBottom: 6 },
+  formInput: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, height: 46, fontFamily: 'Inter_400Regular', fontSize: 14 },
   formTextArea: { height: 100, paddingTop: 12 },
-  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  statusOption: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1.5 },
-  statusOptionDot: { width: 8, height: 8, borderRadius: 4 },
+  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  statusOption: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1 },
+  statusOptionDot: { width: 6, height: 6, borderRadius: 3 },
   statusOptionText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
 });
