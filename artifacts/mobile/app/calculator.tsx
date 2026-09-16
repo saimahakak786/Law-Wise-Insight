@@ -13,7 +13,6 @@ import { useApp } from '@/context/AppContext';
 import { fetch } from 'expo/fetch';
 import * as Haptics from 'expo-haptics';
 
-// Import custom components
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 
@@ -35,14 +34,12 @@ export default function CalculatorScreen() {
   const { getToken } = useAuth();
   const [tab, setTab] = useState<'limitation' | 'courtfee'>('limitation');
 
-  // Limitation state
   const [limCaseType, setLimCaseType] = useState('');
   const [limEventDate, setLimEventDate] = useState('');
   const [limitationPending, setLimitationPending] = useState(false);
   const [limResult, setLimResult] = useState<any>(null);
   const [limError, setLimError] = useState<string | null>(null);
 
-  // Court fee state
   const [feeCourtType, setFeeCourtType] = useState('');
   const [feeCaseType, setFeeCaseType] = useState('');
   const [feeAmount, setFeeAmount] = useState('');
@@ -51,6 +48,14 @@ export default function CalculatorScreen() {
   const [courtFeeError, setCourtFeeError] = useState<string | null>(null);
 
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
+
+  const getCurrencyInfo = (jur: string): { symbol: string; locale: string } => {
+    const j = jur?.toLowerCase() || '';
+    if (j.includes('uk') || j.includes('united kingdom')) return { symbol: '£', locale: 'en-GB' };
+    if (j.includes('usa') || j.includes('united states')) return { symbol: '$', locale: 'en-US' };
+    if (j.includes('uae') || j.includes('emirates')) return { symbol: 'AED ', locale: 'en-AE' };
+    return { symbol: '₹', locale: 'en-IN' };
+  };
 
   const handleLimitation = async () => {
     if (!limCaseType) return;
@@ -61,7 +66,7 @@ export default function CalculatorScreen() {
       const token = await getToken();
       const domain = 'https://law-wise-insight.onrender.com';
 
-      const response = await fetch(`${domain}/api/lawvise/calculator/limitation`, {
+      const response = await fetch(`${domain}/api/lawwise/calculator/limitation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +106,7 @@ export default function CalculatorScreen() {
       const token = await getToken();
       const domain = 'https://law-wise-insight.onrender.com';
 
-      const response = await fetch(`${domain}/api/lawvise/calculator/court-fee`, {
+      const response = await fetch(`${domain}/api/lawwise/calculator/court-fee`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,6 +152,8 @@ export default function CalculatorScreen() {
     return `${days} ${days === 1 ? 'Day' : 'Days'}`;
   };
 
+  const currency = getCurrencyInfo(jurisdiction);
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -158,7 +165,6 @@ export default function CalculatorScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header Section */}
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
             <Feather name="cpu" size={22} color="#C9A84C" />
@@ -169,7 +175,6 @@ export default function CalculatorScreen() {
           </Text>
         </View>
 
-        {/* Elite Tabs Selector */}
         <View style={[styles.tabRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {[
             { id: 'limitation', label: 'Limitation Period', icon: 'clock' },
@@ -310,7 +315,7 @@ export default function CalculatorScreen() {
             </View>
 
             <View style={styles.sectionBlock}>
-              <Text style={styles.sectionHeaderLabel}>3. CLAIM / SUIT VALUE (₹)</Text>
+              <Text style={styles.sectionHeaderLabel}>3. CLAIM / SUIT VALUE ({currency.symbol.trim()})</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
                 value={feeAmount}
@@ -342,17 +347,17 @@ export default function CalculatorScreen() {
               <Card style={[styles.resultCard, { borderColor: colors.border }]}>
                 <View style={styles.feeTotal}>
                   <Text style={[styles.feeTotalLabel, { color: colors.mutedForeground }]}>Estimated Total Court Fee</Text>
-                  <Text style={styles.feeTotalValue}>₹{(feeResult.totalFee as number).toLocaleString('en-IN')}</Text>
+                  <Text style={styles.feeTotalValue}>{currency.symbol}{(feeResult.totalFee as number).toLocaleString(currency.locale)}</Text>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <View style={styles.feeLine}>
                   <Text style={[styles.feeLineLabel, { color: colors.mutedForeground }]}>Base Fee</Text>
-                  <Text style={[styles.feeLineValue, { color: colors.foreground }]}>₹{(feeResult.baseFee as number).toLocaleString('en-IN')}</Text>
+                  <Text style={[styles.feeLineValue, { color: colors.foreground }]}>{currency.symbol}{(feeResult.baseFee as number).toLocaleString(currency.locale)}</Text>
                 </View>
                 {(feeResult.additionalFees as Array<{ name: string; amount: number }>)?.map((f, i) => (
                   <View key={i} style={styles.feeLine}>
                     <Text style={[styles.feeLineLabel, { color: colors.mutedForeground }]}>{f.name}</Text>
-                    <Text style={[styles.feeLineValue, { color: colors.foreground }]}>₹{f.amount.toLocaleString('en-IN')}</Text>
+                    <Text style={[styles.feeLineValue, { color: colors.foreground }]}>{currency.symbol}{f.amount.toLocaleString(currency.locale)}</Text>
                   </View>
                 ))}
                 <Text style={[styles.resultNotes, { color: colors.mutedForeground, marginTop: 10 }]}>{feeResult.description}</Text>
