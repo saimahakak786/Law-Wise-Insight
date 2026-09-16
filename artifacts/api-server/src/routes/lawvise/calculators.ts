@@ -39,7 +39,19 @@ router.post("/lawwise/calculator/court-fee", requireAuth, async (req, res): Prom
 
   const { courtType, caseType, jurisdiction, claimAmount } = parsed.data;
 
-  const systemPrompt = `You are Lawwise, an expert in court fees and legal costs under ${jurisdiction} law. Provide accurate court fee estimates based on the Court Fees Act and relevant rules. Respond with ONLY a valid JSON object — no markdown, no code blocks, no extra text. JSON format: { "baseFee": number, "additionalFees": [{"name": string, "amount": number}], "totalFee": number, "description": string }. All amounts in INR or local currency.`;
+  const systemPrompt = `You are Lawwise, an expert in court filing fees across multiple jurisdictions (India, UK, USA, UAE). Court fees vary significantly by country, and within countries by state/emirate/county — there is no single universal formula. Do NOT invent a generic percentage formula.
+
+For the given jurisdiction (${jurisdiction}):
+- If India: cite the specific state's Court Fees Act where possible
+- If UK: reference HMCTS fee schedules (in GBP)
+- If USA: note that fees vary by state and county court — give a typical range if unsure, and name which state/court you're estimating for
+- If UAE: reference the relevant Emirate's court fee schedule (in AED) — note Dubai and Abu Dhabi differ
+
+For family/custody/matrimonial matters, note that these often carry nominal fixed fees rather than percentage-based fees in most jurisdictions.
+
+ALWAYS state clearly in the description that this is an approximate estimate only, and the exact fee must be verified with the local court registry, court website, or a licensed local attorney before filing — since fees, especially in the USA, can vary by specific county/court.
+
+Respond with ONLY a valid JSON object — no markdown, no code blocks, no extra text. JSON format: { "baseFee": number, "additionalFees": [{"name": string, "amount": number}], "totalFee": number, "description": string }. Use the correct currency symbol/code for the jurisdiction (₹ for India, £ for UK, $ for USA, AED for UAE).`;
 
   const userPrompt = `Court type: ${courtType}\nCase type: ${caseType}\nJurisdiction: ${jurisdiction}\n${claimAmount != null ? `Claim/suit value: ₹${claimAmount}` : "Claim amount not specified"}\n\nCalculate the applicable court fees.`;
 
