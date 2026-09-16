@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -18,6 +18,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -58,6 +59,19 @@ const tokenCache = {
     }
   },
 };
+
+// Configure Android Notification Channel with custom gavel sound
+async function setupNotificationChannel() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('court-alerts', {
+      name: 'Court Hearing Alerts',
+      importance: Notifications.AndroidImportance.MAX,
+      sound: 'court_alarm', // Matches your sound filename without extension
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#1E3A8A',
+    });
+  }
+}
 
 function RootLayoutNav() {
   return (
@@ -103,6 +117,8 @@ function InitializingGate() {
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
+    setupNotificationChannel();
+
     const timer = setTimeout(() => {
       if (!isLoaded) {
         setTimedOut(true);
