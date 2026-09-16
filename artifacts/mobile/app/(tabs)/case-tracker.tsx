@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, ScrollView, Alert, Platform, TouchableOpacity } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
@@ -23,6 +23,13 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const EVENT_TYPES = [
+  { label: 'Hearing', icon: 'calendar', color: '#C9A84C' },
+  { label: 'Written Statement / Counter', icon: 'file-text', color: '#E53935' },
+  { label: 'Limitation Expiry', icon: 'alert-circle', color: '#FB8C00' },
+  { label: 'Peremptory Compliance', icon: 'check-square', color: '#8E24AA' },
+];
+
 export default function CauseListScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -32,6 +39,7 @@ export default function CauseListScreen() {
   const [caseTitle, setCaseTitle] = useState('');
   const [itemNumber, setItemNumber] = useState('');
   const [hearingDate, setHearingDate] = useState(''); // Format: DD-MM-YYYY
+  const [selectedEventType, setSelectedEventType] = useState('Hearing');
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
 
@@ -90,8 +98,8 @@ export default function CauseListScreen() {
   };
 
   const handleAddHearing = async () => {
-    if (!judgeName.trim() || !caseTitle.trim() || !hearingDate.trim()) {
-      Alert.alert('Missing Fields', 'Please fill in the Judge Name, Case Title, and Hearing Date.');
+    if (!caseTitle.trim() || !hearingDate.trim()) {
+      Alert.alert('Missing Fields', 'Please fill in the Case Title and Target Date.');
       return;
     }
 
@@ -116,8 +124,8 @@ export default function CauseListScreen() {
           if (hearingDateTime.getTime() > Date.now()) {
             await Notifications.scheduleNotificationAsync({
               content: {
-                title: '⚖️ Hearing Reminder',
-                body: `Case ${caseTitle} (Item No. ${itemNumber || 'N/A'}) before ${judgeName} — Hearing: ${hearingDate}`,
+                title: `⚖️ ${selectedEventType} Reminder`,
+                body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — Due: ${hearingDate}`,
                 sound: true,
               },
               trigger: {
@@ -133,10 +141,11 @@ export default function CauseListScreen() {
 
       const newMatter = {
         id: Date.now().toString(),
-        judgeName,
+        judgeName: judgeName.trim() || 'N/A',
         caseTitle,
         itemNumber: itemNumber || 'N/A',
         hearingDate,
+        eventType: selectedEventType,
         status: 'Pending Call',
       };
 
@@ -148,15 +157,21 @@ export default function CauseListScreen() {
       setCaseTitle('');
       setItemNumber('');
       setHearingDate('');
+      setSelectedEventType('Hearing');
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Hearing added! 24-hour sound reminder scheduled.');
+      Alert.alert('Success', `${selectedEventType} deadline tracked! 24-hour reminder scheduled.`);
     } catch (error) {
-      console.error('Error adding hearing:', error);
-      Alert.alert('Error', 'Could not save hearing entry.');
+      console.error('Error adding matter:', error);
+      Alert.alert('Error', 'Could not save compliance entry.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const getEventTypeColor = (type: string) => {
+    const found = EVENT_TYPES.find(e => e.label === type);
+    return found ? found.color : '#C9A84C';
   };
 
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
@@ -171,19 +186,56 @@ export default function CauseListScreen() {
       <View style={styles.headerContainer}>
         <View style={styles.titleRow}>
           <Feather name="calendar" size={22} color="#C9A84C" />
-          <Text style={styles.screenTitle}>Cause List & Tracker</Text>
+          <Text style={styles.screenTitle}>Cause List & Compliance</Text>
         </View>
         <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-          Track daily cause lists, item numbers, and manage upcoming court schedules under {jurisdiction} law.
+          Track daily cause lists, filing limitations, counter-affidavits, and critical legal deadlines under {jurisdiction} law.
         </Text>
       </View>
 
       {/* Form Card */}
       <Card style={[styles.formCard, { borderColor: colors.border }]}>
-        <Text style={styles.sectionHeaderLabel}>SCHEDULE NEW HEARING</Text>
+        <Text style={styles.sectionHeaderLabel}>ADD DEADLINE & REMINDER</Text>
+        
+        {/* Event Type Selector */}
+        <Text style={[styles.inputLabel, { color: colors.foreground }]}>Deadline Type</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeSelectorScroll}>
+          {EVENT_TYPES.map((type) => {
+            const isSelected = selectedEventType === type.label;
+            return (
+              <TouchableOpacity
+                key={type.label}
+                style={[
+                  styles.typeChip,
+                  { borderColor: isSelected ? type.color : colors.border, backgroundColor: isSelected ? `${type.color}20` : colors.background }
+                ]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setSelectedEventType(type.label);
+                }}
+              >
+                <Feather name={type.icon as any} size={14} color={isSelected ? type.color : colors.mutedForeground} />
+                <Text style={[styles.typeChipText, { color: isSelected ? type.color : colors.mutedForeground }]}>
+                  {type.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>Case Title / Number *</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="e.g., Suit 102/2026 or Sharma vs. Union"
+            placeholderTextColor={colors.mutedForeground}
+            value={caseTitle}
+            onChangeText={setCaseTitle}
+          />
+        </View>
         
         <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.foreground }]}>Judge Name</Text>
+          <Text style={[styles.inputLabel, { color: colors.foreground }]}>Judge / Forum Name (Optional)</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
             placeholder="e.g., Justice R.K. Agrawal"
@@ -193,20 +245,9 @@ export default function CauseListScreen() {
           />
         </View>
         
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.foreground }]}>Case Title / Number</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-            placeholder="e.g., Suit 102/2026"
-            placeholderTextColor={colors.mutedForeground}
-            value={caseTitle}
-            onChangeText={setCaseTitle}
-          />
-        </View>
-        
         <View style={styles.rowInputs}>
           <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={[styles.inputLabel, { color: colors.foreground }]}>Item Number</Text>
+            <Text style={[styles.inputLabel, { color: colors.foreground }]}>Item No. / Ref</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
               placeholder="e.g., 24"
@@ -218,7 +259,7 @@ export default function CauseListScreen() {
           </View>
 
           <View style={[styles.inputGroup, { flex: 1.2 }]}>
-            <Text style={[styles.inputLabel, { color: colors.foreground }]}>Hearing Date</Text>
+            <Text style={[styles.inputLabel, { color: colors.foreground }]}>Target Date *</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
               placeholder="DD-MM-YYYY"
@@ -230,7 +271,7 @@ export default function CauseListScreen() {
         </View>
 
         <Button
-          title={loading ? "Saving Hearing..." : "Add to Cause List"}
+          title={loading ? "Saving Deadline..." : "Save & Set Reminder"}
           variant="primary"
           onPress={handleAddHearing}
           style={[loading && { opacity: 0.5 }, { marginTop: 4, marginVertical: 0, backgroundColor: '#C9A84C' }]}
@@ -239,7 +280,7 @@ export default function CauseListScreen() {
 
       {/* Tracked Matters Section */}
       <View style={styles.resultsHeaderRow}>
-        <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Tracked Matters</Text>
+        <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Tracked Deadlines</Text>
         <View style={styles.countBadge}>
           <Text style={styles.countBadgeText}>{matters.length}</Text>
         </View>
@@ -248,21 +289,29 @@ export default function CauseListScreen() {
       {matters.length === 0 ? (
         <Card style={[styles.emptyCard, { borderColor: colors.border }]}>
           <Feather name="folder" size={24} color={colors.mutedForeground} style={{ marginBottom: 8 }} />
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No hearings tracked yet. Schedule a matter above to enable automated notifications.</Text>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No deadlines tracked yet. Schedule a hearing, filing deadline, or limitation expiry above to enable automated notifications.</Text>
         </Card>
       ) : (
-        matters.map((item) => (
-          <Card key={item.id} style={[styles.trackedCard, { borderColor: colors.border }]}>
-            <View style={styles.cardRow}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>Item No. {item.itemNumber}</Text>
+        matters.map((item) => {
+          const typeColor = getEventTypeColor(item.eventType || 'Hearing');
+          return (
+            <Card key={item.id} style={[styles.trackedCard, { borderColor: colors.border }]}>
+              <View style={styles.cardRow}>
+                <View style={[styles.badge, { backgroundColor: `${typeColor}20`, borderColor: `${typeColor}40` }]}>
+                  <Text style={[styles.badgeText, { color: typeColor }]}>{item.eventType || 'Hearing'}</Text>
+                </View>
+                <Text style={[styles.dateText, { color: typeColor }]}>📅 {item.hearingDate}</Text>
               </View>
-              <Text style={styles.dateText}>📅 {item.hearingDate}</Text>
-            </View>
-            <Text style={[styles.caseTitle, { color: colors.foreground }]}>{item.caseTitle}</Text>
-            <Text style={[styles.judgeText, { color: colors.mutedForeground }]}>Presiding: {item.judgeName}</Text>
-          </Card>
-        ))
+              <Text style={[styles.caseTitle, { color: colors.foreground }]}>{item.caseTitle}</Text>
+              <View style={styles.metaRow}>
+                {item.itemNumber !== 'N/A' && (
+                  <Text style={[styles.metaText, { color: colors.mutedForeground }]}>Item: {item.itemNumber} • </Text>
+                )}
+                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>Presiding/Forum: {item.judgeName}</Text>
+              </View>
+            </Card>
+          );
+        })
       )}
     </ScrollView>
   );
@@ -276,6 +325,9 @@ const styles = StyleSheet.create({
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   formCard: { marginVertical: 0, marginBottom: 24, padding: 16, borderRadius: 12, borderWidth: 1 },
   sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 14 },
+  typeSelectorScroll: { flexDirection: 'row', marginBottom: 14 },
+  typeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, marginRight: 8 },
+  typeChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
   inputGroup: { marginBottom: 12 },
   inputLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, marginBottom: 6 },
   rowInputs: { flexDirection: 'row', gap: 10 },
@@ -295,9 +347,10 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', lineHeight: 18 },
   trackedCard: { marginVertical: 0, marginBottom: 12, padding: 16, borderRadius: 12, borderWidth: 1 },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  badge: { backgroundColor: '#C9A84C20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#C9A84C40' },
-  badgeText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  dateText: { fontSize: 13, color: '#C9A84C', fontFamily: 'Inter_600SemiBold' },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
+  badgeText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  dateText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 4 },
-  judgeText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  metaRow: { flexDirection: 'row', alignItems: 'center' },
+  metaText: { fontFamily: 'Inter_400Regular', fontSize: 12 },
 });
