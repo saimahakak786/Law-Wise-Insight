@@ -20,7 +20,7 @@ router.post("/lawwise/calculator/limitation", requireAuth, async (req, res): Pro
 
   try {
     const result = await callAI(systemPrompt, userPrompt);
-    const jsonMatch = result.match(/\{[\s\S]*?\}/);
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON in response");
     const data = JSON.parse(jsonMatch[0]);
     res.json(data);
@@ -57,7 +57,7 @@ Respond with ONLY a valid JSON object — no markdown, no code blocks, no extra 
 
   try {
     const result = await callAI(systemPrompt, userPrompt);
-    const jsonMatch = result.match(/\{[\s\S]*?\}/);
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON in response");
     const data = JSON.parse(jsonMatch[0]);
     res.json(data);
