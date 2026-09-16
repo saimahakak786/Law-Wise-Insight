@@ -44,25 +44,11 @@ function calculateCourtFeePureMath(
 ) {
   const cType = (courtType || "").toLowerCase();
   const caseT = (caseType || "").toLowerCase();
-  const jur = (jurisdiction || "india").toLowerCase();
   const val = Number(claimAmount) || 0;
 
   let baseFee = 0;
   let additionalFees: Array<{ name: string; amount: number }> = [];
   let description = "";
-
-  // Non-India fallback
-  if (!jur.includes("india")) {
-    baseFee = val > 0 ? Math.round(val * 0.01) : 100;
-    additionalFees = [{ name: "Filing and Administrative Fee", amount: 50 }];
-    description = `Estimated fee under ${jurisdiction} schedules. Approximate estimate only; verify with local court registry.`;
-    return {
-      baseFee,
-      additionalFees,
-      totalFee: baseFee + additionalFees.reduce((acc, curr) => acc + curr.amount, 0),
-      description,
-    };
-  }
 
   // A. Family, Custody, Matrimonial, Maintenance & Domestic Matters (Flat Nominal Rates)
   if (
