@@ -86,10 +86,32 @@ export default function CalculatorScreen() {
       const result = await response.json();
       setLimResult(result);
     } catch (e: any) {
+      console.log("Limitation API Error (using smart offline fallback):", e);
+
+      // Smart offline fallback based on case type instead of rigid 3 years
+      let fallbackYears = 3;
+      let fallbackDesc = `Standard limitation period for ${limCaseType} under ${jurisdiction} governance.`;
+      let fallbackDeadline = limEventDate ? 'Check statutory timeline' : 'Within 3 years from cause of action';
+
+      const lower = limCaseType.toLowerCase();
+      if (lower.includes('consumer')) {
+        fallbackYears = 2;
+        fallbackDesc = `Standard limitation period under Section 69 of the Consumer Protection Act, 2019.`;
+        fallbackDeadline = limEventDate ? 'Check 2-year statutory limit' : 'Within 2 years from cause of action';
+      } else if (lower.includes('cheque bounce')) {
+        fallbackYears = 0.1; // ~30-45 days
+        fallbackDesc = `Statutory timeline under Section 138 NI Act (Notice within 30 days, complaint within 30 days post-expiry).`;
+        fallbackDeadline = limEventDate ? 'Within 30 days post notice expiry' : 'Immediate upon notice period completion';
+      } else if (lower.includes('property')) {
+        fallbackYears = 12;
+        fallbackDesc = `Suit for possession of immovable property based on title under the Limitation Act.`;
+        fallbackDeadline = limEventDate ? 'Check 12-year statutory limit' : 'Within 12 years from cause of action';
+      }
+
       setLimResult({
-        periodYears: 3,
-        deadline: limEventDate ? '01 Jan 2027' : 'Within 3 years from cause of action',
-        description: `Standard limitation period for ${limCaseType} under ${jurisdiction} governance.`,
+        periodYears: fallbackYears,
+        deadline: fallbackDeadline,
+        description: fallbackDesc,
         notes: 'Calculated successfully via LawVise offline fallback engine.'
       });
     } finally {
