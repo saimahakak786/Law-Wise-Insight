@@ -60,7 +60,7 @@ const tokenCache = {
   },
 };
 
-// Configure Android Notification Channel with custom gavel sound
+// Configure Android Notification Channel with custom gavel sound and persistent visibility
 async function setupNotificationChannel() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('court-alerts', {
@@ -69,6 +69,9 @@ async function setupNotificationChannel() {
       sound: 'court_alarm', // Matches your sound filename without extension
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#1E3A8A',
+      enableLights: true,
+      enableVibrate: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     });
   }
 }
