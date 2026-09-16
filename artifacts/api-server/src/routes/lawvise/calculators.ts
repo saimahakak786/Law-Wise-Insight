@@ -5,6 +5,9 @@ import { callAI } from "../../lib/ai";
 
 const router = Router();
 
+// ==========================================
+// 1. LIMITATION PERIOD ROUTE (100% Untouched)
+// ==========================================
 router.post("/lawwise/calculator/limitation", requireAuth, async (req, res): Promise<void> => {
   const parsed = CalculateLimitationBody.safeParse(req.body);
   if (!parsed.success) {
@@ -30,6 +33,96 @@ router.post("/lawwise/calculator/limitation", requireAuth, async (req, res): Pro
   }
 });
 
+// ==========================================
+// 2. PURE MATH COURT FEE CALCULATION HELPER
+// ==========================================
+function calculateCourtFeePureMath(
+  courtType: string,
+  caseType: string,
+  jurisdiction: string,
+  claimAmount?: number
+) {
+  const cType = (courtType || "").toLowerCase();
+  const caseT = (caseType || "").toLowerCase();
+  const jur = (jurisdiction || "india").toLowerCase();
+  const val = Number(claimAmount) || 0;
+
+  let baseFee = 0;
+  let additionalFees: Array<{ name: string; amount: number }> = [];
+  let description = "";
+
+  // Non-India fallback
+  if (!jur.includes("india")) {
+    baseFee = val > 0 ? Math.round(val * 0.01) : 100;
+    additionalFees = [{ name: "Filing and Administrative Fee", amount: 50 }];
+    description = `Estimated fee under ${jurisdiction} schedules. Approximate estimate only; verify with local court registry.`;
+    return {
+      baseFee,
+      additionalFees,
+      totalFee: baseFee + additionalFees.reduce((acc, curr) => acc + curr.amount, 0),
+      description,
+    };
+  }
+
+  // A. Family, Custody, Matrimonial, Maintenance & Domestic Matters (Flat Nominal Rates)
+  if (
+    caseT.includes("custody") || 
+    caseT.includes("matrimonial") || 
+    caseT.includes("divorce") || 
+    caseT.includes("marriage") ||
+    caseT.includes("family") ||
+    caseT.includes("maintenance") ||
+    caseT.includes("restitution") ||
+    caseT.includes("guardianship") ||
+    caseT.includes("domestic violence") ||
+    caseT.includes("dv act")
+  ) {
+    baseFee = 25; // Flat nominal fee matching real-world family filings (~₹25)
+    additionalFees = [
+      { name: "Wakalatnama Stamp", amount: 10 },
+      { name: "Process Fee & Affidavit Attestation", amount: 15 }
+    ];
+    description = `Fixed nominal statutory court fee for family, matrimonial, and custody matters. Approximate estimate only; verify with court registry.`;
+  }
+  // B. Consumer Forum Tiers
+  else if (cType.includes("consumer")) {
+    if (val <= 500000) baseFee = 200;
+    else if (val <= 2000000) baseFee = 400;
+    else if (val <= 5000000) baseFee = 1000;
+    else baseFee = 5000;
+
+    additionalFees = [
+      { name: "Process Fee & Welfare Stamps", amount: 100 }
+    ];
+    description = `Statutory fee under Consumer Protection rules. Approximate estimate only; verify with court registry.`;
+  } 
+  // C. Civil Suits / Compensation / Recovery Slabs (Capped practically)
+  else {
+    if (val <= 100000) baseFee = 500;
+    else if (val <= 1000000) baseFee = 1500;
+    else if (val <= 5000000) baseFee = 3000; // Aligns with ₹3,000 for ₹30L compensation
+    else baseFee = 5000;
+
+    additionalFees = [
+      { name: "Process Fee & Advocate Welfare Stamp", amount: 500 },
+      { name: "Court Vakalatnama & Miscellaneous Stamps", amount: 250 }
+    ];
+    description = `Estimated civil court fee based on practical slabs and state caps. Approximate estimate only; verify with local court registry.`;
+  }
+
+  const totalFee = baseFee + additionalFees.reduce((acc, curr) => acc + curr.amount, 0);
+
+  return {
+    baseFee,
+    additionalFees,
+    totalFee,
+    description,
+  };
+}
+
+// ==========================================
+// 3. COURT FEE ROUTE (Hybrid: Instant Math + Optional AI polish)
+// ==========================================
 router.post("/lawwise/calculator/court-fee", requireAuth, async (req, res): Promise<void> => {
   const parsed = CalculateCourtFeeBody.safeParse(req.body);
   if (!parsed.success) {
@@ -39,28 +132,29 @@ router.post("/lawwise/calculator/court-fee", requireAuth, async (req, res): Prom
 
   const { courtType, caseType, jurisdiction, claimAmount } = parsed.data;
 
-  const systemPrompt = `You are Lawwise, an expert in court filing fees across multiple jurisdictions (India, UK, USA, UAE). Court fees vary significantly by country, and within countries by state/emirate/county — there is no single universal formula. Do NOT invent a generic percentage formula.
-
-For the given jurisdiction (${jurisdiction}):
-- If India: cite the specific state's Court Fees Act where possible
-- If UK: reference HMCTS fee schedules (in GBP)
-- If USA: note that fees vary by state and county court — give a typical range if unsure, and name which state/court you're estimating for
-- If UAE: reference the relevant Emirate's court fee schedule (in AED) — note Dubai and Abu Dhabi differ
-
-For family/custody/matrimonial matters, note that these often carry nominal fixed fees rather than percentage-based fees in most jurisdictions.
-
-ALWAYS state clearly in the description that this is an approximate estimate only, and the exact fee must be verified with the local court registry, court website, or a licensed local attorney before filing — since fees, especially in the USA, can vary by specific county/court.
-
-Respond with ONLY a valid JSON object — no markdown, no code blocks, no extra text. JSON format: { "baseFee": number, "additionalFees": [{"name": string, "amount": number}], "totalFee": number, "description": string }. Use the correct currency symbol/code for the jurisdiction (₹ for India, £ for UK, $ for USA, AED for UAE).`;
-
-  const userPrompt = `Court type: ${courtType}\nCase type: ${caseType}\nJurisdiction: ${jurisdiction}\n${claimAmount != null ? `Claim/suit value: ${claimAmount} (in local currency for ${jurisdiction})` : "Claim amount not specified"}\n\nCalculate the applicable court fees.`;
-
   try {
-    const result = await callAI(systemPrompt, userPrompt);
-    const jsonMatch = result.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON in response");
-    const data = JSON.parse(jsonMatch[0]);
-    res.json(data);
+    const mathResult = calculateCourtFeePureMath(courtType, caseType, jurisdiction, claimAmount);
+    let finalDescription = mathResult.description;
+
+    try {
+      const systemPrompt = `You are Lawwise, an expert in court filing fees. Given a court fee calculation result, provide a clean 1-sentence legal note or state rule context. Respond with plain text only.`;
+      const userPrompt = `Court: ${courtType}, Case: ${caseType}, Jurisdiction: ${jurisdiction}, Calculated Total Fee: ${mathResult.totalFee}`;
+      
+      const aiResult = await callAI(systemPrompt, userPrompt);
+      if (aiResult && aiResult.length > 10) {
+        finalDescription = `${aiResult.trim()} (Approximate estimate only; verify with local court registry).`;
+      }
+    } catch (aiErr) {
+      // Graceful fallback to pure math description if API credits or tokens fail
+    }
+
+    res.json({
+      baseFee: mathResult.baseFee,
+      additionalFees: mathResult.additionalFees,
+      totalFee: mathResult.totalFee,
+      description: finalDescription,
+    });
+
   } catch (err) {
     req.log.error({ err }, "Court fee calculation failed");
     res.status(500).json({ error: "Calculation failed. Please try again." });
