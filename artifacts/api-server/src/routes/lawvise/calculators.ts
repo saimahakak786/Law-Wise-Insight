@@ -53,7 +53,7 @@ ALWAYS state clearly in the description that this is an approximate estimate onl
 
 Respond with ONLY a valid JSON object — no markdown, no code blocks, no extra text. JSON format: { "baseFee": number, "additionalFees": [{"name": string, "amount": number}], "totalFee": number, "description": string }. Use the correct currency symbol/code for the jurisdiction (₹ for India, £ for UK, $ for USA, AED for UAE).`;
 
-  const userPrompt = `Court type: ${courtType}\nCase type: ${caseType}\nJurisdiction: ${jurisdiction}\n${claimAmount != null ? `Claim/suit value: ₹${claimAmount}` : "Claim amount not specified"}\n\nCalculate the applicable court fees.`;
+  const userPrompt = `Court type: ${courtType}\nCase type: ${caseType}\nJurisdiction: ${jurisdiction}\n${claimAmount != null ? `Claim/suit value: ${claimAmount} (in local currency for ${jurisdiction})` : "Claim amount not specified"}\n\nCalculate the applicable court fees.`;
 
   try {
     const result = await callAI(systemPrompt, userPrompt);
