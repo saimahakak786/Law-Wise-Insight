@@ -68,7 +68,7 @@ function calculateCourtFeePureMath(
       { name: "Wakalatnama Stamp", amount: 10 },
       { name: "Process Fee & Affidavit Attestation", amount: 15 }
     ];
-    description = `Fixed nominal statutory court fee for family, matrimonial, and custody matters. Approximate estimate only; verify with court registry.`;
+    description = `Fixed nominal statutory court fee for family, matrimonial, and custody matters under Indian procedural standards. Approximate estimate only; verify with court registry.`;
   }
   // B. Consumer Forum Tiers
   else if (cType.includes("consumer")) {
@@ -80,7 +80,7 @@ function calculateCourtFeePureMath(
     additionalFees = [
       { name: "Process Fee & Welfare Stamps", amount: 100 }
     ];
-    description = `Statutory fee under Consumer Protection rules. Approximate estimate only; verify with court registry.`;
+    description = `Statutory fee under the Consumer Protection Rules, 2020. Approximate estimate only; verify with local consumer commission registry.`;
   } 
   // C. Civil Suits / Compensation / Recovery Slabs (Capped practically)
   else {
@@ -93,7 +93,7 @@ function calculateCourtFeePureMath(
       { name: "Process Fee & Advocate Welfare Stamp", amount: 500 },
       { name: "Court Vakalatnama & Miscellaneous Stamps", amount: 250 }
     ];
-    description = `Estimated civil court fee based on practical slabs and state caps. Approximate estimate only; verify with local court registry.`;
+    description = `Estimated civil court fee based on practical statutory slabs and state caps under Indian law. Approximate estimate only; verify with local court registry.`;
   }
 
   const totalFee = baseFee + additionalFees.reduce((acc, curr) => acc + curr.amount, 0);
@@ -123,15 +123,18 @@ router.post("/lawwise/calculator/court-fee", requireAuth, async (req, res): Prom
     let finalDescription = mathResult.description;
 
     try {
-      const systemPrompt = `You are Lawwise, an expert in court filing fees. Given a court fee calculation result, provide a clean 1-sentence legal note or state rule context. Respond with plain text only.`;
-      const userPrompt = `Court: ${courtType}, Case: ${caseType}, Jurisdiction: ${jurisdiction}, Calculated Total Fee: ${mathResult.totalFee}`;
+      // Hardcoded Indian context to prevent any foreign AI hallucination (like Indiana)
+      const systemPrompt = `You are Lawwise, an expert in Indian court filing fees and civil procedure rules. Given a court fee calculation result, provide a clean, professional 1-sentence legal note strictly referencing Indian statutory frameworks (e.g. Court Fees Act). Respond with plain text only.`;
+      const userPrompt = `Court: ${courtType}, Case: ${caseType}, Jurisdiction: India, Calculated Total Fee: ${mathResult.totalFee}`;
       
       const aiResult = await callAI(systemPrompt, userPrompt);
       if (aiResult && aiResult.length > 10) {
-        finalDescription = `${aiResult.trim()} (Approximate estimate only; verify with local court registry).`;
+        // Clean up text and ensure it reads professionally
+        const cleanedAiText = aiResult.replace(/indiana/gi, "Indian").trim();
+        finalDescription = `${cleanedAiText} (Approximate estimate only; verify with local court registry).`;
       }
     } catch (aiErr) {
-      // Graceful fallback to pure math description if API credits or tokens fail
+      // Graceful fallback to pure math description if API fails
     }
 
     res.json({
