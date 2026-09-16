@@ -13,7 +13,7 @@ if (GEMINI_API_KEY) {
 }
 
 /**
- * Stream AI response through providers: OpenRouter → Gemini → xAI Grok (fallback chain)
+ * Stream AI response through providers: Gemini → OpenRouter → xAI Grok (fallback chain)
  */
 export async function streamAI(
   systemPrompt: string,
@@ -22,17 +22,16 @@ export async function streamAI(
 ): Promise<string> {
   if (GEMINI_API_KEY) {
     try {
-      return await streamOpenRouter(systemPrompt, userPrompt, onChunk);
-    } catch (err) {
-      logger.warn({ err }, "OpenRouter failed, trying Gemini...");
-    }
-  }
-   if (OPENROUTER_API_KEY) {
-
-    try {
       return await streamGemini(systemPrompt, userPrompt, onChunk);
     } catch (err) {
-      logger.warn({ err }, "Gemini stream failed, trying xAI Grok");
+      logger.warn({ err }, "Gemini failed, trying OpenRouter...");
+    }
+  }
+  if (OPENROUTER_API_KEY) {
+    try {
+      return await streamOpenRouter(systemPrompt, userPrompt, onChunk);
+    } catch (err) {
+      logger.warn({ err }, "OpenRouter failed, trying xAI Grok");
     }
   }
   if (XAI_API_KEY) {
@@ -48,7 +47,7 @@ export async function callAI(systemPrompt: string, userPrompt: string): Promise<
   return chunks.join("");
 }
 
-// ─── Gemini (Secondary) ──────────────────────────────────────────────────────
+// ─── Gemini (Primary) ──────────────────────────────────────────────────────
 
 async function streamGemini(
   systemPrompt: string,
@@ -72,7 +71,7 @@ async function streamGemini(
   return fullText;
 }
 
-// ─── OpenRouter (Primary) ────────────────────────────────────────────────────
+// ─── OpenRouter (Secondary) ────────────────────────────────────────────────
 
 async function streamOpenRouter(
   systemPrompt: string,
