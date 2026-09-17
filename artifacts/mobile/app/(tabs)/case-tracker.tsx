@@ -25,7 +25,7 @@ Notifications.setNotificationHandler({
 
 const EVENT_TYPES = [
   { label: 'Hearing', icon: 'calendar', color: '#C9A84C' },
-  { label: 'Written Statement / Counter', icon: 'file-text', color: '#E53935' },
+  { label: 'Written Statement / Counter', icon: 'file-text', color: '#EF4444' },
   { label: 'Limitation Expiry', icon: 'alert-circle', color: '#FB8C00' },
   { label: 'Peremptory Compliance', icon: 'check-square', color: '#8E24AA' },
 ];
@@ -97,6 +97,14 @@ export default function CauseListScreen() {
     return new Date(dateStr);
   };
 
+  const getDaysRemaining = (dateStr: string) => {
+    const target = parseDateInput(dateStr);
+    const now = new Date();
+    const diffTime = target.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   const handleAddHearing = async () => {
     if (!caseTitle.trim() || !hearingDate.trim()) {
       Alert.alert('Missing Fields', 'Please fill in the Case Title and Target Date.');
@@ -160,7 +168,7 @@ export default function CauseListScreen() {
       setSelectedEventType('Hearing');
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', `${selectedEventType} deadline tracked! 24-hour reminder scheduled.`);
+      Alert.alert('Success', `${selectedEventType} deadline tracked! 24-hour notification scheduled.`);
     } catch (error) {
       console.error('Error adding matter:', error);
       Alert.alert('Error', 'Could not save compliance entry.');
@@ -189,13 +197,13 @@ export default function CauseListScreen() {
           <Text style={styles.screenTitle}>Cause List & Compliance</Text>
         </View>
         <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-          Track daily cause lists, filing limitations, counter-affidavits, and critical legal deadlines under {jurisdiction} law.
+          Track daily cause lists, written statements, affidavits, counter-filings, and limitation periods under {jurisdiction} law.
         </Text>
       </View>
 
       {/* Form Card */}
       <Card style={[styles.formCard, { borderColor: colors.border }]}>
-        <Text style={styles.sectionHeaderLabel}>ADD DEADLINE & REMINDER</Text>
+        <Text style={styles.sectionHeaderLabel}>TRACK FILING DEADLINE & HEARING</Text>
         
         {/* Event Type Selector */}
         <Text style={[styles.inputLabel, { color: colors.foreground }]}>Deadline Type</Text>
@@ -238,7 +246,7 @@ export default function CauseListScreen() {
           <Text style={[styles.inputLabel, { color: colors.foreground }]}>Judge / Forum Name (Optional)</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-            placeholder="e.g., Justice R.K. Agrawal"
+            placeholder="e.g., Commercial Court / Justice Agrawal"
             placeholderTextColor={colors.mutedForeground}
             value={judgeName}
             onChangeText={setJudgeName}
@@ -259,7 +267,7 @@ export default function CauseListScreen() {
           </View>
 
           <View style={[styles.inputGroup, { flex: 1.2 }]}>
-            <Text style={[styles.inputLabel, { color: colors.foreground }]}>Target Date *</Text>
+            <Text style={[styles.inputLabel, { color: colors.foreground }]}>Target Deadline Date *</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
               placeholder="DD-MM-YYYY"
@@ -271,7 +279,7 @@ export default function CauseListScreen() {
         </View>
 
         <Button
-          title={loading ? "Saving Deadline..." : "Save & Set Reminder"}
+          title={loading ? "Saving Deadline..." : "Save Deadline & Set Reminder"}
           variant="primary"
           onPress={handleAddHearing}
           style={[loading && { opacity: 0.5 }, { marginTop: 4, marginVertical: 0, backgroundColor: '#C9A84C' }]}
@@ -280,7 +288,7 @@ export default function CauseListScreen() {
 
       {/* Tracked Matters Section */}
       <View style={styles.resultsHeaderRow}>
-        <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Tracked Deadlines</Text>
+        <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Active Deadlines & Cause List</Text>
         <View style={styles.countBadge}>
           <Text style={styles.countBadgeText}>{matters.length}</Text>
         </View>
@@ -289,25 +297,49 @@ export default function CauseListScreen() {
       {matters.length === 0 ? (
         <Card style={[styles.emptyCard, { borderColor: colors.border }]}>
           <Feather name="folder" size={24} color={colors.mutedForeground} style={{ marginBottom: 8 }} />
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No deadlines tracked yet. Schedule a hearing, filing deadline, or limitation expiry above to enable automated notifications.</Text>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No deadlines tracked yet. Schedule written statements, counter-affidavits, or hearing dates above to track preemptive timelines.</Text>
         </Card>
       ) : (
         matters.map((item) => {
           const typeColor = getEventTypeColor(item.eventType || 'Hearing');
+          const daysLeft = getDaysRemaining(item.hearingDate);
+          
+          let urgencyColor = '#10B981'; // Green (Safe)
+          let urgencyLabel = `${daysLeft} days left`;
+
+          if (daysLeft < 0) {
+            urgencyColor = '#EF4444';
+            urgencyLabel = 'Overdue / Expired';
+          } else if (daysLeft === 0) {
+            urgencyColor = '#EF4444';
+            urgencyLabel = '⚠️ Due Today!';
+          } else if (daysLeft <= 7) {
+            urgencyColor = '#EF4444'; // Critical
+            urgencyLabel = `⚠️ ${daysLeft} days left (Critical)`;
+          } else if (daysLeft <= 14) {
+            urgencyColor = '#FB8C00'; // Warning
+            urgencyLabel = `⚡ ${daysLeft} days left`;
+          }
+
           return (
             <Card key={item.id} style={[styles.trackedCard, { borderColor: colors.border }]}>
               <View style={styles.cardRow}>
                 <View style={[styles.badge, { backgroundColor: `${typeColor}20`, borderColor: `${typeColor}40` }]}>
                   <Text style={[styles.badgeText, { color: typeColor }]}>{item.eventType || 'Hearing'}</Text>
                 </View>
-                <Text style={[styles.dateText, { color: typeColor }]}>📅 {item.hearingDate}</Text>
+                <View style={[styles.urgencyBadge, { backgroundColor: `${urgencyColor}18`, borderColor: `${urgencyColor}40` }]}>
+                  <Text style={[styles.urgencyText, { color: urgencyColor }]}>{urgencyLabel}</Text>
+                </View>
               </View>
+
               <Text style={[styles.caseTitle, { color: colors.foreground }]}>{item.caseTitle}</Text>
+              
               <View style={styles.metaRow}>
+                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>📅 Target: {item.hearingDate} • </Text>
                 {item.itemNumber !== 'N/A' && (
                   <Text style={[styles.metaText, { color: colors.mutedForeground }]}>Item: {item.itemNumber} • </Text>
                 )}
-                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>Presiding/Forum: {item.judgeName}</Text>
+                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>Forum: {item.judgeName}</Text>
               </View>
             </Card>
           );
@@ -349,8 +381,9 @@ const styles = StyleSheet.create({
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
   badgeText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
-  dateText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 4 },
-  metaRow: { flexDirection: 'row', alignItems: 'center' },
+  urgencyBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
+  urgencyText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 6 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   metaText: { fontFamily: 'Inter_400Regular', fontSize: 12 },
 });
