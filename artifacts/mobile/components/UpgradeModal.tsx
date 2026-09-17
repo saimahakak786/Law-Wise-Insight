@@ -1,19 +1,18 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, SafeAreaView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import Purchases from 'react-native-purchases';
+import { purchaseProPackage } from '../services/purchases';
 
 interface UpgradeModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubscribe: () => void;
+  onSuccess?: () => void;
 }
 
-export default function UpgradeModal({ visible, onClose, onSubscribe }: UpgradeModalProps) {
-  const handleSubscribePress = () => {
-    HapticFeedback();
-    onSubscribe();
-  };
+export default function UpgradeModal({ visible, onClose, onSuccess }: UpgradeModalProps) {
+  const [loading, setLoading] = useState(false);
 
   const HapticFeedback = () => {
     try {
@@ -23,12 +22,44 @@ export default function UpgradeModal({ visible, onClose, onSubscribe }: UpgradeM
     }
   };
 
+  const handleSubscribePress = async () => {
+    HapticFeedback();
+    setLoading(true);
+
+    try {
+      // Fetch available offerings from RevenueCat
+      const offerings = await Purchases.getOfferings();
+      const monthlyPackage = offerings.current?.monthly;
+
+      if (!monthlyPackage) {
+        Alert.alert('Unavailable', 'Subscription package is not configured or available at the moment.');
+        setLoading(false);
+        return;
+      }
+
+      // Trigger Google Play purchase flow
+      const success = await purchaseProPackage(monthlyPackage);
+
+      if (success) {
+        Alert.alert('Welcome to Pro!', 'Your subscription is now active. Enjoy unlimited access.');
+        if (onSuccess) onSuccess();
+        onClose();
+      }
+    } catch (e: any) {
+      if (!e.userCancelled) {
+        Alert.alert('Purchase Error', e.message || 'Something went wrong during checkout.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.overlay}>
         <View style={styles.container}>
           {/* Close Button */}
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose} disabled={loading}>
             <Ionicons name="close" size={24} color="#D4AF37" />
           </TouchableOpacity>
 
@@ -58,8 +89,16 @@ export default function UpgradeModal({ visible, onClose, onSubscribe }: UpgradeM
           </View>
 
           {/* CTA Button */}
-          <TouchableOpacity style={styles.ctaButton} onPress={handleSubscribePress}>
-            <Text style={styles.ctaButtonText}>Upgrade to Pro</Text>
+          <TouchableOpacity 
+            style={[styles.ctaButton, loading && { opacity: 0.7 }]} 
+            onPress={handleSubscribePress}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#0A1128" />
+            ) : (
+              <Text style={styles.ctaButtonText}>Upgrade to Pro (₹299/mo)</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -168,7 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#D4AF37',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: { ios: 0.3, android: 0.5 } as any,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
