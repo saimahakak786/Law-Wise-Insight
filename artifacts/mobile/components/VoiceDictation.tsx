@@ -1,39 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { checkProStatus } from '../services/purchases';
+import { checkDictationLimit, incrementDictationCount } from '../services/usageLimits';
 
 interface VoiceDictationProps {
-  isProUser: boolean; // Pass user subscription status here
   onTranscriptionComplete: (text: string) => void;
-  onUpgradePress: () => void; // Triggered when free trial runs out
+  onUpgradePress: () => void; // Triggers the UpgradeModal when limits are hit
 }
 
-export default function VoiceDictation({ isProUser, onTranscriptionComplete, onUpgradePress }: VoiceDictationProps) {
+export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress }: VoiceDictationProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // Track free trial usage (Starts at 1 free trial available)
-  const [hasFreeTrial, setHasFreeTrial] = useState(true);
+  const [isProUser, setIsProUser] = useState(false);
+  const [canUse, setCanUse] = useState(true);
 
-  const handleToggleRecording = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  // Check Pro status and remaining limits on mount / focus
+  useEffect(() => {
+    checkUserStatus();
+  }, []);
 
-    // If free user has already used their 1 free trial, trigger paywall immediately
-    if (!isProUser && !hasFreeTrial) {
-      onUpgradePress();
-      return;
+  const checkUserStatus = async () => {
+    const proActive = await checkProStatus();
+    setIsProUser(proActive);
+
+    if (!proActive) {
+      const allowed = await checkDictationLimit();
+      setCanUse(allowed);
     }
-    
+  };
+
+  const handleToggleRecording = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (e) {
+      // Fallback for environments without haptics
+    }
+
+    // Refresh status before allowing action
+    const proActive = await checkProStatus();
+    setIsProUser(proActive);
+
+    if (!proActive) {
+      const allowed = await checkDictationLimit();
+      setCanUse(allowed);
+
+      if (!allowed) {
+        // Limit exceeded! Trigger the paywall modal
+        onUpgradePress();
+        return;
+      }
+    }
+
     if (!isRecording) {
       setIsRecording(true);
     } else {
       setIsRecording(false);
       setIsProcessing(true);
 
-      // Consume the single free trial if not a Pro user
-      if (!isProUser) {
-        setHasFreeTrial(false);
+      // If free user, increment local usage counter
+      if (!proActive) {
+        await incrementDictationCount();
+        const allowed = await checkDictationLimit();
+        setCanUse(allowed);
       }
 
       setTimeout(() => {
@@ -67,8 +97,8 @@ export default function VoiceDictation({ isProUser, onTranscriptionComplete, onU
                 ? 'Tap to Stop & Transcribe' 
                 : isProUser 
                   ? 'Voice Dictation (Pro)' 
-                  : hasFreeTrial 
-                    ? 'Voice Dictation (1 Free Trial)' 
+                  : canUse 
+                    ? 'Voice Dictation (Free Trial)' 
                     : 'Voice Dictation (Locked)'}
             </Text>
           </Pressable>
