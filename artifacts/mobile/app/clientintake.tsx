@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, Pressable, StyleSheet,
   Platform, ActivityIndicator, Alert,
@@ -9,6 +9,9 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { checkProStatus } from '@/services/purchases';
+import { checkClientIntakeLimit, incrementClientIntakeCount } from '@/services/usageLimits';
+import UpgradeModal from '@/components/UpgradeModal';
 
 export default function ClientIntakeScreen() {
   const colors = useColors();
@@ -21,17 +24,40 @@ export default function ClientIntakeScreen() {
   const [disputeSummary, setDisputeSummary] = useState('');
   
   const [isChecking, setIsChecking] = useState(false);
+  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
+
   const [intakeResult, setIntakeResult] = useState<{
     status: 'clear' | 'conflict' | null;
     message: string;
     engagementMemo: string;
   } | null>(null);
 
-  const handleRunConflictCheckAndIntake = () => {
+  const handleRunConflictCheckAndIntake = async () => {
     if (!clientName.trim() || !opposingParty.trim() || !disputeSummary.trim()) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert('Incomplete Details', 'Please fill in the client name, opposing party, and dispute summary.');
       return;
+    }
+
+    try {
+      // 1. Check if user has active Pro subscription via RevenueCat
+      const isPro = await checkProStatus();
+
+      if (!isPro) {
+        // 2. If not Pro, check local usage limit (1 free client intake)
+        const canProceed = await checkClientIntakeLimit();
+
+        if (!canProceed) {
+          // Limit hit! Open the Upgrade Paywall Modal
+          setIsUpgradeModalVisible(true);
+          return;
+        }
+
+        // 3. Increment the free intake count
+        await incrementClientIntakeCount();
+      }
+    } catch (e) {
+      console.error('Error verifying subscription or limits:', e);
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -74,140 +100,148 @@ export default function ClientIntakeScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable 
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}
-          style={[styles.backBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather name="arrow-left" size={18} color={colors.foreground} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Client Intake & Conflict Check</Text>
-        <View style={{ width: 38 }} />
-      </View>
-
-      {/* Info Banner */}
-      <LinearGradient
-        colors={['#1B2448', '#0F1635']}
-        style={styles.banner}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+    <>
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
       >
-        <Feather name="shield" size={24} color="#C9A84C" />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.bannerTitle}>Automated Screening</Text>
-          <Text style={styles.bannerSub}>Run instant conflict checks and organize prospective client intake records instantly.</Text>
-        </View>
-      </LinearGradient>
-
-      {/* Form Fields */}
-      <View style={styles.formSection}>
-        <Text style={[styles.label, { color: colors.foreground }]}>Client Full Name / Entity</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="e.g., Rajesh Sharma / Apex Enterprises"
-          placeholderTextColor={colors.mutedForeground}
-          value={clientName}
-          onChangeText={setClientName}
-        />
-
-        <Text style={[styles.label, { color: colors.foreground }]}>Opposing Party / Respondent</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="e.g., Standard Corporation Ltd."
-          placeholderTextColor={colors.mutedForeground}
-          value={opposingParty}
-          onChangeText={setOpposingParty}
-        />
-
-        <Text style={[styles.label, { color: colors.foreground }]}>Practice Area / Case Type</Text>
-        <View style={styles.chipRow}>
-          {['Civil Litigation', 'Corporate Arbitration', 'IP & Trademark', 'Employment Dispute'].map((type) => (
-            <Pressable
-              key={type}
-              style={[
-                styles.chip,
-                { 
-                  backgroundColor: caseType === type ? '#C9A84C' : colors.card,
-                  borderColor: caseType === type ? '#C9A84C' : (colors.border ?? '#C9A84C30')
-                }
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setCaseType(type);
-              }}
-            >
-              <Text style={[styles.chipText, { color: caseType === type ? '#070D24' : colors.foreground }]}>
-                {type}
-              </Text>
-            </Pressable>
-          ))}
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable 
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}
+            style={[styles.backBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather name="arrow-left" size={18} color={colors.foreground} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Client Intake & Conflict Check</Text>
+          <View style={{ width: 38 }} />
         </View>
 
-        <Text style={[styles.label, { color: colors.foreground }]}>Client Brief & Core Facts</Text>
-        <TextInput
-          style={[styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="Summarize the client's problem, disputed amount, or grievance..."
-          placeholderTextColor={colors.mutedForeground}
-          value={disputeSummary}
-          onChangeText={setDisputeSummary}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
-
-        <Pressable
-          style={styles.actionBtn}
-          onPress={handleRunConflictCheckAndIntake}
+        {/* Info Banner */}
+        <LinearGradient
+          colors={['#1B2448', '#0F1635']}
+          style={styles.banner}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         >
-          <LinearGradient
-            colors={['#C9A84C', '#E8C87A']}
-            style={styles.gradientBtn}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          <Feather name="shield" size={24} color="#C9A84C" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bannerTitle}>Automated Screening</Text>
+            <Text style={styles.bannerSub}>Run instant conflict checks and organize prospective client intake records instantly.</Text>
+          </View>
+        </LinearGradient>
+
+        {/* Form Fields */}
+        <View style={styles.formSection}>
+          <Text style={[styles.label, { color: colors.foreground }]}>Client Full Name / Entity</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="e.g., Rajesh Sharma / Apex Enterprises"
+            placeholderTextColor={colors.mutedForeground}
+            value={clientName}
+            onChangeText={setClientName}
+          />
+
+          <Text style={[styles.label, { color: colors.foreground }]}>Opposing Party / Respondent</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="e.g., Standard Corporation Ltd."
+            placeholderTextColor={colors.mutedForeground}
+            value={opposingParty}
+            onChangeText={setOpposingParty}
+          />
+
+          <Text style={[styles.label, { color: colors.foreground }]}>Practice Area / Case Type</Text>
+          <View style={styles.chipRow}>
+            {['Civil Litigation', 'Corporate Arbitration', 'IP & Trademark', 'Employment Dispute'].map((type) => (
+              <Pressable
+                key={type}
+                style={[
+                  styles.chip,
+                  { 
+                    backgroundColor: caseType === type ? '#C9A84C' : colors.card,
+                    borderColor: caseType === type ? '#C9A84C' : (colors.border ?? '#C9A84C30')
+                  }
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setCaseType(type);
+                }}
+              >
+                <Text style={[styles.chipText, { color: caseType === type ? '#070D24' : colors.foreground }]}>
+                  {type}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={[styles.label, { color: colors.foreground }]}>Client Brief & Core Facts</Text>
+          <TextInput
+            style={[styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+            placeholder="Summarize the client's problem, disputed amount, or grievance..."
+            placeholderTextColor={colors.mutedForeground}
+            value={disputeSummary}
+            onChangeText={setDisputeSummary}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+
+          <Pressable
+            style={styles.actionBtn}
+            onPress={handleRunConflictCheckAndIntake}
           >
-            {isChecking ? (
-              <ActivityIndicator color="#070D24" size="small" />
-            ) : (
-              <>
-                <Feather name="check-circle" size={18} color="#070D24" />
-                <Text style={styles.actionBtnText}>Run Conflict Check & Generate Intake</Text>
-              </>
-            )}
-          </LinearGradient>
-        </Pressable>
-      </View>
-
-      {/* Results Box */}
-      {intakeResult && (
-        <View style={[styles.resultCard, { backgroundColor: colors.card, borderColor: intakeResult.status === 'conflict' ? '#EF4444' : '#10B981' }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Feather 
-              name={intakeResult.status === 'conflict' ? 'alert-triangle' : 'check-circle'} 
-              size={18} 
-              color={intakeResult.status === 'conflict' ? '#EF4444' : '#10B981'} 
-            />
-            <Text style={[styles.resultTitle, { color: intakeResult.status === 'conflict' ? '#EF4444' : '#10B981' }]}>
-              {intakeResult.status === 'conflict' ? 'Conflict Warning Flagged' : 'Clear for Representation'}
-            </Text>
-          </View>
-          <Text style={[styles.resultMsg, { color: colors.foreground }]}>{intakeResult.message}</Text>
-          
-          <View style={[styles.memoBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.memoContent, { color: colors.foreground }]}>{intakeResult.engagementMemo}</Text>
-          </View>
-
-          {intakeResult.status === 'clear' && (
-            <Pressable style={styles.saveVaultBtn} onPress={handleSaveToIntakeVault}>
-              <Feather name="folder-plus" size={16} color="#070D24" />
-              <Text style={styles.saveVaultBtnText}>Save Intake File to Vault</Text>
-            </Pressable>
-          )}
+            <LinearGradient
+              colors={['#C9A84C', '#E8C87A']}
+              style={styles.gradientBtn}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            >
+              {isChecking ? (
+                <ActivityIndicator color="#070D24" size="small" />
+              ) : (
+                <>
+                  <Feather name="check-circle" size={18} color="#070D24" />
+                  <Text style={styles.actionBtnText}>Run Conflict Check & Generate Intake</Text>
+                </>
+              )}
+            </LinearGradient>
+          </Pressable>
         </View>
-      )}
-    </ScrollView>
+
+        {/* Results Box */}
+        {intakeResult && (
+          <View style={[styles.resultCard, { backgroundColor: colors.card, borderColor: intakeResult.status === 'conflict' ? '#EF4444' : '#10B981' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Feather 
+                name={intakeResult.status === 'conflict' ? 'alert-triangle' : 'check-circle'} 
+                size={18} 
+                color={intakeResult.status === 'conflict' ? '#EF4444' : '#10B981'} 
+              />
+              <Text style={[styles.resultTitle, { color: intakeResult.status === 'conflict' ? '#EF4444' : '#10B981' }]}>
+                {intakeResult.status === 'conflict' ? 'Conflict Warning Flagged' : 'Clear for Representation'}
+              </Text>
+            </View>
+            <Text style={[styles.resultMsg, { color: colors.foreground }]}>{intakeResult.message}</Text>
+            
+            <View style={[styles.memoBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.memoContent, { color: colors.foreground }]}>{intakeResult.engagementMemo}</Text>
+            </View>
+
+            {intakeResult.status === 'clear' && (
+              <Pressable style={styles.saveVaultBtn} onPress={handleSaveToIntakeVault}>
+                <Feather name="folder-plus" size={16} color="#070D24" />
+                <Text style={styles.saveVaultBtnText}>Save Intake File to Vault</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Upgrade Paywall Modal Triggered when Free Trial is Exhausted */}
+      <UpgradeModal
+        visible={isUpgradeModalVisible}
+        onClose={() => setIsUpgradeModalVisible(false)}
+      />
+    </>
   );
 }
 
