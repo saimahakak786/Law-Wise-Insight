@@ -359,7 +359,19 @@ For and on behalf of the Claimant
               reply: 'Case law research results retrieved successfully with official citations.'
             }));
           }
-          // 8. General Fallback API
+          // 8. Document Export Endpoint (For Court Filings & Downloads)
+          else if (pathname.includes('/export') || pathname.includes('/download')) {
+            const content = data.content || data.draftContent || data.response || 'LawWise Legal Document';
+            const title = data.title || 'LawWise_Court_Document';
+            
+            res.end(JSON.stringify({
+              success: true,
+              filename: `${title.replace(/\s+/g, '_')}.txt`,
+              fileContent: content,
+              message: 'Document prepared successfully for court filing.'
+            }));
+          }
+          // 9. General Fallback API
           else {
             res.end(JSON.stringify({
               success: true,
