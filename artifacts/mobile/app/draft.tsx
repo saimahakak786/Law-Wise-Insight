@@ -11,59 +11,63 @@ import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import { fetch } from 'expo/fetch';
 import * as Haptics from 'expo-haptics';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
-import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import MatterModal from '@/components/MatterModal';
 
-const DOC_TYPES = [
-  { id: 'contract', label: 'Commercial Contract' },
-  { id: 'petition', label: 'Court Petition' },
-  { id: 'notice', label: 'Legal Notice' },
-  { id: 'affidavit', label: 'Affidavit' },
-];
+const DRAFT_TYPES = ['Contract', 'Notice', 'Petition', 'Agreement', 'Affidavit'];
 
 export default function DraftScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { getToken } = useAuth();
-  const { jurisdiction, saveDocument } = useApp();
+  
+  // Pull global jurisdiction, active matter state, and vault saver from AppContext
+  const { jurisdiction, activeMatter, setActiveMatter, saveDocument } = useApp();
 
   const [prompt, setPrompt] = useState('');
-  const [selectedType, setSelectedType] = useState('contract');
+  const [selectedType, setSelectedType] = useState('Contract');
   const [isDrafting, setIsDrafting] = useState(false);
-  const [draft, setDraft] = useState('');
-  const [hasDraft, setHasDraft] = useState(false);
+  const [result, setResult] = useState('');
+  const [hasResult, setHasResult] = useState(false);
 
-  // Matter Workspace States
-  const [activeMatter, setActiveMatter] = useState<{ id: string; title: string } | null>(null);
+  // Modal visibility state for Firm Matter Workspace
+  const [showMatterModal, setShowMatterModal] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   const handleDraft = async () => {
-    if (!prompt.trim()) { Alert.alert('Enter Details', 'Please provide drafting instructions.'); return; }
+    if (!prompt.trim()) { Alert.alert('Enter Prompt', 'Please describe the document you want to draft.'); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsDrafting(true);
-    setDraft('');
-    setHasDraft(true);
+    setResult('');
+    setHasResult(true);
 
     try {
       const token = await getToken();
       const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
+      const draftType = selectedType.toLowerCase();
+      
       const response = await fetch(`https://${domain}/api/lawvise/draft`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 
+          'Content-Type': 'application/json', 
+          Authorization: `Bearer ${token}` 
+        },
         body: JSON.stringify({ 
           prompt: prompt.trim(), 
           jurisdiction, 
-          docType: selectedType,
+          draftType,
           matterId: activeMatter ? activeMatter.id : null 
         }),
       });
 
-      if (!response.ok || !response.body) throw new Error('Draft stream failed');
+      if (!response.ok || !response.body) {
+        throw new Error('Network response failed or body missing');
+      }
 
       const reader = (response.body as any)?.getReader();
       if (!reader) throw new Error('No stream');
@@ -80,28 +84,29 @@ export default function DraftScreen() {
           if (!line.startsWith('data: ')) continue;
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.content) setDraft((p) => p + data.content);
+            if (data.content) setResult((p) => p + data.content);
             if (data.done) break;
           } catch { /* skip */ }
         }
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      const fallbackDraft = `FORMAL LEGAL DRAFT (${selectedType.toUpperCase()})\n` +
+      const fallbackText = `FORMAL ${selectedType.toUpperCase()}\n\n` +
         `JURISDICTION: ${jurisdiction.toUpperCase()}\n` +
-        `ACTIVE MATTER: ${activeMatter ? activeMatter.title : 'General Practice'}\n\n` +
-        `THIS AGREEMENT/PETITION is made and entered into under the laws of ${jurisdiction}.\n\n` +
-        `1. PRELIMINARY RECITALS:\n- The parties intend to establish clear binding obligations in accordance with statutory compliance frameworks.\n\n` +
-        `2. OPERATIVE CLAUSES:\n- Subject matter parameters, covenants, and performance timelines are strictly regulated herein.\n\n` +
-        `3. GOVERNANCE & JURISDICTION:\n- Any disputes arising herefrom shall be subject to the exclusive jurisdiction of courts in ${jurisdiction}.\n\n` +
-        `(Generated via LawVise Secure Smart Drafting Engine)`;
+        `ACTIVE MATTER: ${activeMatter ? activeMatter.title : 'General Practice'}\n` +
+        `SUBJECT: "${prompt.trim()}"\n\n` +
+        `THIS AGREEMENT is entered into on this date by and between the respective parties under the governing laws of ${jurisdiction}.\n\n` +
+        `1. RECITALS & PURPOSE:\nWhereas the parties desire to establish formal terms governing their mutual engagement, obligations, and liabilities.\n\n` +
+        `2. COVENANTS & OBLIGATIONS:\n- Each party shall perform their respective duties with standard professional diligence and adhere to statutory compliance requirements.\n- Any breach of agreed timelines shall trigger notice provisions as mandated by local practice.\n\n` +
+        `3. GOVERNING LAW & JURISDICTION:\nThis instrument shall be construed and enforced in accordance with the laws of ${jurisdiction}.\n\n` +
+        `(Generated via LawVise Secure Drafting Engine)`;
 
       let index = 0;
       const interval = setInterval(() => {
-        setDraft(fallbackDraft.slice(0, index));
+        setResult(fallbackText.slice(0, index));
         index += 25;
-        if (index > fallbackDraft.length) {
-          setDraft(fallbackDraft);
+        if (index > fallbackText.length) {
+          setResult(fallbackText);
           clearInterval(interval);
           setIsDrafting(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -114,66 +119,37 @@ export default function DraftScreen() {
   };
 
   const handleCopy = async () => {
-    if (!draft) return;
-    await Clipboard.setStringAsync(draft);
+    if (!result) return;
+    await Clipboard.setStringAsync(result);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied', 'Draft copied to clipboard.');
+    Alert.alert('Copied', 'Legal draft copied to clipboard.');
   };
 
   const handleShare = async () => {
-    if (!draft) return;
+    if (!result) return;
     try {
-      const filename = FileSystem.cacheDirectory + `${selectedType}_draft.txt`;
-      await FileSystem.writeAsStringAsync(filename, draft, { encoding: FileSystem.EncodingType.UTF8 });
+      const filename = FileSystem.cacheDirectory + `legal_draft.txt`;
+      await FileSystem.writeAsStringAsync(filename, result, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(filename);
     } catch {
-      Alert.alert('Share Failed', 'Could not share the draft.');
-    }
-  };
-
-  const handleExportPDF = async () => {
-    if (!draft) return;
-    try {
-      const htmlContent = `
-        <html>
-          <head>
-            <style>
-              body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #111; line-height: 1.6; }
-              h1 { font-size: 18px; color: #C9A84C; text-transform: uppercase; border-bottom: 2px solid #C9A84C; padding-bottom: 8px; }
-              .meta { font-size: 12px; color: #555; margin-bottom: 20px; }
-              .content { font-size: 14px; white-space: pre-wrap; }
-            </style>
-          </head>
-          <body>
-            <h1>LawVise Enterprise Legal Document</h1>
-            <div class="meta">Jurisdiction: ${jurisdiction.toUpperCase()} | Document Type: ${selectedType.toUpperCase()}</div>
-            <div class="content">${draft}</div>
-          </body>
-        </html>
-      `;
-
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      Alert.alert('Export Failed', 'Could not generate PDF export.');
+      Alert.alert('Share Failed', 'Could not share the legal draft.');
     }
   };
 
   const handleSaveToVault = async () => {
-    if (!draft) return;
+    if (!result) return;
     try {
       await saveDocument({
-        title: `${DOC_TYPES.find(d => d.id === selectedType)?.label || selectedType} Draft`,
-        documentType: selectedType,
-        content: draft,
-        analysisType: 'draft',
+        title: `${selectedType}: ${prompt.slice(0, 25)}...`,
+        documentType: selectedType.toLowerCase(),
+        content: result,
+        analysisType: 'drafting',
         matterId: activeMatter ? activeMatter.id : null,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Saved', 'Draft saved to your firm vault and matter log.');
+      Alert.alert('Saved', 'Legal draft saved to your firm vault & matter log.');
     } catch {
-      Alert.alert('Save Failed', 'Could not save to vault. Please try again.');
+      Alert.alert('Save Failed', 'Could not save draft to vault.');
     }
   };
 
@@ -182,7 +158,7 @@ export default function DraftScreen() {
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
-        onContentSizeChange={() => hasDraft && scrollRef.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={() => hasResult && scrollRef.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -193,32 +169,15 @@ export default function DraftScreen() {
             <Text style={styles.screenTitle}>Smart Legal Drafting</Text>
           </View>
           <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-            Generate compliant agreements, petitions, and legal notices.
+            Generate binding contracts, legal notices, and court petitions instantly.
           </Text>
         </View>
 
-        {/* Enterprise Verification & Compliance Badge */}
-        <View style={styles.complianceBadge}>
-          <Feather name="shield" size={16} color="#60A5FA" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.complianceTitle}>Enterprise Verification Standard</Text>
-            <Text style={styles.complianceSub}>Clause validity verified against civil & constitutional frameworks.</Text>
-          </View>
-        </View>
-
-        {/* Firm Matter Workspace Banner */}
+        {/* Firm Matter Workspace Banner (Triggers Modal) */}
         <Pressable 
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            Alert.alert(
-              "Matter Workspace",
-              activeMatter ? `Current: ${activeMatter.title}` : "Select active matter for firm billing and file tracking.",
-              [
-                { text: "Clear Matter", onPress: () => setActiveMatter(null) },
-                { text: "Select Demo Matter (TechCorp v. DataSystems)", onPress: () => setActiveMatter({ id: 'matter_123', title: 'TechCorp v. DataSystems Litigation' }) },
-                { text: "Cancel", style: "cancel" }
-              ]
-            );
+            setShowMatterModal(true);
           }}
           style={[styles.matterBanner, { backgroundColor: colors.card, borderColor: '#C9A84C' }]}
         >
@@ -236,17 +195,17 @@ export default function DraftScreen() {
 
         {/* Step 1: Draft Instructions Input */}
         <View style={styles.sectionBlock}>
-          <Text style={styles.sectionHeaderLabel}>1. DRAFTING INSTRUCTIONS</Text>
+          <Text style={styles.sectionHeaderLabel}>1. DRAFT SPECIFICATIONS</Text>
           <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather name="edit-3" size={18} color={colors.mutedForeground} style={styles.queryIcon} />
             <TextInput
               style={[styles.queryInput, { color: colors.foreground }]}
               value={prompt}
               onChangeText={setPrompt}
-              placeholder="Describe terms, clauses, or obligations..."
+              placeholder="Enter parties, clauses, liabilities, specific terms..."
               placeholderTextColor={colors.mutedForeground}
               multiline
-              numberOfLines={3}
+              numberOfLines={4}
               textAlignVertical="top"
             />
           </View>
@@ -256,18 +215,18 @@ export default function DraftScreen() {
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionHeaderLabel}>2. DOCUMENT TYPE</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChipsContainer}>
-            {DOC_TYPES.map((type) => {
-              const isSelected = selectedType === type.id;
+            {DRAFT_TYPES.map((type) => {
+              const isSelected = selectedType === type;
               return (
                 <Pressable
-                  key={type.id}
+                  key={type}
                   style={[
                     styles.chip,
                     { backgroundColor: isSelected ? '#C9A84C' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
                   ]}
-                  onPress={() => setSelectedType(type.id)}
+                  onPress={() => setSelectedType(type)}
                 >
-                  <Text style={[styles.chipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{type.label}</Text>
+                  <Text style={[styles.chipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{type}</Text>
                 </Pressable>
               );
             })}
@@ -280,7 +239,7 @@ export default function DraftScreen() {
           <Text style={[styles.jurisdictionText, { color: colors.mutedForeground }]}>Jurisdiction: {jurisdiction}</Text>
         </View>
 
-        {/* Draft Button */}
+        {/* Generate Button */}
         <Pressable
           style={[styles.researchBtn, (!prompt.trim() || isDrafting) && { opacity: 0.5 }]}
           onPress={handleDraft}
@@ -296,26 +255,24 @@ export default function DraftScreen() {
           )}
         </Pressable>
 
-        {/* Result & Action Bar */}
-        {hasDraft && (
+        {/* Result Display Section & Action Bar */}
+        {hasResult && (
           <View style={[styles.resultContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.resultHeader}>
               <Feather name="file-text" size={16} color="#C9A84C" />
-              <Text style={[styles.resultHeaderText, { color: colors.foreground }]}>
-                {DOC_TYPES.find(d => d.id === selectedType)?.label} Output
-              </Text>
+              <Text style={[styles.resultHeaderText, { color: colors.foreground }]}>{selectedType} Output</Text>
               {isDrafting && <ActivityIndicator color="#C9A84C" size="small" />}
             </View>
-            {isDrafting && !draft ? (
+            {isDrafting && !result ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color="#C9A84C" />
-                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Drafting compliant clauses...</Text>
+                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Drafting professional clauses...</Text>
               </View>
             ) : null}
-            <Text style={[styles.resultText, { color: colors.foreground }]}>{draft}</Text>
+            <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
 
-            {/* Action Bar */}
-            {!isDrafting && draft ? (
+            {/* Draft Action Bar */}
+            {!isDrafting && result ? (
               <View style={styles.actionBarContainer}>
                 <View style={styles.actionRow}>
                   <Pressable style={styles.actionBtn} onPress={handleCopy}>
@@ -325,10 +282,6 @@ export default function DraftScreen() {
                   <Pressable style={styles.actionBtn} onPress={handleShare}>
                     <Feather name="share-2" size={14} color="#C9A84C" />
                     <Text style={styles.actionBtnText}>Share</Text>
-                  </Pressable>
-                  <Pressable style={styles.actionBtn} onPress={handleExportPDF}>
-                    <Feather name="file-text" size={14} color="#C9A84C" />
-                    <Text style={styles.actionBtnText}>Export PDF</Text>
                   </Pressable>
                 </View>
                 <Pressable style={[styles.actionBtn, styles.primaryActionBtn]} onPress={handleSaveToVault}>
@@ -340,6 +293,14 @@ export default function DraftScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Global Matter Selection Modal */}
+      <MatterModal
+        visible={showMatterModal}
+        onClose={() => setShowMatterModal(false)}
+        activeMatter={activeMatter}
+        onSelectMatter={(matter) => setActiveMatter(matter)}
+      />
     </View>
   );
 }
@@ -350,10 +311,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
-  complianceBadge: { backgroundColor: '#1E3A8A', borderColor: '#3B82F6', borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  complianceTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#BFDBFE' },
-  complianceSub: { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#93C5FD', marginTop: 2 },
-  
+
   matterBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -388,7 +346,7 @@ const styles = StyleSheet.create({
   queryIcon: { marginRight: 10, marginTop: 2 },
   queryInput: {
     flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14,
-    lineHeight: 22, minHeight: 70,
+    lineHeight: 22, minHeight: 90,
   },
   horizontalChipsContainer: { gap: 8 },
   chip: {
@@ -408,7 +366,7 @@ const styles = StyleSheet.create({
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
   resultText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24, marginBottom: 16 },
-  
+
   actionBarContainer: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 14, gap: 10 },
   actionRow: { flexDirection: 'row', gap: 8 },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C' },
