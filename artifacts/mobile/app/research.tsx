@@ -26,6 +26,11 @@ export default function ResearchScreen() {
   const [isResearching, setIsResearching] = useState(false);
   const [result, setResult] = useState('');
   const [hasResult, setHasResult] = useState(false);
+
+  // Matter Workspace States
+  const [activeMatter, setActiveMatter] = useState<{ id: string; title: string } | null>(null);
+  const [showMatterModal, setShowMatterModal] = useState(false);
+
   const scrollRef = useRef<ScrollView>(null);
 
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
@@ -43,8 +48,16 @@ export default function ResearchScreen() {
       const researchType = selectedType.toLowerCase().replace(' ', '_');
       const response = await fetch(`https://${domain}/api/lawvise/research`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ query: query.trim(), jurisdiction, researchType }),
+        headers: { 
+          'Content-Type': 'application/json', 
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ 
+          query: query.trim(), 
+          jurisdiction, 
+          researchType,
+          matterId: activeMatter ? activeMatter.id : null // Pass active matter context to server
+        }),
       });
 
       if (!response.ok || !response.body) {
@@ -76,6 +89,7 @@ export default function ResearchScreen() {
       const fallbackText = `LEGAL RESEARCH MEMORANDUM\n\n` +
         `JURISDICTION: ${jurisdiction.toUpperCase()}\n` +
         `QUERY TYPE: ${selectedType.toUpperCase()}\n` +
+        `ACTIVE MATTER: ${activeMatter ? activeMatter.title : 'General Practice'}\n` +
         `SUBJECT: "${query.trim()}"\n\n` +
         `1. STATUTORY OVERVIEW & PROVISIONS:\nUnder applicable statutory interpretations within ${jurisdiction}, this matter is governed by codified rules emphasizing compliance, evidentiary burden, and statutory rights.\n\n` +
         `2. RELEVANT JUDICIAL PRECEDENTS:\n- Landmark precedent establishes that judicial review must weigh both procedural compliance and substantive fairness.\n- Subsequent bench rulings reinforce strict adherence to statutory limitation periods.\n\n` +
@@ -127,6 +141,35 @@ export default function ResearchScreen() {
             <Text style={styles.complianceSub}>Verified Coram bench details, headnotes, and SCC / JT / SCALE standards.</Text>
           </View>
         </View>
+
+        {/* Firm Matter Workspace Banner */}
+        <Pressable 
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            // Temporary picker mock until full modal is attached
+            Alert.alert(
+              "Matter Workspace",
+              activeMatter ? `Current: ${activeMatter.title}` : "Select active matter for billing and record keeping.",
+              [
+                { text: "Clear Matter", onPress: () => setActiveMatter(null) },
+                { text: "Select Demo Matter (TechCorp v. DataSystems)", onPress: () => setActiveMatter({ id: 'matter_123', title: 'TechCorp v. DataSystems Litigation' }) },
+                { text: "Cancel", style: "cancel" }
+              ]
+            );
+          }}
+          style={[styles.matterBanner, { backgroundColor: colors.card, borderColor: '#C9A84C' }]}
+        >
+          <View style={styles.matterIconBox}>
+            <Feather name="briefcase" size={16} color="#C9A84C" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.matterLabel, { color: colors.mutedForeground }]}>FIRM MATTER WORKSPACE</Text>
+            <Text style={[styles.matterName, { color: colors.foreground }]} numberOfLines={1}>
+              {activeMatter ? activeMatter.title : 'General Practice (Tap to assign matter)'}
+            </Text>
+          </View>
+          <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+        </Pressable>
 
         {/* Step 1: Research Query Input */}
         <View style={styles.sectionBlock}>
@@ -218,9 +261,36 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
-  complianceBadge: { backgroundColor: '#1E3A8A', borderColor: '#3B82F6', borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  complianceBadge: { backgroundColor: '#1E3A8A', borderColor: '#3B82F6', borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   complianceTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#BFDBFE' },
   complianceSub: { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#93C5FD', marginTop: 2 },
+  
+  // Matter Workspace Styles
+  matterBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  matterIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(201, 168, 76, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  matterLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.5 },
+  matterName: { fontSize: 13, fontFamily: 'Inter_700Bold', marginTop: 1 },
+
   sectionBlock: { marginBottom: 20 },
   sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 10 },
   queryWrapper: {
