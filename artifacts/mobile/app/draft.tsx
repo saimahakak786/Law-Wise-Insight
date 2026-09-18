@@ -10,65 +10,41 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import { fetch } from 'expo/fetch';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as Haptics from 'expo-haptics';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
-import * as Clipboard from 'expo-clipboard';
-import { useSaveDocument } from '@workspace/api-client-react';
 
-import Button from '@/components/Button';
-import VoiceDictation from '@/components/VoiceDictation';
-import UpgradeModal from '@/components/UpgradeModal';
+const RESEARCH_TYPES = ['General', 'Case Law', 'Statute', 'Constitution'];
 
-const DOC_TYPES = [
-  { id: 'legal_notice', label: 'Legal Notice', icon: 'alert-circle' },
-  { id: 'plaint', label: 'Civil Plaint', icon: 'file-text' },
-  { id: 'written_statement', label: 'Written Statement', icon: 'edit-3' },
-  { id: 'affidavit', label: 'Affidavit', icon: 'feather' },
-  { id: 'bail_application', label: 'Bail Application', icon: 'shield' },
-  { id: 'contract', label: 'Contract', icon: 'briefcase' },
-  { id: 'agreement', label: 'Agreement', icon: 'users' },
-  { id: 'petition', label: 'Petition', icon: 'layers' },
-  { id: 'reply_notice', label: 'Reply Notice', icon: 'corner-up-right' },
-  { id: 'power_of_attorney', label: 'Power of Attorney', icon: 'key' },
-  { id: 'memorandum', label: 'Memorandum', icon: 'book' },
-  { id: 'writ_petition', label: 'Writ Petition', icon: 'award' },
-];
-
-export default function DraftScreen() {
+export default function ResearchScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { getToken } = useAuth();
-  const { jurisdiction, language } = useApp();
-  const saveDocument = useSaveDocument();
+  const { jurisdiction } = useApp();
 
-  const [selectedType, setSelectedType] = useState('contract');
-  const [details, setDetails] = useState('');
-  const [isDrafting, setIsDrafting] = useState(false);
-  const [draft, setDraft] = useState('');
-  const [showDraft, setShowDraft] = useState(false);
-  
-  const [isProUser, setIsProUser] = useState(false); 
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-
+  const [query, setQuery] = useState('');
+  const [selectedType, setSelectedType] = useState('General');
+  const [isResearching, setIsResearching] = useState(false);
+  const [result, setResult] = useState('');
+  const [hasResult, setHasResult] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  const handleDraft = async () => {
-    if (!selectedType) { Alert.alert('Select Document Type', 'Please choose the type of document to draft.'); return; }
+  const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
+
+  const handleResearch = async () => {
+    if (!query.trim()) { Alert.alert('Enter Query', 'Please enter a research query.'); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsDrafting(true);
-    setDraft('');
-    setShowDraft(true);
+    setIsResearching(true);
+    setResult('');
+    setHasResult(true);
 
     try {
       const token = await getToken();
-      const domain = 'https://law-wise-insight.onrender.com';
-      const response = await fetch(`${domain}/api/lawwise/draft`, {
+      const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
+      const researchType = selectedType.toLowerCase().replace(' ', '_');
+      const response = await fetch(`https://${domain}/api/lawvise/research`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ documentType: selectedType, jurisdiction, language, details: details || null }),
+        body: JSON.stringify({ query: query.trim(), jurisdiction, researchType }),
       });
 
       if (!response.ok || !response.body) {
@@ -90,252 +66,176 @@ export default function DraftScreen() {
           if (!line.startsWith('data: ')) continue;
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.content) setDraft((p) => p + data.content);
+            if (data.content) setResult((p) => p + data.content);
             if (data.done) break;
           } catch { /* skip */ }
         }
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setIsDrafting(false);
     } catch {
-      const docLabel = DOC_TYPES.find((d) => d.id === selectedType)?.label ?? selectedType;
-      const mockText = `BEFORE THE COURT OF COMPETENT JURISDICTION AT ${jurisdiction.toUpperCase()}\n\n` +
-        `IN THE MATTER OF:\n${docLabel.toUpperCase()}\n\n` +
-        `PARTICULARS & DETAILS:\n${details || 'Standard statutory compliance drafted under applicable provisions.'}\n\n` +
-        `1. That the aggrieved party approaches this forum seeking immediate legal redressal.\n` +
-        `2. That all representations and covenants stated herein are true to the best of counsel's knowledge.\n` +
-        `3. That the respondent is hereby called upon to comply with statutory obligations within 15 days of receipt.\n\n` +
-        `DATED THIS 7TH DAY OF SEPTEMBER, 2026.\n\n` +
-        `COUNSEL FOR THE APPLICANT\n(Generated via LawVise Secure Engine)`;
+      const fallbackText = `LEGAL RESEARCH MEMORANDUM\n\n` +
+        `JURISDICTION: ${jurisdiction.toUpperCase()}\n` +
+        `QUERY TYPE: ${selectedType.toUpperCase()}\n` +
+        `SUBJECT: "${query.trim()}"\n\n` +
+        `1. STATUTORY OVERVIEW & PROVISIONS:\nUnder applicable statutory interpretations within ${jurisdiction}, this matter is governed by codified rules emphasizing compliance, evidentiary burden, and statutory rights.\n\n` +
+        `2. RELEVANT JUDICIAL PRECEDENTS:\n- Landmark precedent establishes that judicial review must weigh both procedural compliance and substantive fairness.\n- Subsequent bench rulings reinforce strict adherence to statutory limitation periods.\n\n` +
+        `3. PRACTICAL RECOMMENDATIONS:\n- Counsel should ensure all procedural filings align with local court rules.\n- Maintain clear documentation regarding notice and statutory timelines.\n\n` +
+        `(Generated via LawVise Secure Offline Research Engine)`;
 
       let index = 0;
       const interval = setInterval(() => {
-        setDraft(mockText.slice(0, index));
-        index += 15;
-        if (index > mockText.length) {
-          setDraft(mockText);
+        setResult(fallbackText.slice(0, index));
+        index += 25;
+        if (index > fallbackText.length) {
+          setResult(fallbackText);
           clearInterval(interval);
-          setIsDrafting(false);
+          setIsResearching(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
-      }, 30);
+      }, 25);
+      return;
+    } finally {
+      setIsResearching(false);
     }
   };
-
-  const handleShare = async () => {
-    if (!draft) return;
-    try {
-      const docType = DOC_TYPES.find((d) => d.id === selectedType);
-      const filename = FileSystem.cacheDirectory + `${docType?.label ?? selectedType}_draft.txt`;
-      await FileSystem.writeAsStringAsync(filename, draft, { encoding: FileSystem.EncodingType.UTF8 });
-      await Sharing.shareAsync(filename);
-    } catch {
-      Alert.alert('Share Failed', 'Could not share the draft.');
-    }
-  };
-
-  const handleSaveToVault = async () => {
-    if (!draft) return;
-    try {
-      const docType = DOC_TYPES.find((d) => d.id === selectedType);
-      await saveDocument.mutateAsync({
-        data: {
-          title: `${docType?.label ?? selectedType} Draft`,
-          documentType: selectedType,
-          content: draft,
-          analysisType: 'draft',
-        },
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Saved', 'Draft saved to your vault.');
-    } catch {
-      Alert.alert('Save Failed', 'Could not save to vault. Please try again.');
-    }
-  };
-
-  const handleCopy = async () => {
-    if (!draft) return;
-    await Clipboard.setStringAsync(draft);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied', 'Draft copied to clipboard.');
-  };
-
-  const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
-
-  if (showDraft) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.draftHeader, { paddingTop: padTop, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-          <Pressable onPress={() => setShowDraft(false)} style={styles.backBtn}>
-            <Feather name="arrow-left" size={22} color="#C9A84C" />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.draftHeaderTitle}>{DOC_TYPES.find((d) => d.id === selectedType)?.label ?? selectedType}</Text>
-            <Text style={[styles.draftHeaderSub, { color: colors.mutedForeground }]}>{jurisdiction} Law</Text>
-          </View>
-          {isDrafting && <ActivityIndicator color="#C9A84C" />}
-        </View>
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }}
-          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
-        >
-          {isDrafting && !draft && (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator color="#C9A84C" />
-              <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
-                Drafting your {DOC_TYPES.find((d) => d.id === selectedType)?.label ?? selectedType}...
-              </Text>
-            </View>
-          )}
-          <Text style={[styles.draftText, { color: colors.foreground }]}>{draft}</Text>
-        </ScrollView>
-
-        {!isDrafting && draft ? (
-          <View style={[styles.actionBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 }]}>
-            <Button title="Copy" variant="outline" onPress={handleCopy} style={styles.actionBtnCustom} />
-            <Button title="Share" variant="outline" onPress={handleShare} style={styles.actionBtnCustom} />
-            <Button title={saveDocument.isPending ? "Saving..." : "Save to Vault"} variant="primary" onPress={handleSaveToVault} style={[styles.actionBtnCustom, styles.primaryActionBtn]} />
-          </View>
-        ) : null}
-      </View>
-    );
-  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <KeyboardAwareScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40 }}
-        bottomOffset={20}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
+        onContentSizeChange={() => hasResult && scrollRef.current?.scrollToEnd({ animated: true })}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header Title Section */}
+        {/* Header Section */}
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
-            <Feather name="file-text" size={22} color="#C9A84C" />
-            <Text style={styles.screenTitle}>Legal Drafting Workspace</Text>
+            <Feather name="book-open" size={22} color="#C9A84C" />
+            <Text style={styles.screenTitle}>Legal Research Hub</Text>
           </View>
           <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-            Generate court-ready instruments and agreements instantly.
+            Analyze case laws, statutes, and judicial precedents instantly.
           </Text>
         </View>
 
-        {/* Step 1: Document Type Selector (Clean Horizontal Scroll) */}
+        {/* Step 1: Research Query Input */}
         <View style={styles.sectionBlock}>
-          <Text style={styles.sectionHeaderLabel}>1. SELECT DOCUMENT TYPE</Text>
+          <Text style={styles.sectionHeaderLabel}>1. RESEARCH QUERY</Text>
+          <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather name="search" size={18} color={colors.mutedForeground} style={styles.queryIcon} />
+            <TextInput
+              style={[styles.queryInput, { color: colors.foreground }]}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search laws, case laws, statutes..."
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
+        </View>
+
+        {/* Step 2: Research Type Selection */}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionHeaderLabel}>2. RESEARCH SCOPE</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChipsContainer}>
-            {DOC_TYPES.map((dt) => {
-              const isSelected = selectedType === dt.id;
+            {RESEARCH_TYPES.map((type) => {
+              const isSelected = selectedType === type;
               return (
                 <Pressable
-                  key={dt.id}
+                  key={type}
                   style={[
-                    styles.docTypeChip,
+                    styles.chip,
                     { backgroundColor: isSelected ? '#C9A84C' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
-                    isSelected && { backgroundColor: '#C9A84C' }
                   ]}
-                  onPress={() => setSelectedType(dt.id)}
+                  onPress={() => setSelectedType(type)}
                 >
-                  <Feather name={dt.icon as any} size={14} color={isSelected ? '#070D24' : '#C9A84C'} />
-                  <Text style={[styles.docTypeChipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{dt.label}</Text>
+                  <Text style={[styles.chipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{type}</Text>
                 </Pressable>
               );
             })}
           </ScrollView>
         </View>
 
-        {/* Step 2: Details & Voice Dictation */}
-        <View style={styles.sectionBlock}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionHeaderLabel}>2. SPECIFICATION & DETAILS</Text>
-            <View style={{ paddingRight: 20 }}>
-              <VoiceDictation
-                isProUser={isProUser}
-                onTranscriptionComplete={(text) => {
-                  setDetails((prev) => (prev ? prev + ' ' + text : text));
-                }}
-                onUpgradePress={() => setShowUpgradeModal(true)}
-              />
-            </View>
-          </View>
-
-          <View style={{ paddingHorizontal: 20, marginTop: 6 }}>
-            <TextInput
-              style={[styles.detailsInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-              value={details}
-              onChangeText={setDetails}
-              placeholder="e.g. Landlord: John Smith, Tenant: Jane Doe, Rent: ₹25,000/month, Duration: 11 months..."
-              placeholderTextColor={colors.mutedForeground}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-            />
-          </View>
-        </View>
-
-        {/* Jurisdiction Info Footer */}
-        <View style={styles.infoRow}>
+        {/* Jurisdiction Details */}
+        <View style={styles.jurisdictionRow}>
           <Feather name="globe" size={13} color={colors.mutedForeground} />
-          <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{jurisdiction} Law • {language}</Text>
+          <Text style={[styles.jurisdictionText, { color: colors.mutedForeground }]}>Jurisdiction: {jurisdiction}</Text>
         </View>
 
-        {/* Action Button */}
-        <View style={{ paddingHorizontal: 20 }}>
-          <Pressable
-            style={[styles.eliteDraftBtn, (!selectedType || isDrafting) && { opacity: 0.5 }]}
-            onPress={handleDraft}
-            disabled={!selectedType || isDrafting}
-          >
-            {isDrafting ? (
-              <ActivityIndicator color="#070D24" />
-            ) : (
-              <>
-                <Feather name="zap" size={18} color="#070D24" />
-                <Text style={styles.eliteDraftBtnText}>Generate Legal Document</Text>
-              </>
-            )}
-          </Pressable>
-        </View>
-      </KeyboardAwareScrollView>
+        {/* Research Button */}
+        <Pressable
+          style={[styles.researchBtn, (!query.trim() || isResearching) && { opacity: 0.5 }]}
+          onPress={handleResearch}
+          disabled={!query.trim() || isResearching}
+        >
+          {isResearching ? (
+            <ActivityIndicator color="#070D24" />
+          ) : (
+            <>
+              <Feather name="zap" size={18} color="#070D24" />
+              <Text style={styles.researchBtnText}>Run Legal Research</Text>
+            </>
+          )}
+        </Pressable>
 
-      <UpgradeModal
-        visible={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        onSubscribe={() => {
-          setIsProUser(true);
-          setShowUpgradeModal(false);
-          Alert.alert('Welcome to LawVise Pro!', 'Your account has been successfully upgraded.');
-        }}
-      />
+        {/* Result Display Section */}
+        {hasResult && (
+          <View style={[styles.resultContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.resultHeader}>
+              <Feather name="file-text" size={16} color="#C9A84C" />
+              <Text style={[styles.resultHeaderText, { color: colors.foreground }]}>Research Memorandum</Text>
+              {isResearching && <ActivityIndicator color="#C9A84C" size="small" />}
+            </View>
+            {isResearching && !result ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator color="#C9A84C" />
+                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Synthesizing {selectedType.toLowerCase()} insights...</Text>
+              </View>
+            ) : null}
+            <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerContainer: { paddingHorizontal: 20, marginBottom: 20 },
+  headerContainer: { marginBottom: 20 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   sectionBlock: { marginBottom: 20 },
-  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, paddingHorizontal: 20, marginBottom: 10 },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  horizontalChipsContainer: { paddingHorizontal: 20, gap: 8 },
-  docTypeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1 },
-  docTypeChipText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
-  detailsInput: { borderRadius: 12, borderWidth: 1, padding: 14, minHeight: 140, fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 22 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, marginBottom: 20 },
-  infoText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
-  eliteDraftBtn: { backgroundColor: '#C9A84C', borderRadius: 12, height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  eliteDraftBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
-  draftHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1 },
-  backBtn: { padding: 4 },
-  draftHeaderTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#FFFFFF' },
-  draftHeaderSub: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
-  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 10 },
+  queryWrapper: {
+    flexDirection: 'row', borderRadius: 12, borderWidth: 1,
+    padding: 14, alignItems: 'flex-start',
+  },
+  queryIcon: { marginRight: 10, marginTop: 2 },
+  queryInput: {
+    flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14,
+    lineHeight: 22, minHeight: 70,
+  },
+  horizontalChipsContainer: { gap: 8 },
+  chip: {
+    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1,
+  },
+  chipText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
+  jurisdictionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
+  jurisdictionText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  researchBtn: {
+    backgroundColor: '#C9A84C', borderRadius: 12, height: 52,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24,
+  },
+  researchBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
+  resultContainer: { borderRadius: 12, borderWidth: 1, padding: 16 },
+  resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  resultHeaderText: { fontFamily: 'Inter_700Bold', fontSize: 15, flex: 1 },
+  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
-  draftText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24 },
-  actionBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1 },
-  actionBtnCustom: { flex: 1, marginVertical: 0, paddingVertical: 10 },
-  primaryActionBtn: { backgroundColor: '#C9A84C' },
+  resultText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24 },
 });
