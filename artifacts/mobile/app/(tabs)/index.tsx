@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import JurisdictionSelector from '@/components/JurisdictionSelector';
 
 const QUICK_ACTIONS = [
+  { id: 'vault', label: 'Firm\nVault', icon: 'folder' as const, route: '/vault' },
   { id: 'analyze', label: 'Analyze\nDocument', icon: 'file-text' as const, route: '/(tabs)/analyze' },
   { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat' },
   { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/clientintake' },
@@ -22,7 +23,6 @@ const QUICK_ACTIONS = [
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
   { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research' },
   { id: 'tracker', label: 'Case\nTracker', icon: 'briefcase' as const, route: '/(tabs)/cases' },
-  { id: 'matcher', label: 'Case\nMatcher', icon: 'git-commit' as const, route: '/(tabs)/fact-matcher' },
 ];
 
 const MOCK_FALLBACK_DOCUMENTS = [
@@ -253,7 +253,7 @@ export default function HomeScreen() {
         style={({ pressed }) => [styles.vaultBanner, { backgroundColor: colors.card, borderColor: colors.border ?? '#C9A84C30', opacity: pressed ? 0.9 : 1 }]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.push('/(tabs)/cases' as any);
+          router.push('/vault' as any);
         }}
       >
         <View style={styles.vaultIconBg}>
