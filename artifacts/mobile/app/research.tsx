@@ -11,6 +11,10 @@ import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import { fetch } from 'expo/fetch';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import MatterModal from '@/components/MatterModal'; // Import your clean matter modal component
 
 const RESEARCH_TYPES = ['General', 'Case Law', 'Statute', 'Constitution'];
 
@@ -19,7 +23,9 @@ export default function ResearchScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { getToken } = useAuth();
-  const { jurisdiction } = useApp();
+  
+  // Pull global jurisdiction, active matter state, and vault saver from AppContext
+  const { jurisdiction, activeMatter, setActiveMatter, saveDocument } = useApp();
 
   const [query, setQuery] = useState('');
   const [selectedType, setSelectedType] = useState('General');
@@ -27,12 +33,10 @@ export default function ResearchScreen() {
   const [result, setResult] = useState('');
   const [hasResult, setHasResult] = useState(false);
 
-  // Matter Workspace States
-  const [activeMatter, setActiveMatter] = useState<{ id: string; title: string } | null>(null);
+  // Modal visibility state for Firm Matter Workspace
   const [showMatterModal, setShowMatterModal] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
-
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   const handleResearch = async () => {
@@ -56,7 +60,7 @@ export default function ResearchScreen() {
           query: query.trim(), 
           jurisdiction, 
           researchType,
-          matterId: activeMatter ? activeMatter.id : null // Pass active matter context to server
+          matterId: activeMatter ? activeMatter.id : null 
         }),
       });
 
@@ -113,6 +117,41 @@ export default function ResearchScreen() {
     }
   };
 
+  const handleCopy = async () => {
+    if (!result) return;
+    await Clipboard.setStringAsync(result);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Copied', 'Research memorandum copied to clipboard.');
+  };
+
+  const handleShare = async () => {
+    if (!result) return;
+    try {
+      const filename = FileSystem.cacheDirectory + `research_memo.txt`;
+      await FileSystem.writeAsStringAsync(filename, result, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(filename);
+    } catch {
+      Alert.alert('Share Failed', 'Could not share the research memorandum.');
+    }
+  };
+
+  const handleSaveToVault = async () => {
+    if (!result) return;
+    try {
+      await saveDocument({
+        title: `Research: ${query.slice(0, 30)}...`,
+        documentType: 'research',
+        content: result,
+        analysisType: selectedType.toLowerCase(),
+        matterId: activeMatter ? activeMatter.id : null,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Saved', 'Research memorandum saved to your firm vault & matter log.');
+    } catch {
+      Alert.alert('Save Failed', 'Could not save memorandum to vault.');
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -142,20 +181,11 @@ export default function ResearchScreen() {
           </View>
         </View>
 
-        {/* Firm Matter Workspace Banner */}
+        {/* Firm Matter Workspace Banner (Triggers Modal) */}
         <Pressable 
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            // Temporary picker mock until full modal is attached
-            Alert.alert(
-              "Matter Workspace",
-              activeMatter ? `Current: ${activeMatter.title}` : "Select active matter for billing and record keeping.",
-              [
-                { text: "Clear Matter", onPress: () => setActiveMatter(null) },
-                { text: "Select Demo Matter (TechCorp v. DataSystems)", onPress: () => setActiveMatter({ id: 'matter_123', title: 'TechCorp v. DataSystems Litigation' }) },
-                { text: "Cancel", style: "cancel" }
-              ]
-            );
+            setShowMatterModal(true);
           }}
           style={[styles.matterBanner, { backgroundColor: colors.card, borderColor: '#C9A84C' }]}
         >
@@ -233,7 +263,7 @@ export default function ResearchScreen() {
           )}
         </Pressable>
 
-        {/* Result Display Section */}
+        {/* Result Display Section & Action Bar */}
         {hasResult && (
           <View style={[styles.resultContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.resultHeader}>
@@ -248,9 +278,37 @@ export default function ResearchScreen() {
               </View>
             ) : null}
             <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
+
+            {/* Research Action Bar */}
+            {!isResearching && result ? (
+              <View style={styles.actionBarContainer}>
+                <View style={styles.actionRow}>
+                  <Pressable style={styles.actionBtn} onPress={handleCopy}>
+                    <Feather name="copy" size={14} color="#C9A84C" />
+                    <Text style={styles.actionBtnText}>Copy</Text>
+                  </Pressable>
+                  <Pressable style={styles.actionBtn} onPress={handleShare}>
+                    <Feather name="share-2" size={14} color="#C9A84C" />
+                    <Text style={styles.actionBtnText}>Share</Text>
+                  </Pressable>
+                </View>
+                <Pressable style={[styles.actionBtn, styles.primaryActionBtn]} onPress={handleSaveToVault}>
+                  <Feather name="save" size={15} color="#070D24" />
+                  <Text style={[styles.actionBtnText, { color: '#070D24', fontFamily: 'Inter_700Bold' }]}>Save to Vault</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         )}
       </ScrollView>
+
+      {/* Global Matter Selection Modal */}
+      <MatterModal
+        visible={showMatterModal}
+        onClose={() => setShowMatterModal(false)}
+        activeMatter={activeMatter}
+        onSelectMatter={(matter) => setActiveMatter(matter)}
+      />
     </View>
   );
 }
@@ -265,7 +323,6 @@ const styles = StyleSheet.create({
   complianceTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#BFDBFE' },
   complianceSub: { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#93C5FD', marginTop: 2 },
   
-  // Matter Workspace Styles
   matterBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -319,5 +376,11 @@ const styles = StyleSheet.create({
   resultHeaderText: { fontFamily: 'Inter_700Bold', fontSize: 15, flex: 1 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
-  resultText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24 },
+  resultText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24, marginBottom: 16 },
+
+  actionBarContainer: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 14, gap: 10 },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C' },
+  primaryActionBtn: { backgroundColor: '#C9A84C', width: '100%', borderWidth: 0 },
+  actionBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#C9A84C' },
 });
