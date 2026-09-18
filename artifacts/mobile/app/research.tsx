@@ -119,6 +119,15 @@ export default function ResearchScreen() {
           </Text>
         </View>
 
+        {/* CaseOn Verification & Compliance Badge */}
+        <View style={styles.complianceBadge}>
+          <Feather name="shield" size={16} color="#60A5FA" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.complianceTitle}>Authentic Multi-Reporter Citations</Text>
+            <Text style={styles.complianceSub}>Verified Coram bench details, headnotes, and SCC / JT / SCALE standards.</Text>
+          </View>
+        </View>
+
         {/* Step 1: Research Query Input */}
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionHeaderLabel}>1. RESEARCH QUERY</Text>
@@ -205,10 +214,13 @@ export default function ResearchScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerContainer: { marginBottom: 20 },
+  headerContainer: { marginBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  complianceBadge: { backgroundColor: '#1E3A8A', borderColor: '#3B82F6', borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  complianceTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#BFDBFE' },
+  complianceSub: { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#93C5FD', marginTop: 2 },
   sectionBlock: { marginBottom: 20 },
   sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 10 },
   queryWrapper: {
