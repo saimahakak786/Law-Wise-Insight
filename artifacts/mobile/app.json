@@ -51,7 +51,7 @@
         "expo-notifications",
         {
           "sounds": [
-            "../attached_assets/court_alarm.mp3"
+            "./attached_assets/court_alarm.mp3"
           ]
         }
       ]
