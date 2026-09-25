@@ -148,8 +148,7 @@ export default function ChatScreen() {
         )}
         <View style={[
           styles.bubble,
-          isUser ? styles.userBubble : styles.aiBubble,
-          !isUser && { backgroundColor: colors.card },
+          isUser ? styles.userBubble : [styles.aiBubble, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }],
         ]}>
           {item.isStreaming && !item.content ? (
             <View style={styles.typingDots}>
@@ -225,7 +224,7 @@ export default function ChatScreen() {
         style={[styles.inputBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 0) }]}
       >
         <TextInput
-          style={[styles.textInput, { backgroundColor: colors.secondary, color: colors.foreground }]}
+          style={[styles.textInput, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, color: colors.foreground }]}
           value={input}
           onChangeText={setInput}
           placeholder="Ask a legal question..."
