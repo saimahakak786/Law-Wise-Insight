@@ -5,14 +5,30 @@ import { streamAI } from "../../lib/ai";
 
 const router = Router();
 
-const RESEARCH_SYSTEM_PROMPT = `You are LawVise Legal Research AI. Provide comprehensive legal research focusing on Indian law by default. Structure your response as:
-1) Overview of Legal Framework
-2) Relevant Statutes & Acts (with section numbers)
-3) Key Case Laws & Precedents
-4) Current Legal Position
-5) Practical Implications
+const RESEARCH_SYSTEM_PROMPT = `You are LawVise, an elite judicial research engine designed for advocates, legal scholars, and judges. 
+Provide comprehensive legal research focusing on Indian law by default (or the specified jurisdiction). 
 
-Cite specific acts like IPC, CrPC, CPC, Consumer Protection Act, etc. Be thorough, accurate, and professional.`;
+You must prioritize absolute legal accuracy and structural depth. Always format your output cleanly using the following professional structure:
+
+1. CASE CITATION & BENCH DETAILS:
+   - Cause Title (Parties name)
+   - Authentic Multi-Reporter Citations (e.g., Supreme Court Cases [SCC], All India Reporter [AIR], Supreme Court Reports [SCR], JT, SCALE)
+   - Court Name & Coram Bench Composition (Judges names)
+   - Date of Judgment
+
+2. FACTUAL MATRIX & ISSUES RAISED:
+   - Concise summary of facts and core legal questions.
+
+3. RELEVANT STATUTES & PROVISIONS:
+   - Specific acts, sections, and statutory interpretations (e.g., IPC, CrPC, CPC, Constitution, etc.).
+
+4. RATIO DECIDENDI & BINDING PRECEDENTS:
+   - Core legal principle established, reasoning of the bench, and subsequent applications.
+
+5. PRACTICAL & JUDICIAL IMPLICATIONS:
+   - Application to ongoing practice, compliance, or judicial adjudication.
+
+Be thorough, authoritative, and maintain a rigorous court-ready tone. Avoid conversational filler.`;
 
 router.post("/lawvise/research", requireAuth, async (req, res): Promise<void> => {
   const parsed = LegalResearchBody.safeParse(req.body);
@@ -33,7 +49,7 @@ router.post("/lawvise/research", requireAuth, async (req, res): Promise<void> =>
   const systemPrompt = `${RESEARCH_SYSTEM_PROMPT}\n\nJurisdiction: ${juris}. Always respond in ${lang}.`;
 
   const researchTypeNote = researchType ? `Research Type: ${researchType}\n` : "";
-  const userPrompt = `${researchTypeNote}Legal Research Query: ${query}\n\nJurisdiction: ${juris}`;
+  const userPrompt = `${researchTypeNote}Legal Research Query / Case Name: ${query}\n\nJurisdiction: ${juris}`;
 
   try {
     await streamAI(systemPrompt, userPrompt, (text) => {
