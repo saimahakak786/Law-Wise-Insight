@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { checkProStatus } from '../services/purchases';
 import { checkDictationLimit, incrementDictationCount } from '../services/usageLimits';
 
 interface VoiceDictationProps {
   onTranscriptionComplete: (text: string) => void;
-  onUpgradePress: () => void; // Triggers the UpgradeModal when limits are hit
+  onUpgradePress: () => void;
 }
 
 export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress }: VoiceDictationProps) {
@@ -15,11 +16,29 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProUser, setIsProUser] = useState(false);
   const [canUse, setCanUse] = useState(true);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
 
-  // Check Pro status and remaining limits on mount / focus
   useEffect(() => {
     checkUserStatus();
+    requestMicrophonePermission();
+
+    return () => {
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
+    };
   }, []);
+
+  const requestMicrophonePermission = async () => {
+    try {
+      const response = await Audio.requestPermissionsAsync();
+      if (!response.granted) {
+        Alert.alert('Permission Required', 'Microphone permission is needed for voice dictation.');
+      }
+    } catch (e) {
+      console.log('Error requesting mic permission:', e);
+    }
+  };
 
   const checkUserStatus = async () => {
     const proActive = await checkProStatus();
@@ -31,14 +50,85 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
     }
   };
 
+  const startRecording = async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(newRecording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+      Alert.alert('Error', 'Could not start audio recording.');
+      setIsRecording(false);
+    }
+  };
+
+  const stopAndUploadRecording = async () => {
+    if (!recording) return;
+
+    setIsRecording(false);
+    setIsProcessing(true);
+
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+
+      if (!uri) {
+        throw new Error('No recording URI found');
+      }
+
+      // If free user, increment local usage counter
+      if (!isProUser) {
+        await incrementDictationCount();
+        const allowed = await checkDictationLimit();
+        setCanUse(allowed);
+      }
+
+      // TODO: Send this 'uri' file to your Render backend API endpoint
+      // Example FormData upload:
+      /*
+      const formData = new FormData();
+      formData.append('audio', {
+        uri,
+        type: 'audio/m4a',
+        name: 'dictation.m4a',
+      } as any);
+
+      const response = await fetch('https://law-wise-insight.onrender.com/api/dictate', {
+        method: 'POST',
+        body: formData,
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const data = await response.json();
+      onTranscriptionComplete(data.transcription);
+      */
+
+      // Temporary simulation for testing before backend route integration:
+      setTimeout(() => {
+        setIsProcessing(false);
+        // This will pass your real flow test once connected to your backend speech AI
+        onTranscriptionComplete(" Drafting preliminary injunction motion for client hearing");
+      }, 1500);
+
+    } catch (error) {
+      console.error('Failed to process recording', error);
+      setIsProcessing(false);
+      Alert.alert('Error', 'Failed to process audio recording.');
+    }
+  };
+
   const handleToggleRecording = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch (e) {
-      // Fallback for environments without haptics
-    }
+    } catch (e) {}
 
-    // Refresh status before allowing action
     const proActive = await checkProStatus();
     setIsProUser(proActive);
 
@@ -47,30 +137,15 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       setCanUse(allowed);
 
       if (!allowed) {
-        // Limit exceeded! Trigger the paywall modal
         onUpgradePress();
         return;
       }
     }
 
     if (!isRecording) {
-      setIsRecording(true);
+      await startRecording();
     } else {
-      setIsRecording(false);
-      setIsProcessing(true);
-
-      // If free user, increment local usage counter
-      if (!proActive) {
-        await incrementDictationCount();
-        const allowed = await checkDictationLimit();
-        setCanUse(allowed);
-      }
-
-      setTimeout(() => {
-        setIsProcessing(false);
-        const transcribedText = " The opposing counsel failed to establish statutory compliance within the mandatory limitation window.";
-        onTranscriptionComplete(transcribedText);
-      }, 1200);
+      await stopAndUploadRecording();
     }
   };
 
@@ -79,7 +154,7 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       {isProcessing ? (
         <View style={styles.processingRow}>
           <ActivityIndicator color="#C9A84C" size="small" />
-          <Text style={styles.processingText}>Transcribing voice note to brief...</Text>
+          <Text style={styles.processingText}>Transcribing courtroom audio...</Text>
         </View>
       ) : (
         <View style={styles.wrapperRow}>
