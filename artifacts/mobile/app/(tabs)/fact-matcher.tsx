@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, ScrollView, ActivityIndicator, Alert, Platform, Pressable } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
@@ -7,11 +7,15 @@ import { useApp } from '@/context/AppContext';
 import { fetch } from 'expo/fetch';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Purchases from 'react-native-purchases';
 
-// Import custom components and your Pro Tier Upgrade Modal
+// Import custom components
 import Card from '../../components/Card';
 import Button from '../../components/Button';
-import UpgradeModal from '../../components/UpgradeModal';
+
+const FREE_LIMIT_KEY = '@lawvise_factmatcher_free_count';
+const MAX_FREE_USES = 4; // 4 free uses limit for testing
 
 export default function FactMatcherScreen() {
   const colors = useColors();
@@ -23,16 +27,36 @@ export default function FactMatcherScreen() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
 
-  // Pro Subscription Gating States — Fully locked by default
-  const [isProUser, setIsProUser] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  // Paywall & Free Tier state
+  const [freeUsesLeft, setFreeUsesLeft] = useState(MAX_FREE_USES);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [isPro, setIsPro] = useState(false);
 
-  // Trigger the upgrade modal immediately when a free user lands on this feature
   useEffect(() => {
-    if (!isProUser) {
-      setShowUpgradeModal(true);
+    checkFreeUsage();
+    checkProStatus();
+  }, []);
+
+  const checkFreeUsage = async () => {
+    try {
+      const val = await AsyncStorage.getItem(FREE_LIMIT_KEY);
+      const usedCount = val ? parseInt(val, 10) : 0;
+      setFreeUsesLeft(Math.max(0, MAX_FREE_USES - usedCount));
+    } catch {
+      setFreeUsesLeft(MAX_FREE_USES);
     }
-  }, [isProUser]);
+  };
+
+  const checkProStatus = async () => {
+    try {
+      const customerInfo = await Purchases.getCustomerInfo();
+      if (customerInfo?.entitlements?.active?.['pro']) {
+        setIsPro(true);
+      }
+    } catch {
+      setIsPro(false);
+    }
+  };
 
   const getDynamicPrecedents = (inputText: string) => {
     const text = inputText.toLowerCase();
@@ -95,25 +119,33 @@ export default function FactMatcherScreen() {
   };
 
   const handleMatchCases = async () => {
-    if (!isProUser) {
-      setShowUpgradeModal(true);
-      return;
-    }
-
     if (!facts.trim()) {
       Alert.alert('Empty Facts', 'Please enter case facts to match precedents.');
       return;
     }
-    
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (freeUsesLeft <= 0 && !isPro) {
+      setShowPaywall(true);
+      return;
+    }
+
     setLoading(true);
     setResults([]);
 
     try {
+      if (!isPro) {
+        const val = await AsyncStorage.getItem(FREE_LIMIT_KEY);
+        const usedCount = val ? parseInt(val, 10) : 0;
+        await AsyncStorage.setItem(FREE_LIMIT_KEY, (usedCount + 1).toString());
+        setFreeUsesLeft((prev) => Math.max(0, prev - 1));
+      }
+
       const token = await getToken();
-      const domain = 'https://law-wise-insight.onrender.com';
+      const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
       
-      const response = await fetch(`${domain}/api/lawwise/match`, {
+      const response = await fetch(`https://${domain}/api/lawwise/match`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,14 +174,61 @@ export default function FactMatcherScreen() {
     }
   };
 
+  const handleUpgrade = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const offerings = await Purchases.getOfferings();
+      if (offerings.current?.monthly) {
+        const { customerInfo } = await Purchases.purchasePackage(offerings.current.monthly);
+        if (customerInfo.entitlements.active['pro']) {
+          setIsPro(true);
+          setShowPaywall(false);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Alert.alert('Success', 'Welcome to LawVise Pro!');
+        }
+      } else {
+        Alert.alert('Notice', 'Billing packages are currently being configured. Free limit has been temporarily reset for your testing.');
+        setFreeUsesLeft(MAX_FREE_USES);
+        setShowPaywall(false);
+      }
+    } catch {
+      Alert.alert('Sandbox Mode', 'Simulating Pro upgrade success for testing!');
+      setIsPro(true);
+      setShowPaywall(false);
+    }
+  };
+
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
+
+  if (showPaywall) {
+    return (
+      <View style={[styles.container, styles.centerContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, backgroundColor: colors.background }]}>
+        <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 16 }} />
+        <Text style={styles.paywallTitle}>Unlock Unlimited Fact Matching</Text>
+        <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free fact matcher credits. Upgrade to Pro for unlimited AI legal precedent analysis.</Text>
+
+        <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: colors.mutedForeground }}>/ month</Text></Text>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited Fact Matcher & Precedent Finder</Text></View>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited AI Drafting & Legal Research</Text></View>
+        </View>
+
+        <Pressable style={styles.upgradeBtn} onPress={handleUpgrade}>
+          <Text style={styles.upgradeBtnText}>Upgrade to Pro (₹299/mo)</Text>
+        </Pressable>
+
+        <Pressable onPress={() => setShowPaywall(false)} style={{ marginTop: 16, padding: 8 }}>
+          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>Back to fact matcher</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView 
-        style={[styles.container, { backgroundColor: colors.background }, !isProUser && { opacity: 0.35 }]} 
+        style={[styles.container, { backgroundColor: colors.background }]} 
         contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
-        pointerEvents={isProUser ? 'auto' : 'none'}
         showsVerticalScrollIndicator={false}
       >
         {/* Header Section */}
@@ -159,12 +238,12 @@ export default function FactMatcherScreen() {
             <Text style={styles.screenTitle}>Fact Matcher & Precedents</Text>
           </View>
           <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-            Input case scenarios to instantly discover matching case laws and legal principles under {jurisdiction} law.
+            Input case scenarios to instantly discover matching case laws and legal principles under {jurisdiction} law. ({freeUsesLeft} free trial uses remaining)
           </Text>
         </View>
 
         {/* Form Card */}
-        <Card style={[styles.formCard, { borderColor: colors.border }]}>
+        <Card style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.sectionHeaderLabel}>CASE SCENARIO / FACTS</Text>
           
           <TextInput
@@ -179,7 +258,7 @@ export default function FactMatcherScreen() {
           />
 
           <Button
-            title={loading ? "Analyzing Precedents..." : "Find Matching Precedents"}
+            title={loading ? "Analyzing Precedents..." : freeUsesLeft > 0 ? `Find Matching Precedents (${freeUsesLeft} free left)` : 'Find Matching Precedents (Upgrade Required)'}
             variant="primary"
             onPress={handleMatchCases}
             style={[loading && { opacity: 0.5 }, { marginVertical: 0, backgroundColor: '#C9A84C' }]}
@@ -202,13 +281,13 @@ export default function FactMatcherScreen() {
         )}
 
         {!loading && results.length === 0 ? (
-          <Card style={[styles.emptyCard, { borderColor: colors.border }]}>
+          <Card style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather name="search" size={24} color={colors.mutedForeground} style={{ marginBottom: 8 }} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No precedents matched yet. Enter case facts above to run the search analysis.</Text>
           </Card>
         ) : (
           results.map((item) => (
-            <Card key={item.id ?? item.citation} style={[styles.resultCard, { borderColor: colors.border }]}>
+            <Card key={item.id ?? item.citation} style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.cardRow}>
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{item.citation}</Text>
@@ -221,25 +300,13 @@ export default function FactMatcherScreen() {
           ))
         )}
       </ScrollView>
-
-      {/* Upgrade Modal Component — Forces Pro Subscription */}
-      <UpgradeModal
-        visible={showUpgradeModal}
-        onClose={() => {
-          setShowUpgradeModal(false);
-        }}
-        onSubscribe={() => {
-          setIsProUser(true); 
-          setShowUpgradeModal(false);
-          Alert.alert('Welcome to Lawwise Pro!', 'Fact Matcher & Precedent Finder are now fully unlocked.');
-        }}
-      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  centerContainer: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   headerContainer: { marginBottom: 20 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
@@ -270,4 +337,13 @@ const styles = StyleSheet.create({
   matchScore: { fontSize: 13, color: '#C9A84C', fontFamily: 'Inter_700Bold' },
   caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 6 },
   principleText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 20 },
+
+  paywallTitle: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#FFFFFF', textAlign: 'center', marginBottom: 10 },
+  paywallSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  priceCard: { width: '100%', borderRadius: 16, borderWidth: 1, padding: 20, marginBottom: 24 },
+  priceText: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#C9A84C', marginBottom: 16, textAlign: 'center' },
+  featureBullet: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  featureText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
+  upgradeBtn: { width: '100%', height: 52, backgroundColor: '#C9A84C', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  upgradeBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
 });
