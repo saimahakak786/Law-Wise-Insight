@@ -79,6 +79,13 @@ export default function ClientIntakeScreen() {
           engagementMemo: `[CONFLICT ALERT]\nRepresentation declined or requires explicit written waiver from both parties under ethical compliance guidelines.`
         });
       } else {
+        // Smart case-status detection based on the user's brief
+        const isAlreadyFiled = /filed|pending|ongoing|discharge|discharged|suit instituted|registered|court case/i.test(disputeSummary);
+        
+        const recommendedNextStep = isAlreadyFiled
+          ? 'Track upcoming hearings, compile evidence, and prepare written statements / replies.'
+          : 'Issue formal legal notice / draft initial petition within 7 days.';
+
         setIntakeResult({
           status: 'clear',
           message: `✅ Conflict Check Passed: No prior records or conflicting representations found for "${opposingParty}".`,
@@ -87,7 +94,7 @@ export default function ClientIntakeScreen() {
 • Opposing Party: ${opposingParty}
 • Practice Area: ${caseType}
 • Core Grievance: ${disputeSummary}
-• Recommended Next Step: Issue formal legal notice / draft initial petition within 7 days.`
+• Recommended Next Step: ${recommendedNextStep}`
         });
       }
     }, 1200);
