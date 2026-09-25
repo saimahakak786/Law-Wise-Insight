@@ -1,285 +1,449 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TextInput, Pressable, StyleSheet,
-  Platform, ActivityIndicator, Alert,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { useColors } from '@/hooks/useColors';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import { checkProStatus } from '@/services/purchases';
-import { checkClientIntakeLimit, incrementClientIntakeCount } from '@/services/usageLimits';
-import UpgradeModal from '@/components/UpgradeModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Purchases from 'react-native-purchases';
+import { LegalTheme } from '../../constants/theme';
+
+const PRACTICE_AREAS = [
+  'Civil Litigation',
+  'Corporate Arbitration',
+  'IP & Trademark',
+  'Employment Dispute',
+  'Criminal Defense',
+  'Family Law',
+];
+
+const FREE_LIMIT_KEY = '@lawvise_client_intake_free_count';
+const MAX_FREE_USES = 4; // Updated to 4 free uses for testing
 
 export default function ClientIntakeScreen() {
-  const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [clientName, setClientName] = useState('');
   const [opposingParty, setOpposingParty] = useState('');
-  const [caseType, setCaseType] = useState('Civil Litigation');
-  const [disputeSummary, setDisputeSummary] = useState('');
+  const [selectedArea, setSelectedArea] = useState(PRACTICE_AREAS[0]);
+  const [brief, setBrief] = useState('');
   
-  const [isChecking, setIsChecking] = useState(false);
-  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [freeUsesLeft, setFreeUsesLeft] = useState(MAX_FREE_USES);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [isPro, setIsPro] = useState(false);
 
-  const [intakeResult, setIntakeResult] = useState<{
-    status: 'clear' | 'conflict' | null;
-    message: string;
-    engagementMemo: string;
-  } | null>(null);
+  useEffect(() => {
+    checkFreeUsage();
+    checkProStatus();
+  }, []);
 
-  const handleRunConflictCheckAndIntake = async () => {
-    if (!clientName.trim() || !opposingParty.trim() || !disputeSummary.trim()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      Alert.alert('Incomplete Details', 'Please fill in the client name, opposing party, and dispute summary.');
+  const checkFreeUsage = async () => {
+    try {
+      const val = await AsyncStorage.getItem(FREE_LIMIT_KEY);
+      const usedCount = val ? parseInt(val, 10) : 0;
+      const remaining = Math.max(0, MAX_FREE_USES - usedCount);
+      setFreeUsesLeft(remaining);
+    } catch {
+      setFreeUsesLeft(MAX_FREE_USES);
+    }
+  };
+
+  const checkProStatus = async () => {
+    try {
+      const customerInfo = await Purchases.getCustomerInfo();
+      if (customerInfo?.entitlements?.active?.['pro']) {
+        setIsPro(true);
+      }
+    } catch {
+      setIsPro(false);
+    }
+  };
+
+  const handleRunScreening = async () => {
+    if (!clientName.trim() || !opposingParty.trim()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Missing Fields', 'Please enter both the client name and opposing party.');
       return;
     }
 
-    try {
-      // 1. Check if user has active Pro subscription via RevenueCat
-      const isPro = await checkProStatus();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      if (!isPro) {
-        // 2. If not Pro, check local usage limit (1 free client intake)
-        const canProceed = await checkClientIntakeLimit();
-
-        if (!canProceed) {
-          // Limit hit! Open the Upgrade Paywall Modal
-          setIsUpgradeModalVisible(true);
-          return;
-        }
-
-        // 3. Increment the free intake count
-        await incrementClientIntakeCount();
-      }
-    } catch (e) {
-      console.error('Error verifying subscription or limits:', e);
+    if (freeUsesLeft <= 0 && !isPro) {
+      setShowPaywall(true);
+      return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsChecking(true);
-    setIntakeResult(null);
+    setLoading(true);
 
-    // Simulate AI conflict database lookup & analysis
-    setTimeout(() => {
-      setIsChecking(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      // Simple mock rule: if opposing party contains "Apex" or "TechCorp", flag a conflict
-      const hasConflict = opposingParty.toLowerCase().includes('apex') || opposingParty.toLowerCase().includes('techcorp');
-
-      if (hasConflict) {
-        setIntakeResult({
-          status: 'conflict',
-          message: `⚠️ Potential Conflict Detected: "${opposingParty}" exists in prior firm records (Matter #402 - Active/Previous Representation).`,
-          engagementMemo: `[CONFLICT ALERT]\nRepresentation declined or requires explicit written waiver from both parties under ethical compliance guidelines.`
-        });
-      } else {
-        // Smart case-status detection based on the user's brief
-        const isAlreadyFiled = /filed|pending|ongoing|discharge|discharged|suit instituted|registered|court case/i.test(disputeSummary);
-        
-        const recommendedNextStep = isAlreadyFiled
-          ? 'Track upcoming hearings, compile evidence, and prepare written statements / replies.'
-          : 'Issue formal legal notice / draft initial petition within 7 days.';
-
-        setIntakeResult({
-          status: 'clear',
-          message: `✅ Conflict Check Passed: No prior records or conflicting representations found for "${opposingParty}".`,
-          engagementMemo: `⚖️ [AI INTAKE SUMMARY & RETAINER DRAFT]
-• Client: ${clientName}
-• Opposing Party: ${opposingParty}
-• Practice Area: ${caseType}
-• Core Grievance: ${disputeSummary}
-• Recommended Next Step: ${recommendedNextStep}`
-        });
+    try {
+      if (!isPro) {
+        const val = await AsyncStorage.getItem(FREE_LIMIT_KEY);
+        const usedCount = val ? parseInt(val, 10) : 0;
+        await AsyncStorage.setItem(FREE_LIMIT_KEY, (usedCount + 1).toString());
+        setFreeUsesLeft((prev) => Math.max(0, prev - 1));
       }
-    }, 1200);
+
+      setTimeout(() => {
+        setLoading(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          'Conflict Check Clear',
+          `No active conflicts found for ${clientName} vs. ${opposingParty}. Intake profile successfully generated.`,
+          [{ text: 'View Report', onPress: () => router.back() }]
+        );
+      }, 1500);
+    } catch (e: any) {
+      setLoading(false);
+      Alert.alert('Error', e?.message || 'Something went wrong processing intake.');
+    }
   };
 
-  const handleSaveToIntakeVault = () => {
+  const handleUpgrade = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert('Success', 'Client intake profile and conflict clearance certificate saved to secure vault.');
-    router.back();
+    try {
+      const offerings = await Purchases.getOfferings();
+      if (offerings.current?.monthly) {
+        const { customerInfo } = await Purchases.purchasePackage(offerings.current.monthly);
+        if (customerInfo.entitlements.active['pro']) {
+          setIsPro(true);
+          setShowPaywall(false);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Alert.alert('Success', 'Welcome to LawVise Pro!');
+        }
+      } else {
+        Alert.alert('Notice', 'Billing packages are currently being configured. Free limit has been temporarily reset for your testing.');
+        setFreeUsesLeft(MAX_FREE_USES);
+        setShowPaywall(false);
+      }
+    } catch (e: any) {
+      if (!e.userCancelled) {
+        Alert.alert('Sandbox Mode', 'Simulating Pro upgrade success for testing!');
+        setIsPro(true);
+        setShowPaywall(false);
+      }
+    }
   };
+
+  if (showPaywall) {
+    return (
+      <View style={[styles.container, styles.centerContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
+        <Feather name="shield" size={48} color={LegalTheme.colors.primaryGold} style={{ marginBottom: 16 }} />
+        <Text style={styles.title}>Unlock Unlimited Intake</Text>
+        <Text style={styles.subtitle}>You have used your {MAX_FREE_USES} free screening credits. Upgrade to Pro for unlimited AI client intakes, case matching, and document analysis.</Text>
+
+        <View style={styles.priceCard}>
+          <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: LegalTheme.colors.textSecondary }}>/ month</Text></Text>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color={LegalTheme.colors.primaryGold} /><Text style={styles.featureText}>Unlimited Client Conflict Checks</Text></View>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color={LegalTheme.colors.primaryGold} /><Text style={styles.featureText}>AI Case Matcher & Precedent Finder</Text></View>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color={LegalTheme.colors.primaryGold} /><Text style={styles.featureText}>Continuous Voice Dictation & FIR Analyzer</Text></View>
+        </View>
+
+        <Pressable style={styles.upgradeBtn} onPress={handleUpgrade}>
+          <Text style={styles.upgradeBtnText}>Upgrade to Pro (₹299/mo)</Text>
+        </Pressable>
+
+        <Pressable onPress={() => setShowPaywall(false)} style={{ marginTop: 16, padding: 8 }}>
+          <Text style={{ color: LegalTheme.colors.textSecondary, fontFamily: 'Inter_400Regular' }}>Back to screening</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
-    <>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: LegalTheme.colors.backgroundPrimary }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40 }}
+        style={styles.container}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 60 },
+        ]}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable 
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}
-            style={[styles.backBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="arrow-left" size={18} color={colors.foreground} />
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="arrow-left" size={20} color={LegalTheme.colors.textPrimary} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Client Intake & Conflict Check</Text>
-          <View style={{ width: 38 }} />
+          <Text style={styles.headerTitle}>Client Intake & Conflict Check</Text>
         </View>
 
-        {/* Info Banner */}
-        <LinearGradient
-          colors={['#1B2448', '#0F1635']}
-          style={styles.banner}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        >
-          <Feather name="shield" size={24} color="#C9A84C" />
-          <View style={{ flex: 1 }}>
+        <View style={styles.banner}>
+          <Feather name="shield" size={20} color={LegalTheme.colors.primaryGold} style={{ marginTop: 2 }} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.bannerTitle}>Automated Screening</Text>
-            <Text style={styles.bannerSub}>Run instant conflict checks and organize prospective client intake records instantly.</Text>
+            <Text style={styles.bannerDesc}>
+              Run instant conflict checks and organize prospective client intake records instantly. ({freeUsesLeft} free trial uses remaining)
+            </Text>
           </View>
-        </LinearGradient>
+        </View>
 
-        {/* Form Fields */}
-        <View style={styles.formSection}>
-          <Text style={[styles.label, { color: colors.foreground }]}>Client Full Name / Entity</Text>
+        <Text style={styles.label}>Client Full Name / Entity</Text>
+        <View style={styles.inputWrapper}>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-            placeholder="e.g., Rajesh Sharma / Apex Enterprises"
-            placeholderTextColor={colors.mutedForeground}
+            style={styles.input}
             value={clientName}
             onChangeText={setClientName}
+            placeholder="e.g. Acme Corp or John Doe"
+            placeholderTextColor={LegalTheme.colors.textSecondary}
           />
-
-          <Text style={[styles.label, { color: colors.foreground }]}>Opposing Party / Respondent</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-            placeholder="e.g., Standard Corporation Ltd."
-            placeholderTextColor={colors.mutedForeground}
-            value={opposingParty}
-            onChangeText={setOpposingParty}
-          />
-
-          <Text style={[styles.label, { color: colors.foreground }]}>Practice Area / Case Type</Text>
-          <View style={styles.chipRow}>
-            {['Civil Litigation', 'Corporate Arbitration', 'IP & Trademark', 'Employment Dispute'].map((type) => (
-              <Pressable
-                key={type}
-                style={[
-                  styles.chip,
-                  { 
-                    backgroundColor: caseType === type ? '#C9A84C' : colors.card,
-                    borderColor: caseType === type ? '#C9A84C' : (colors.border ?? '#C9A84C30')
-                  }
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setCaseType(type);
-                }}
-              >
-                <Text style={[styles.chipText, { color: caseType === type ? '#070D24' : colors.foreground }]}>
-                  {type}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Text style={[styles.label, { color: colors.foreground }]}>Client Brief & Core Facts</Text>
-          <TextInput
-            style={[styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-            placeholder="Summarize the client's problem, disputed amount, or grievance..."
-            placeholderTextColor={colors.mutedForeground}
-            value={disputeSummary}
-            onChangeText={setDisputeSummary}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-
-          <Pressable
-            style={styles.actionBtn}
-            onPress={handleRunConflictCheckAndIntake}
-          >
-            <LinearGradient
-              colors={['#C9A84C', '#E8C87A']}
-              style={styles.gradientBtn}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            >
-              {isChecking ? (
-                <ActivityIndicator color="#070D24" size="small" />
-              ) : (
-                <>
-                  <Feather name="check-circle" size={18} color="#070D24" />
-                  <Text style={styles.actionBtnText}>Run Conflict Check & Generate Intake</Text>
-                </>
-              )}
-            </LinearGradient>
-          </Pressable>
         </View>
 
-        {/* Results Box */}
-        {intakeResult && (
-          <View style={[styles.resultCard, { backgroundColor: colors.card, borderColor: intakeResult.status === 'conflict' ? '#EF4444' : '#10B981' }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <Feather 
-                name={intakeResult.status === 'conflict' ? 'alert-triangle' : 'check-circle'} 
-                size={18} 
-                color={intakeResult.status === 'conflict' ? '#EF4444' : '#10B981'} 
-              />
-              <Text style={[styles.resultTitle, { color: intakeResult.status === 'conflict' ? '#EF4444' : '#10B981' }]}>
-                {intakeResult.status === 'conflict' ? 'Conflict Warning Flagged' : 'Clear for Representation'}
-              </Text>
-            </View>
-            <Text style={[styles.resultMsg, { color: colors.foreground }]}>{intakeResult.message}</Text>
-            
-            <View style={[styles.memoBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.memoContent, { color: colors.foreground }]}>{intakeResult.engagementMemo}</Text>
-            </View>
+        <Text style={styles.label}>Opposing Party / Respondent</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            value={opposingParty}
+            onChangeText={setOpposingParty}
+            placeholder="e.g. Vertex Holdings Ltd."
+            placeholderTextColor={LegalTheme.colors.textSecondary}
+          />
+        </View>
 
-            {intakeResult.status === 'clear' && (
-              <Pressable style={styles.saveVaultBtn} onPress={handleSaveToIntakeVault}>
-                <Feather name="folder-plus" size={16} color="#070D24" />
-                <Text style={styles.saveVaultBtnText}>Save Intake File to Vault</Text>
+        <Text style={styles.label}>Practice Area / Case Type</Text>
+        <View style={styles.chipsGrid}>
+          {PRACTICE_AREAS.map((area) => {
+            const isSelected = selectedArea === area;
+            return (
+              <Pressable
+                key={area}
+                style={[styles.chip, isSelected && styles.chipSelected]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSelectedArea(area);
+                }}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                  {area}
+                </Text>
               </Pressable>
-            )}
-          </View>
-        )}
-      </ScrollView>
+            );
+          })}
+        </View>
 
-      {/* Upgrade Paywall Modal Triggered when Free Trial is Exhausted */}
-      <UpgradeModal
-        visible={isUpgradeModalVisible}
-        onClose={() => setIsUpgradeModalVisible(false)}
-      />
-    </>
+        <Text style={styles.label}>Client Brief & Core Facts</Text>
+        <View style={[styles.inputWrapper, { height: 110, alignItems: 'flex-start', paddingTop: 12 }]}>
+          <TextInput
+            style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
+            value={brief}
+            onChangeText={setBrief}
+            placeholder="Summarize the client's problem, disputed amount, or grievance..."
+            placeholderTextColor={LegalTheme.colors.textSecondary}
+            multiline
+          />
+        </View>
+
+        <Pressable
+          style={[styles.submitBtn, loading && { opacity: 0.7 }]}
+          onPress={handleRunScreening}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#070D24" />
+          ) : (
+            <>
+              <Feather name="check-circle" size={18} color="#070D24" style={{ marginRight: 8 }} />
+              <Text style={styles.submitBtnText}>
+                {freeUsesLeft > 0 ? `Run Conflict Check (${freeUsesLeft} free left)` : 'Run Conflict Check (Upgrade Required)'}
+              </Text>
+            </>
+          )}
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  backBtn: { width: 38, height: 38, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  container: {
+    flex: 1,
+    backgroundColor: LegalTheme.colors.backgroundPrimary,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+  },
+  centerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: LegalTheme.colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+    color: LegalTheme.colors.textPrimary,
+  },
   banner: {
-    borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20,
+    flexDirection: 'row',
+    backgroundColor: LegalTheme.colors.backgroundSecondary,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: LegalTheme.colors.borderSubtle,
+    padding: 16,
+    marginBottom: 24,
   },
-  bannerTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#FFFFFF' },
-  bannerSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#CBD5E1', marginTop: 2 },
-  formSection: { gap: 12, marginBottom: 20 },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 13, marginTop: 4 },
-  input: { borderRadius: 10, borderWidth: 1, padding: 12, fontFamily: 'Inter_400Regular', fontSize: 13 },
-  textArea: { borderRadius: 10, borderWidth: 1, padding: 12, height: 100, fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 18 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1 },
-  chipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
-  actionBtn: { marginTop: 10, borderRadius: 12, overflow: 'hidden' },
-  gradientBtn: { paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  actionBtnText: { fontFamily: 'Inter_700Bold', fontSize: 14, color: '#070D24' },
-  resultCard: { borderRadius: 14, padding: 16, borderWidth: 1, marginTop: 10, marginBottom: 30 },
-  resultTitle: { fontFamily: 'Inter_700Bold', fontSize: 14 },
-  resultMsg: { fontFamily: 'Inter_500Medium', fontSize: 12, marginBottom: 12, lineHeight: 18 },
-  memoBox: { borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 14 },
-  memoContent: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 18 },
-  saveVaultBtn: {
-    backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 12,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+  bannerTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
+    color: LegalTheme.colors.textPrimary,
+    marginBottom: 4,
   },
-  saveVaultBtnText: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#070D24' },
+  bannerDesc: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    color: LegalTheme.colors.textSecondary,
+    lineHeight: 18,
+  },
+  label: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: LegalTheme.colors.textPrimary,
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    backgroundColor: LegalTheme.colors.backgroundSecondary,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: LegalTheme.colors.borderSubtle,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    height: 52,
+    justifyContent: 'center',
+  },
+  input: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    color: LegalTheme.colors.textPrimary,
+    width: '100%',
+  },
+  chipsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: LegalTheme.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: LegalTheme.colors.borderSubtle,
+  },
+  chipSelected: {
+    backgroundColor: LegalTheme.colors.primaryGold,
+    borderColor: LegalTheme.colors.primaryGold,
+  },
+  chipText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: LegalTheme.colors.textSecondary,
+  },
+  chipTextSelected: {
+    color: '#070D24',
+    fontFamily: 'Inter_600SemiBold',
+  },
+  submitBtn: {
+    flexDirection: 'row',
+    height: 54,
+    backgroundColor: LegalTheme.colors.primaryGold,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: LegalTheme.colors.primaryGold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitBtnText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    color: '#070D24',
+  },
+  title: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 26,
+    color: LegalTheme.colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: LegalTheme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  priceCard: {
+    width: '100%',
+    backgroundColor: LegalTheme.colors.backgroundSecondary,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: LegalTheme.colors.borderSubtle,
+    padding: 20,
+    marginBottom: 24,
+  },
+  priceText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 28,
+    color: LegalTheme.colors.primaryGold,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  featureBullet: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  featureText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: LegalTheme.colors.textPrimary,
+  },
+  upgradeBtn: {
+    width: '100%',
+    height: 52,
+    backgroundColor: LegalTheme.colors.primaryGold,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upgradeBtnText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    color: '#070D24',
+  },
 });
