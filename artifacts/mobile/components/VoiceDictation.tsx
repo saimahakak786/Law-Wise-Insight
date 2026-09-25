@@ -91,9 +91,7 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
         setCanUse(allowed);
       }
 
-      // TODO: Send this 'uri' file to your Render backend API endpoint
-      // Example FormData upload:
-      /*
+      // Send the audio file to your Render backend API endpoint
       const formData = new FormData();
       formData.append('audio', {
         uri,
@@ -104,18 +102,19 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       const response = await fetch('https://law-wise-insight.onrender.com/api/dictate', {
         method: 'POST',
         body: formData,
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      const data = await response.json();
-      onTranscriptionComplete(data.transcription);
-      */
 
-      // Temporary simulation for testing before backend route integration:
-      setTimeout(() => {
-        setIsProcessing(false);
-        // This will pass your real flow test once connected to your backend speech AI
-        onTranscriptionComplete(" Drafting preliminary injunction motion for client hearing");
-      }, 1500);
+      const data = await response.json();
+      setIsProcessing(false);
+
+      if (response.ok) {
+        onTranscriptionComplete(data.transcription);
+      } else {
+        Alert.alert('Error', data.error || 'Transcription failed.');
+      }
 
     } catch (error) {
       console.error('Failed to process recording', error);
