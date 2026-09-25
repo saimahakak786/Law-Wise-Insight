@@ -13,7 +13,8 @@
       "backgroundColor": "#070024"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.saimahakak786.lawwise"
     },
     "android": {
       "package": "com.saimahakak786.lawwise"
@@ -23,7 +24,12 @@
     },
     "plugins": [
       "expo-secure-store",
-      "@clerk/expo",
+      [
+        "@clerk/expo",
+        {
+          "scheme": "mobile"
+        }
+      ],
       [
         "expo-router",
         {
