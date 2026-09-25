@@ -202,7 +202,7 @@ export default function CauseListScreen() {
       </View>
 
       {/* Form Card */}
-      <Card style={[styles.formCard, { borderColor: colors.border }]}>
+      <Card style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={styles.sectionHeaderLabel}>TRACK FILING DEADLINE & HEARING</Text>
         
         {/* Event Type Selector */}
@@ -295,7 +295,7 @@ export default function CauseListScreen() {
       </View>
 
       {matters.length === 0 ? (
-        <Card style={[styles.emptyCard, { borderColor: colors.border }]}>
+        <Card style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Feather name="folder" size={24} color={colors.mutedForeground} style={{ marginBottom: 8 }} />
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No deadlines tracked yet. Schedule written statements, counter-affidavits, or hearing dates above to track preemptive timelines.</Text>
         </Card>
@@ -322,7 +322,7 @@ export default function CauseListScreen() {
           }
 
           return (
-            <Card key={item.id} style={[styles.trackedCard, { borderColor: colors.border }]}>
+            <Card key={item.id} style={[styles.trackedCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.cardRow}>
                 <View style={[styles.badge, { backgroundColor: `${typeColor}20`, borderColor: `${typeColor}40` }]}>
                   <Text style={[styles.badgeText, { color: typeColor }]}>{item.eventType || 'Hearing'}</Text>
