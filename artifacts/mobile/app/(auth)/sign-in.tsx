@@ -44,6 +44,7 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [signInError, setSignInError] = useState(''); // Added custom UI error state
   const otpInputRef = useRef<TextInput>(null);
 
   // Forgot password state
@@ -66,25 +67,44 @@ export default function SignInPage() {
 
   const handleSignIn = async () => {
     if (!identifier || !password) return;
+    setSignInError('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const { error } = await signIn.password({ emailAddress: identifier.trim(), password });
-    if (error) return;
+    try {
+      const result = await signIn.password({ emailAddress: identifier.trim(), password });
+      
+      if (result.error) {
+        setSignInError(result.error.message || 'Invalid email or password.');
+        return;
+      }
 
-    if (signIn.status === 'complete') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await signIn.finalize({ navigate });
+      if (signIn.status === 'complete') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await signIn.finalize({ navigate });
+      }
+    } catch (e: any) {
+      // Catch network or Clerk server exceptions gracefully instead of crashing
+      const errorMessage = e?.errors?.[0]?.message || e?.message || 'Server error occurred during sign in. Please try again.';
+      setSignInError(errorMessage);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
   const handleVerify = async () => {
+    setSignInError('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
-    await signIn.mfa.verifyEmailCode({ code });
+    try {
+      await signIn.mfa.verifyEmailCode({ code });
 
-    if (signIn.status === 'complete') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await signIn.finalize({ navigate });
+      if (signIn.status === 'complete') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await signIn.finalize({ navigate });
+      }
+    } catch (e: any) {
+      const errorMessage = e?.errors?.[0]?.message || 'Verification failed. Please check the code.';
+      setSignInError(errorMessage);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
@@ -204,7 +224,8 @@ export default function SignInPage() {
           </View>
         </Pressable>
 
-        {errors.fields.code && (
+        {signInError ? <Text style={styles.error}>{signInError}</Text> : null}
+        {errors?.fields?.code && (
           <Text style={styles.error}>{errors.fields.code.message}</Text>
         )}
         
@@ -379,7 +400,7 @@ export default function SignInPage() {
             autoCorrect={false}
           />
         </View>
-        {errors.fields.identifier && (
+        {errors?.fields?.identifier && (
           <Text style={styles.error}>{errors.fields.identifier.message}</Text>
         )}
 
@@ -398,9 +419,12 @@ export default function SignInPage() {
             <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#8B9CC5" />
           </Pressable>
         </View>
-        {errors.fields.password && (
+        {errors?.fields?.password && (
           <Text style={styles.error}>{errors.fields.password.message}</Text>
         )}
+
+        {/* Custom Server/API Error Display */}
+        {signInError ? <Text style={styles.error}>{signInError}</Text> : null}
 
         {/* Forgot Password link */}
         <Pressable
