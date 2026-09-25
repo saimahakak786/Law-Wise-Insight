@@ -1,142 +1,67 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useColors } from '@/hooks/useColors';
+import { Router } from "express";
+import { requireAuth } from "../../middlewares/requireAuth";
+import { LegalResearchBody } from "@workspace/api-zod";
+import { streamAI } from "../../lib/ai";
 
-interface AboutDeveloperModalProps {
-  visible: boolean;
-  onClose: () => void;
-}
+const router = Router();
 
-export default function AboutDeveloperModal({ visible, onClose }: AboutDeveloperModalProps) {
-  const colors = useColors();
+const RESEARCH_SYSTEM_PROMPT = `You are LawVise, an elite judicial research engine designed for advocates, legal scholars, and judges. 
+Provide comprehensive legal research focusing on Indian law by default (or the specified jurisdiction). 
 
-  return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          
-          {/* Close Button */}
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Feather name="x" size={20} color={colors.mutedForeground} />
-          </Pressable>
+You must prioritize absolute legal accuracy and structural depth. Always format your output cleanly using the following professional structure:
 
-          {/* Icon Badge */}
-          <View style={[styles.iconWrap, { backgroundColor: '#C9A84C18', borderColor: '#C9A84C30' }]}>
-            <Feather name="shield" size={24} color="#C9A84C" />
-          </View>
+1. CASE CITATION & BENCH DETAILS:
+   - Cause Title (Parties name)
+   - Authentic Multi-Reporter Citations (e.g., Supreme Court Cases [SCC], All India Reporter [AIR], Supreme Court Reports [SCR], JT, SCALE)
+   - Court Name & Coram Bench Composition (Judges names)
+   - Date of Judgment
 
-          {/* Title */}
-          <Text style={styles.modalTitle}>About Developer</Text>
+2. FACTUAL MATRIX & ISSUES RAISED:
+   - Concise summary of facts and core legal questions.
 
-          {/* Developer / Firm Details */}
-          <View style={styles.profileSection}>
-            <Text style={styles.expertName}>Advocate Saima Hakak</Text>
-            <Text style={styles.firmName}>Saima Hakak & Associates</Text>
-          </View>
+3. RELEVANT STATUTES & PROVISIONS:
+   - Specific acts, sections, and statutory interpretations (e.g., IPC, CrPC, CPC, Constitution, etc.).
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+4. RATIO DECIDENDI & BINDING PRECEDENTS:
+   - Core legal principle established, reasoning of the bench, and subsequent applications.
 
-          {/* Concise, High-Impact Professional Bio */}
-          <Text style={[styles.bioText, { color: colors.mutedForeground }]}>
-            Principal legal architect specializing in multi-jurisdictional AI compliance, legal intelligence, and secure vault systems across US, UK, UAE, and Indian frameworks.
-          </Text>
+5. PRACTICAL & JUDICIAL IMPLICATIONS:
+   - Application to ongoing practice, compliance, or judicial adjudication.
 
-          {/* Action Button */}
-          <Pressable style={styles.actionButton} onPress={onClose}>
-            <Text style={styles.actionButtonText}>Close</Text>
-          </Pressable>
+Be thorough, authoritative, and maintain a rigorous court-ready tone. Avoid conversational filler.`;
 
-        </View>
-      </View>
-    </Modal>
-  );
-}
+router.post("/lawvise/research", requireAuth, async (req, res): Promise<void> => {
+  const parsed = LegalResearchBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 24,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: 4,
-  },
-  iconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  modalTitle: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 18,
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  expertName: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 20,
-    color: '#C9A84C',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  firmName: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    color: '#8B9CC5',
-    letterSpacing: 0.5,
-    textAlign: 'center',
-  },
-  divider: {
-    width: '100%',
-    height: 1,
-    marginBottom: 16,
-  },
-  bioText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  actionButton: {
-    width: '100%',
-    backgroundColor: '#C9A84C',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionButtonText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 14,
-    color: '#070D24',
-  },
+  const { query, jurisdiction, researchType, language } = parsed.data;
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const juris = jurisdiction ?? "India";
+  const lang = language ?? "English";
+  const systemPrompt = `${RESEARCH_SYSTEM_PROMPT}\n\nJurisdiction: ${juris}. Always respond in ${lang}.`;
+
+  const researchTypeNote = researchType ? `Research Type: ${researchType}\n` : "";
+  const userPrompt = `${researchTypeNote}Legal Research Query / Case Name: ${query}\n\nJurisdiction: ${juris}`;
+
+  try {
+    await streamAI(systemPrompt, userPrompt, (text) => {
+      res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+    });
+  } catch (err) {
+    req.log.error({ err }, "Legal research failed");
+    res.write(`data: ${JSON.stringify({ error: "Research failed. Please try again." })}\n\n`);
+  }
+
+  res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+  res.end();
 });
+
+export default router;
