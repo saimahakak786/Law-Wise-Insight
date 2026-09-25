@@ -47,7 +47,7 @@
     "expo-system-ui": "~6.0.9",
     "expo-web-browser": "~15.0.10",
     "react": "19.1.0",
-"react-dom": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-keyboard-controller": "1.18.5",
@@ -63,6 +63,7 @@
   },
   "dependencies": {
     "@notifee/react-native": "^9.1.8",
+    "expo-av": "~16.0.4",
     "expo-clipboard": "~8.0.8",
     "expo-file-system": "~19.0.23",
     "expo-image-picker": "~17.0.11",
