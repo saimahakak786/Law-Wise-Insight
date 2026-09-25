@@ -16,7 +16,19 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import MatterModal from '@/components/MatterModal';
 
-const DRAFT_TYPES = ['Contract', 'Notice', 'Petition', 'Agreement', 'Affidavit'];
+const DRAFT_TYPES = [
+  'Stay / Injunction IA',
+  'Interlocutory App (IA)',
+  'Legal Notice',
+  'Bail Application',
+  'Written Statement',
+  'Sale Deed',
+  'Writ Petition',
+  'Affidavit',
+  'Contract',
+  'Agreement',
+  'Petition'
+];
 
 export default function DraftScreen() {
   const colors = useColors();
@@ -28,7 +40,7 @@ export default function DraftScreen() {
   const { jurisdiction, activeMatter, setActiveMatter, saveDocument } = useApp();
 
   const [prompt, setPrompt] = useState('');
-  const [selectedType, setSelectedType] = useState('Contract');
+  const [selectedType, setSelectedType] = useState('Stay / Injunction IA');
   const [isDrafting, setIsDrafting] = useState(false);
   const [result, setResult] = useState('');
   const [hasResult, setHasResult] = useState(false);
@@ -40,7 +52,7 @@ export default function DraftScreen() {
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
   const handleDraft = async () => {
-    if (!prompt.trim()) { Alert.alert('Enter Prompt', 'Please describe the document you want to draft.'); return; }
+    if (!prompt.trim()) { Alert.alert('Enter Prompt', 'Please describe the facts, urgency, and interim relief required for this draft.'); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsDrafting(true);
     setResult('');
@@ -91,27 +103,36 @@ export default function DraftScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      const fallbackText = `FORMAL ${selectedType.toUpperCase()}\n\n` +
-        `JURISDICTION: ${jurisdiction.toUpperCase()}\n` +
+      const fallbackText = `IN THE COURT / FORUM OF: ${jurisdiction.toUpperCase()}\n` +
         `ACTIVE MATTER: ${activeMatter ? activeMatter.title : 'General Practice'}\n` +
-        `SUBJECT: "${prompt.trim()}"\n\n` +
-        `THIS AGREEMENT is entered into on this date by and between the respective parties under the governing laws of ${jurisdiction}.\n\n` +
-        `1. RECITALS & PURPOSE:\nWhereas the parties desire to establish formal terms governing their mutual engagement, obligations, and liabilities.\n\n` +
-        `2. COVENANTS & OBLIGATIONS:\n- Each party shall perform their respective duties with standard professional diligence and adhere to statutory compliance requirements.\n- Any breach of agreed timelines shall trigger notice provisions as mandated by local practice.\n\n` +
-        `3. GOVERNING LAW & JURISDICTION:\nThis instrument shall be construed and enforced in accordance with the laws of ${jurisdiction}.\n\n` +
-        `(Generated via LawVise Secure Drafting Engine)`;
+        `DOCUMENT TYPE: ${selectedType.toUpperCase()}\n\n` +
+        `------------------------------------------------------------------------------------\n` +
+        `MEMORANDUM OF ${selectedType.toUpperCase()}\n` +
+        `------------------------------------------------------------------------------------\n\n` +
+        `1. CAUSE TITLE & PARTICULARS:\n` +
+        `   - Subject / Emergency: "${prompt.trim()}"\n` +
+        `   - Governing Framework: Applicable statutory provisions and procedural codes under ${jurisdiction}.\n\n` +
+        `2. GROUNDS FOR URGENCY / INTERIM RELIEF:\n` +
+        `   - That the applicant has a strong prima facie case in their favor.\n` +
+        `   - That the balance of convenience lies heavily in favor of the applicant, and irreparable loss or injury shall be caused if interim protection is not granted.\n` +
+        `   - Specific factual matrix: ${prompt.trim()}\n\n` +
+        `3. PRAYER / INTERIM DIRECTIONS SOUGHT:\n` +
+        `   - It is most respectfully prayed that this Hon'ble Court may be pleased to grant an ad-interim ex-parte stay / injunction restraining the respondents from acting contrary to law, pending final adjudication of the main matter.\n\n` +
+        `VERIFICATION:\n` +
+        `I, the Applicant/Counsel, do hereby verify that the contents of this ${selectedType} are true and correct to the best of my knowledge and instructions.\n\n` +
+        `(Generated via LawVise Senior Counsel Drafting Engine)`;
 
       let index = 0;
       const interval = setInterval(() => {
         setResult(fallbackText.slice(0, index));
-        index += 25;
+        index += 35;
         if (index > fallbackText.length) {
           setResult(fallbackText);
           clearInterval(interval);
           setIsDrafting(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
-      }, 25);
+      }, 20);
       return;
     } finally {
       setIsDrafting(false);
@@ -169,7 +190,7 @@ export default function DraftScreen() {
             <Text style={styles.screenTitle}>Smart Legal Drafting</Text>
           </View>
           <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-            Generate binding contracts, legal notices, and court petitions instantly.
+            Generate binding contracts, injunction stay IAs, bail applications, and court petitions instantly.
           </Text>
         </View>
 
@@ -195,14 +216,14 @@ export default function DraftScreen() {
 
         {/* Step 1: Draft Instructions Input */}
         <View style={styles.sectionBlock}>
-          <Text style={styles.sectionHeaderLabel}>1. DRAFT SPECIFICATIONS</Text>
+          <Text style={styles.sectionHeaderLabel}>1. DRAFT SPECIFICATIONS & URGENCY</Text>
           <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather name="edit-3" size={18} color={colors.mutedForeground} style={styles.queryIcon} />
             <TextInput
               style={[styles.queryInput, { color: colors.foreground }]}
               value={prompt}
               onChangeText={setPrompt}
-              placeholder="Enter parties, clauses, liabilities, specific terms..."
+              placeholder="Describe emergency, interim protection required, parties, grounds..."
               placeholderTextColor={colors.mutedForeground}
               multiline
               numberOfLines={4}
@@ -213,7 +234,7 @@ export default function DraftScreen() {
 
         {/* Step 2: Document Type Selection */}
         <View style={styles.sectionBlock}>
-          <Text style={styles.sectionHeaderLabel}>2. DOCUMENT TYPE</Text>
+          <Text style={styles.sectionHeaderLabel}>2. DOCUMENT CATEGORY</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChipsContainer}>
             {DRAFT_TYPES.map((type) => {
               const isSelected = selectedType === type;
@@ -250,7 +271,7 @@ export default function DraftScreen() {
           ) : (
             <>
               <Feather name="cpu" size={18} color="#070D24" />
-              <Text style={styles.researchBtnText}>Generate Legal Draft</Text>
+              <Text style={styles.researchBtnText}>Generate Professional Draft</Text>
             </>
           )}
         </Pressable>
@@ -266,7 +287,7 @@ export default function DraftScreen() {
             {isDrafting && !result ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color="#C9A84C" />
-                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Drafting professional clauses...</Text>
+                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Drafting comprehensive legal clauses...</Text>
               </View>
             ) : null}
             <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
