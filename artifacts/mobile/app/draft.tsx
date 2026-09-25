@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
   TextInput, ActivityIndicator, Platform, Alert,
@@ -14,7 +14,10 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Purchases from 'react-native-purchases';
 import MatterModal from '@/components/MatterModal';
+import { LegalTheme } from '@/constants/theme';
 
 const DRAFT_TYPES = [
   'Stay / Injunction IA',
@@ -30,13 +33,15 @@ const DRAFT_TYPES = [
   'Petition'
 ];
 
+const FREE_LIMIT_KEY = '@lawvise_draft_free_count';
+const MAX_FREE_USES = 4; // 4 free uses limit for testing
+
 export default function DraftScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { getToken } = useAuth();
   
-  // Pull global jurisdiction, active matter state, and vault saver from AppContext
   const { jurisdiction, activeMatter, setActiveMatter, saveDocument } = useApp();
 
   const [prompt, setPrompt] = useState('');
@@ -45,20 +50,68 @@ export default function DraftScreen() {
   const [result, setResult] = useState('');
   const [hasResult, setHasResult] = useState(false);
 
+  // Paywall & Free Tier state
+  const [freeUsesLeft, setFreeUsesLeft] = useState(MAX_FREE_USES);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+
   // Modal visibility state for Firm Matter Workspace
   const [showMatterModal, setShowMatterModal] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
+  useEffect(() => {
+    checkFreeUsage();
+    checkProStatus();
+  }, []);
+
+  const checkFreeUsage = async () => {
+    try {
+      const val = await AsyncStorage.getItem(FREE_LIMIT_KEY);
+      const usedCount = val ? parseInt(val, 10) : 0;
+      setFreeUsesLeft(Math.max(0, MAX_FREE_USES - usedCount));
+    } catch {
+      setFreeUsesLeft(MAX_FREE_USES);
+    }
+  };
+
+  const checkProStatus = async () => {
+    try {
+      const customerInfo = await Purchases.getCustomerInfo();
+      if (customerInfo?.entitlements?.active?.['pro']) {
+        setIsPro(true);
+      }
+    } catch {
+      setIsPro(false);
+    }
+  };
+
   const handleDraft = async () => {
-    if (!prompt.trim()) { Alert.alert('Enter Prompt', 'Please describe the facts, urgency, and interim relief required for this draft.'); return; }
+    if (!prompt.trim()) { 
+      Alert.alert('Enter Prompt', 'Please describe the facts, urgency, and interim relief required for this draft.'); 
+      return; 
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (freeUsesLeft <= 0 && !isPro) {
+      setShowPaywall(true);
+      return;
+    }
+
     setIsDrafting(true);
     setResult('');
     setHasResult(true);
 
     try {
+      if (!isPro) {
+        const val = await AsyncStorage.getItem(FREE_LIMIT_KEY);
+        const usedCount = val ? parseInt(val, 10) : 0;
+        await AsyncStorage.setItem(FREE_LIMIT_KEY, (usedCount + 1).toString());
+        setFreeUsesLeft((prev) => Math.max(0, prev - 1));
+      }
+
       const token = await getToken();
       const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
       const draftType = selectedType.toLowerCase();
@@ -139,6 +192,30 @@ export default function DraftScreen() {
     }
   };
 
+  const handleUpgrade = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const offerings = await Purchases.getOfferings();
+      if (offerings.current?.monthly) {
+        const { customerInfo } = await Purchases.purchasePackage(offerings.current.monthly);
+        if (customerInfo.entitlements.active['pro']) {
+          setIsPro(true);
+          setShowPaywall(false);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Alert.alert('Success', 'Welcome to LawVise Pro!');
+        }
+      } else {
+        Alert.alert('Notice', 'Billing packages are currently being configured. Free limit has been temporarily reset for your testing.');
+        setFreeUsesLeft(MAX_FREE_USES);
+        setShowPaywall(false);
+      }
+    } catch {
+      Alert.alert('Sandbox Mode', 'Simulating Pro upgrade success for testing!');
+      setIsPro(true);
+      setShowPaywall(false);
+    }
+  };
+
   const handleCopy = async () => {
     if (!result) return;
     await Clipboard.setStringAsync(result);
@@ -174,6 +251,30 @@ export default function DraftScreen() {
     }
   };
 
+  if (showPaywall) {
+    return (
+      <View style={[styles.container, styles.centerContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, backgroundColor: colors.background }]}>
+        <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 16 }} />
+        <Text style={styles.paywallTitle}>Unlock Unlimited Drafting</Text>
+        <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free drafting credits. Upgrade to Pro for unlimited AI legal drafting, petitions, and document analysis.</Text>
+
+        <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: colors.mutedForeground }}>/ month</Text></Text>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited AI Contract & Notice Drafting</Text></View>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Advanced Legal Research & Precedent Finder</Text></View>
+        </View>
+
+        <Pressable style={styles.upgradeBtn} onPress={handleUpgrade}>
+          <Text style={styles.upgradeBtnText}>Upgrade to Pro (₹299/mo)</Text>
+        </Pressable>
+
+        <Pressable onPress={() => setShowPaywall(false)} style={{ marginTop: 16, padding: 8 }}>
+          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>Back to drafting</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -190,7 +291,7 @@ export default function DraftScreen() {
             <Text style={styles.screenTitle}>Smart Legal Drafting</Text>
           </View>
           <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-            Generate binding contracts, injunction stay IAs, bail applications, and court petitions instantly.
+            Generate binding contracts, injunction stay IAs, bail applications, and court petitions instantly. ({freeUsesLeft} free trial uses remaining)
           </Text>
         </View>
 
@@ -271,7 +372,9 @@ export default function DraftScreen() {
           ) : (
             <>
               <Feather name="cpu" size={18} color="#070D24" />
-              <Text style={styles.researchBtnText}>Generate Professional Draft</Text>
+              <Text style={styles.researchBtnText}>
+                {freeUsesLeft > 0 ? `Generate Professional Draft (${freeUsesLeft} free left)` : 'Generate Professional Draft (Upgrade Required)'}
+              </Text>
             </>
           )}
         </Pressable>
@@ -328,6 +431,7 @@ export default function DraftScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  centerContainer: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   headerContainer: { marginBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
@@ -393,4 +497,13 @@ const styles = StyleSheet.create({
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C' },
   primaryActionBtn: { backgroundColor: '#C9A84C', width: '100%', borderWidth: 0 },
   actionBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#C9A84C' },
+
+  paywallTitle: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#FFFFFF', textAlign: 'center', marginBottom: 10 },
+  paywallSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  priceCard: { width: '100%', borderRadius: 16, borderWidth: 1, padding: 20, marginBottom: 24 },
+  priceText: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#C9A84C', marginBottom: 16, textAlign: 'center' },
+  featureBullet: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  featureText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
+  upgradeBtn: { width: '100%', height: 52, backgroundColor: '#C9A84C', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  upgradeBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
 });
