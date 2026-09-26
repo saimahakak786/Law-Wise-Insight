@@ -69,6 +69,7 @@
     "expo-image-picker": "~17.0.11",
     "expo-localization": "~17.0.9",
     "expo-notifications": "~0.32.17",
+    "expo-print": "~14.0.3",
     "expo-sharing": "~14.0.8",
     "i18n-js": "^4.5.3",
     "react-native-purchases": "~10.9.1"
