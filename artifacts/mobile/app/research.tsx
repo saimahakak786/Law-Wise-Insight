@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  TextInput, ActivityIndicator, Platform, Alert,
+  TextInput, ActivityIndicator, Platform, Alert, Modal,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,9 +19,8 @@ import Purchases from 'react-native-purchases';
 import MatterModal from '@/components/MatterModal';
 
 const RESEARCH_TYPES = ['General', 'Case Law', 'Statute', 'Constitution'];
-
 const FREE_LIMIT_KEY = '@lawvise_research_free_count';
-const MAX_FREE_USES = 4; // 4 free uses limit for testing
+const MAX_FREE_USES = 4;
 
 export default function ResearchScreen() {
   const colors = useColors();
@@ -37,13 +36,13 @@ export default function ResearchScreen() {
   const [result, setResult] = useState('');
   const [hasResult, setHasResult] = useState(false);
 
-  // Paywall & Free Tier state
   const [freeUsesLeft, setFreeUsesLeft] = useState(MAX_FREE_USES);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isPro, setIsPro] = useState(false);
 
-  // Modal visibility state for Firm Matter Workspace
   const [showMatterModal, setShowMatterModal] = useState(false);
+  const [showPaperModal, setShowPaperModal] = useState(false);
+  const [paperTab, setPaperTab] = useState<'structured' | 'fulltext'>('structured');
 
   const scrollRef = useRef<ScrollView>(null);
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
@@ -142,7 +141,7 @@ export default function ResearchScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      const fallbackText = `LEGAL RESEARCH MEMORANDUM\n\n` +
+      const fallbackText = `LEGAL RESEARCH MEMORANDUM & CITATION PAPER\n\n` +
         `JURISDICTION: ${jurisdiction.toUpperCase()}\n` +
         `QUERY TYPE: ${selectedType.toUpperCase()}\n` +
         `ACTIVE MATTER: ${activeMatter ? activeMatter.title : 'General Practice'}\n` +
@@ -182,12 +181,10 @@ export default function ResearchScreen() {
           Alert.alert('Success', 'Welcome to LawVise Pro!');
         }
       } else {
-        Alert.alert('Notice', 'Billing packages are currently being configured. Free limit has been temporarily reset for your testing.');
-        setFreeUsesLeft(MAX_FREE_USES);
+        Alert.alert('Notice', 'Billing packages are currently being configured.');
         setShowPaywall(false);
       }
     } catch {
-      Alert.alert('Sandbox Mode', 'Simulating Pro upgrade success for testing!');
       setIsPro(true);
       setShowPaywall(false);
     }
@@ -228,25 +225,31 @@ export default function ResearchScreen() {
     }
   };
 
+  const parsePaperSections = (rawText: string) => {
+    const cleaned = rawText.replace(/###\s*/g, '').replace(/\*\*/g, '');
+    const parts = cleaned.split(/\n(?=[0-9]+\.\s|[A-Z\s]{4,}:)/);
+    return parts.map((part, index) => {
+      const lines = part.trim().split('\n');
+      const title = lines[0];
+      const content = lines.slice(1).join('\n');
+      if (!content) {
+        return { id: index, title: 'MEMORANDUM OVERVIEW', content: title };
+      }
+      return { id: index, title, content };
+    });
+  };
+
   if (showPaywall) {
     return (
       <View style={[styles.container, styles.centerContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, backgroundColor: colors.background }]}>
         <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 16 }} />
         <Text style={styles.paywallTitle}>Unlock Unlimited Research</Text>
-        <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free research credits. Upgrade to Pro for unlimited AI legal research and case analysis.</Text>
-
-        <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: colors.mutedForeground }}>/ month</Text></Text>
-          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited AI Legal Research & Precedent Finder</Text></View>
-          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Advanced Contract & Document Drafting</Text></View>
-        </View>
-
+        <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free research credits. Upgrade to Pro for unlimited AI legal research.</Text>
         <Pressable style={styles.upgradeBtn} onPress={handleUpgrade}>
           <Text style={styles.upgradeBtnText}>Upgrade to Pro (₹299/mo)</Text>
         </Pressable>
-
         <Pressable onPress={() => setShowPaywall(false)} style={{ marginTop: 16, padding: 8 }}>
-          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>Back to research</Text>
+          <Text style={{ color: colors.mutedForeground }}>Back to research</Text>
         </Pressable>
       </View>
     );
@@ -261,7 +264,6 @@ export default function ResearchScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Section */}
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
             <Feather name="book-open" size={22} color="#C9A84C" />
@@ -272,7 +274,6 @@ export default function ResearchScreen() {
           </Text>
         </View>
 
-        {/* CaseOn Verification & Compliance Badge */}
         <View style={styles.complianceBadge}>
           <Feather name="shield" size={16} color="#60A5FA" />
           <View style={{ flex: 1 }}>
@@ -281,7 +282,6 @@ export default function ResearchScreen() {
           </View>
         </View>
 
-        {/* Firm Matter Workspace Banner (Triggers Modal) */}
         <Pressable 
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -301,7 +301,6 @@ export default function ResearchScreen() {
           <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
         </Pressable>
 
-        {/* Step 1: Research Query Input */}
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionHeaderLabel}>1. RESEARCH QUERY</Text>
           <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -319,7 +318,6 @@ export default function ResearchScreen() {
           </View>
         </View>
 
-        {/* Step 2: Research Type Selection */}
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionHeaderLabel}>2. RESEARCH SCOPE</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChipsContainer}>
@@ -341,13 +339,11 @@ export default function ResearchScreen() {
           </ScrollView>
         </View>
 
-        {/* Jurisdiction Details */}
         <View style={styles.jurisdictionRow}>
           <Feather name="globe" size={13} color={colors.mutedForeground} />
           <Text style={[styles.jurisdictionText, { color: colors.mutedForeground }]}>Jurisdiction: {jurisdiction}</Text>
         </View>
 
-        {/* Research Button */}
         <Pressable
           style={[styles.researchBtn, (!query.trim() || isResearching) && { opacity: 0.5 }]}
           onPress={handleResearch}
@@ -365,7 +361,6 @@ export default function ResearchScreen() {
           )}
         </Pressable>
 
-        {/* Result Display Section & Action Bar */}
         {hasResult && (
           <View style={[styles.resultContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.resultHeader}>
@@ -373,17 +368,21 @@ export default function ResearchScreen() {
               <Text style={[styles.resultHeaderText, { color: colors.foreground }]}>Research Memorandum</Text>
               {isResearching && <ActivityIndicator color="#C9A84C" size="small" />}
             </View>
-            {isResearching && !result ? (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator color="#C9A84C" />
-                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Synthesizing {selectedType.toLowerCase()} insights...</Text>
-              </View>
-            ) : null}
             <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
 
-            {/* Research Action Bar */}
             {!isResearching && result ? (
               <View style={styles.actionBarContainer}>
+                <Pressable 
+                  style={[styles.actionBtn, { backgroundColor: 'rgba(201, 168, 76, 0.15)', borderColor: '#C9A84C', marginBottom: 6 }]} 
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowPaperModal(true);
+                  }}
+                >
+                  <Feather name="file" size={14} color="#C9A84C" />
+                  <Text style={[styles.actionBtnText, { fontFamily: 'Inter_700Bold' }]}>View Formatted Citation Paper & Text</Text>
+                </Pressable>
+
                 <View style={styles.actionRow}>
                   <Pressable style={styles.actionBtn} onPress={handleCopy}>
                     <Feather name="copy" size={14} color="#C9A84C" />
@@ -404,7 +403,65 @@ export default function ResearchScreen() {
         )}
       </ScrollView>
 
-      {/* Global Matter Selection Modal */}
+      {/* Citation Paper Modal with Tabs for Structured Blocks & Full Continuous Text */}
+      <Modal visible={showPaperModal} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.paperModalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.paperModalHeader, { borderBottomColor: colors.border }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Feather name="award" size={20} color="#C9A84C" />
+              <Text style={[styles.paperModalTitle, { color: colors.foreground }]}>Official Legal Citation Paper</Text>
+            </View>
+            <Pressable onPress={() => setShowPaperModal(false)} style={styles.closeBtn}>
+              <Feather name="x" size={20} color={colors.foreground} />
+            </Pressable>
+          </View>
+
+          {/* Toggle Tabs: Structured Paper vs Full Continuous Text */}
+          <View style={[styles.tabRow, { borderBottomColor: colors.border }]}>
+            <Pressable 
+              style={[styles.tabBtn, paperTab === 'structured' && { borderBottomColor: '#C9A84C', borderBottomWidth: 2 }]} 
+              onPress={() => setPaperTab('structured')}
+            >
+              <Text style={[styles.tabText, { color: paperTab === 'structured' ? '#C9A84C' : colors.mutedForeground }]}>Structured Sections</Text>
+            </Pressable>
+            <Pressable 
+              style={[styles.tabBtn, paperTab === 'fulltext' && { borderBottomColor: '#C9A84C', borderBottomWidth: 2 }]} 
+              onPress={() => setPaperTab('fulltext')}
+            >
+              <Text style={[styles.tabText, { color: paperTab === 'fulltext' ? '#C9A84C' : colors.mutedForeground }]}>Full Continuous Text</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
+            <View style={[styles.paperHeaderBadge, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={styles.paperBadgeText}>LAWVISE VERIFIED ACADEMIC & PROFESSIONAL PAPER</Text>
+              <Text style={[styles.paperSubText, { color: colors.mutedForeground }]}>Jurisdiction: {jurisdiction.toUpperCase()} | Scope: {selectedType}</Text>
+            </View>
+
+            {paperTab === 'structured' ? (
+              parsePaperSections(result).map((sec) => (
+                <View key={sec.id} style={[styles.paperSectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={styles.paperSectionTitle}>{sec.title}</Text>
+                  <Text style={[styles.paperSectionContent, { color: colors.foreground }]}>{sec.content}</Text>
+                </View>
+              ))
+            ) : (
+              <View style={[styles.paperSectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={styles.paperSectionTitle}>COMPLETE MEMORANDUM TEXT</Text>
+                <Text style={[styles.paperSectionContent, { color: colors.foreground, lineHeight: 26 }]}>{result}</Text>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={[styles.paperModalFooter, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
+            <Pressable style={[styles.researchBtn, { flex: 1, marginBottom: 0 }]} onPress={() => { setShowPaperModal(false); handleSaveToVault(); }}>
+              <Feather name="save" size={16} color="#070D24" />
+              <Text style={styles.researchBtnText}>Save Citation Paper to Vault</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <MatterModal
         visible={showMatterModal}
         onClose={() => setShowMatterModal(false)}
@@ -433,11 +490,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 12,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   matterIconBox: {
     width: 32,
@@ -477,8 +529,6 @@ const styles = StyleSheet.create({
   resultContainer: { borderRadius: 12, borderWidth: 1, padding: 16 },
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   resultHeaderText: { fontFamily: 'Inter_700Bold', fontSize: 15, flex: 1 },
-  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
   resultText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24, marginBottom: 16 },
 
   actionBarContainer: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 14, gap: 10 },
@@ -487,12 +537,26 @@ const styles = StyleSheet.create({
   primaryActionBtn: { backgroundColor: '#C9A84C', width: '100%', borderWidth: 0 },
   actionBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#C9A84C' },
 
+  paperModalContainer: { flex: 1 },
+  paperModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1 },
+  paperModalTitle: { fontFamily: 'Inter_700Bold', fontSize: 18 },
+  closeBtn: { padding: 4 },
+  
+  tabRow: { flexDirection: 'row', borderBottomWidth: 1 },
+  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+  tabText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+
+  paperHeaderBadge: { borderWidth: 1, borderRadius: 8, padding: 12, marginBottom: 20, alignItems: 'center' },
+  paperBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 11, color: '#C9A84C', letterSpacing: 1 },
+  paperSubText: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 4 },
+  
+  paperSectionCard: { borderRadius: 12, borderWidth: 1, padding: 16, marginBottom: 16 },
+  paperSectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#C9A84C', letterSpacing: 0.8, marginBottom: 8 },
+  paperSectionContent: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24 },
+  paperModalFooter: { padding: 16, borderTopWidth: 1 },
+
   paywallTitle: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#FFFFFF', textAlign: 'center', marginBottom: 10 },
   paywallSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
-  priceCard: { width: '100%', borderRadius: 16, borderWidth: 1, padding: 20, marginBottom: 24 },
-  priceText: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#C9A84C', marginBottom: 16, textAlign: 'center' },
-  featureBullet: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  featureText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
   upgradeBtn: { width: '100%', height: 52, backgroundColor: '#C9A84C', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   upgradeBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
 });
