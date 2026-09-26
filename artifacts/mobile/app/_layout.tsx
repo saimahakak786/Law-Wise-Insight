@@ -126,7 +126,7 @@ function InitializingGate() {
 
     // <-- 2. ADDED CONFIGURE BLOCK HERE
     try {
-      Purchases.configure({ apiKey: "goog_YOUR_REAL_GOOGLE_PLAY_KEY" });
+      Purchases.configure({ apiKey:"goog_IVymTFIszZNpmPfSIZHqXBInlhR"  });
     } catch (e) {
       console.error('Failed to initialize RevenueCat:', e);
     }
