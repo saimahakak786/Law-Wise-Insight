@@ -9,6 +9,7 @@ import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
 import { AppProvider } from '@/context/AppContext';
+import Purchases from 'react-native-purchases'; // <-- 1. ADDED IMPORT HERE
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -122,6 +123,13 @@ function InitializingGate() {
 
   useEffect(() => {
     setupNotificationChannel();
+
+    // <-- 2. ADDED CONFIGURE BLOCK HERE
+    try {
+      Purchases.configure({ apiKey: "goog_YOUR_REAL_GOOGLE_PLAY_KEY" });
+    } catch (e) {
+      console.error('Failed to initialize RevenueCat:', e);
+    }
 
     const timer = setTimeout(() => {
       if (!isLoaded) {
