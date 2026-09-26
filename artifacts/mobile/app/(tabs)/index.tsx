@@ -65,7 +65,6 @@ export default function HomeScreen() {
   const [savedMemos, setSavedMemos] = useState<string[]>([]);
   
   const [freeDictationsLeft, setFreeDictationsLeft] = useState(3);
-  const [freeIntakesLeft, setFreeIntakesLeft] = useState(1); // 1 Free Client Intake trial
   const [isProUser, setIsProUser] = useState(false);
 
   useEffect(() => {
@@ -168,28 +167,9 @@ export default function HomeScreen() {
     Alert.alert('Success', 'Structured brief securely logged to your case files.');
   };
 
-  // Quick Action Handler with 1 Free Intake Check
+  // Quick Action Handler - Navigates directly, letting target screens manage their own trial states
   const handleQuickActionPress = (action: typeof QUICK_ACTIONS[0]) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    if (action.id === 'intake' && !isProUser) {
-      if (freeIntakesLeft > 0) {
-        setFreeIntakesLeft(0); // Use the 1 free intake
-        router.push(action.route as any);
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        Alert.alert(
-          'LawVise Pro Required',
-          'You have used your 1 free client intake trial. Upgrade to Pro for unlimited conflict checks and secure client vault archives.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Unlock Pro', onPress: () => setIsProUser(true) }
-          ]
-        );
-      }
-      return;
-    }
-
     router.push(action.route as any);
   };
 
@@ -270,11 +250,6 @@ export default function HomeScreen() {
       {/* Quick Actions */}
       <View style={styles.sectionHeaderRow}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
-        {!isProUser && (
-          <Text style={[styles.intakeTrialHint, { color: '#C9A84C' }]}>
-            {freeIntakesLeft > 0 ? '1 Free Client Intake Included' : 'Intake Pro Locked'}
-          </Text>
-        )}
       </View>
       <View style={styles.actionsGrid}>
         {QUICK_ACTIONS.map((action) => (
@@ -288,11 +263,6 @@ export default function HomeScreen() {
               style={styles.actionIconBg}
             >
               <Feather name={action.icon} size={24} color="#C9A84C" />
-              {action.id === 'intake' && !isProUser && freeIntakesLeft === 0 && (
-                <View style={styles.lockBadgeOverlay}>
-                  <Feather name="lock" size={10} color="#C9A84C" />
-                </View>
-              )}
             </LinearGradient>
             <Text style={[styles.actionLabel, { color: colors.foreground }]}>{action.label}</Text>
           </Pressable>
@@ -515,7 +485,6 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
-  intakeTrialHint: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
   sectionTitleText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
   seeAll: { fontFamily: 'Inter_500Medium', fontSize: 13 },
   tierBadge: {
@@ -526,7 +495,6 @@ const styles = StyleSheet.create({
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 10, marginBottom: 24 },
   actionCard: { width: '47%', borderRadius: 14, padding: 16, gap: 10 },
   actionIconBg: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  lockBadgeOverlay: { position: 'absolute', bottom: -2, right: -2, backgroundColor: '#070D24', borderRadius: 6, padding: 2 },
   actionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, lineHeight: 18 },
   dictationCard: {
     marginHorizontal: 20, borderRadius: 16, padding: 20, alignItems: 'center',
