@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import * as Print from 'expo-print';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases from 'react-native-purchases';
 import MatterModal from '@/components/MatterModal';
@@ -205,6 +206,54 @@ export default function ResearchScreen() {
       await Sharing.shareAsync(filename);
     } catch {
       Alert.alert('Share Failed', 'Could not share the research memorandum.');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!result) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const htmlContent = `
+        <html>
+          <head>
+            <style>
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #111827; line-height: 1.6; }
+              h1 { color: #1e3a8a; border-bottom: 2px solid #C9A84C; padding-bottom: 10px; font-size: 22px; }
+              .badge { background: #f3f4f6; border: 1px solid #d1d5db; padding: 10px; font-size: 11px; font-weight: bold; margin-bottom: 20px; color: #4b5563; }
+              .content { font-size: 13px; white-space: pre-wrap; }
+            </style>
+          </head>
+          <body>
+            <h1>LawVise Official Legal Citation Paper</h1>
+            <div class="badge">Jurisdiction: ${jurisdiction.toUpperCase()} | Scope: ${selectedType}</div>
+            <div class="content">${result.replace(/\n/g, '<br/>')}</div>
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Citation Paper PDF' });
+      } else {
+        Alert.alert('PDF Generated', `File saved at: ${uri}`);
+      }
+    } catch {
+      Alert.alert('Export Failed', 'Could not generate PDF document.');
+    }
+  };
+
+  const handleExportMarkdown = async () => {
+    if (!result) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const markdownContent = `# LawVise Legal Citation Paper\n\n> Jurisdiction: ${jurisdiction.toUpperCase()} | Scope: ${selectedType}\n\n---\n\n${result}`;
+      const filename = FileSystem.cacheDirectory + `Citation_Paper_${Date.now()}.md`;
+      await FileSystem.writeAsStringAsync(filename, markdownContent, { encoding: FileSystem.EncodingType.UTF8 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(filename, { mimeType: 'text/markdown', dialogTitle: 'Export Markdown Citation Paper' });
+      }
+    } catch {
+      Alert.alert('Export Failed', 'Could not generate Markdown file.');
     }
   };
 
@@ -453,10 +502,18 @@ export default function ResearchScreen() {
             )}
           </ScrollView>
 
-          <View style={[styles.paperModalFooter, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
-            <Pressable style={[styles.researchBtn, { flex: 1, marginBottom: 0 }]} onPress={() => { setShowPaperModal(false); handleSaveToVault(); }}>
-              <Feather name="save" size={16} color="#070D24" />
-              <Text style={styles.researchBtnText}>Save Citation Paper to Vault</Text>
+          <View style={[styles.paperModalFooter, { borderTopColor: colors.border, backgroundColor: colors.card, flexDirection: 'row', gap: 10 }]}>
+            <Pressable style={[styles.actionBtn, { flex: 1, borderColor: '#C9A84C' }]} onPress={handleExportPDF}>
+              <Feather name="file-text" size={15} color="#C9A84C" />
+              <Text style={styles.actionBtnText}>Export PDF</Text>
+            </Pressable>
+            <Pressable style={[styles.actionBtn, { flex: 1, borderColor: '#C9A84C' }]} onPress={handleExportMarkdown}>
+              <Feather name="code" size={15} color="#C9A84C" />
+              <Text style={styles.actionBtnText}>Export MD</Text>
+            </Pressable>
+            <Pressable style={[styles.researchBtn, { flex: 1.2, marginBottom: 0, height: 46 }]} onPress={() => { setShowPaperModal(false); handleSaveToVault(); }}>
+              <Feather name="save" size={15} color="#070D24" />
+              <Text style={styles.researchBtnText}>Save to Vault</Text>
             </Pressable>
           </View>
         </View>
