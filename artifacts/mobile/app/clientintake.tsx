@@ -17,7 +17,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases from 'react-native-purchases';
-import { LegalTheme } from '../constants/theme';
+import { LegalTheme } from './constants/theme';
 
 
 const PRACTICE_AREAS = [
