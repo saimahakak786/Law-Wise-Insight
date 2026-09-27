@@ -18,7 +18,7 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 
 const FREE_LIMIT_KEY = '@lawvise_factmatcher_free_count';
-const MAX_FREE_USES = 4; // 4 free uses limit for testing
+const MAX_FREE_USES = 7; // 7 free uses limit for testing
 
 export default function FactMatcherScreen() {
   const colors = useColors();
