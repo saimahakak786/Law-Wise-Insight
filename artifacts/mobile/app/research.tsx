@@ -21,7 +21,7 @@ import MatterModal from '@/components/MatterModal';
 
 const RESEARCH_TYPES = ['General', 'Case Law', 'Statute', 'Constitution'];
 const FREE_LIMIT_KEY = '@lawvise_research_free_count';
-const MAX_FREE_USES = 4;
+const MAX_FREE_USES = 7;
 
 export default function ResearchScreen() {
   const colors = useColors();
