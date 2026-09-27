@@ -23,8 +23,10 @@ const DRAFT_TYPES = [
   'Stay / Injunction IA',
   'Legal Notice',
   'Civil Suit / Plaint',
-  'Writ Petition',
+  'Consumer Complaint',
   'Written Statement',
+  'Arbitration Petition',
+  'Writ Petition',
   'Criminal Complaint',
   'Affidavit',
   'Rent Deed',
@@ -33,6 +35,15 @@ const DRAFT_TYPES = [
   'Power of Attorney (GPA/SPA)',
   'Partnership Deed',
   'Employment / Founder Agreement'
+];
+
+const TONE_OPTIONS = ['Firm / Standard', 'Aggressive / Litigious', 'Neutral / Corporate'];
+
+const CLAUSE_LIBRARY = [
+  { name: 'Arbitration Clause', text: 'Any dispute, controversy, or claim arising out of or relating to this contract, including its formation or breach, shall be settled by arbitration in accordance with the Arbitration and Conciliation Act, 1996.' },
+  { name: 'Indemnification', text: 'The Party of the Second Part shall indemnify, defend, and hold harmless the Party of the First Part against any losses, liabilities, claims, damages, or expenses arising out of breach of representations.' },
+  { name: 'Force Majeure', text: 'Neither party shall be liable for any failure or delay in performance under this Agreement due to acts of God, war, pandemic, government restrictions, or other unforeseen circumstances beyond reasonable control.' },
+  { name: 'Governing Jurisdiction', text: 'This Agreement shall be governed by and construed in accordance with the laws of India, and the courts at the designated jurisdiction shall have exclusive territorial jurisdiction.' }
 ];
 
 const FREE_LIMIT_KEY = '@lawvise_draft_free_count';
@@ -48,6 +59,9 @@ export default function DraftScreen() {
 
   const [prompt, setPrompt] = useState('');
   const [selectedType, setSelectedType] = useState('Rent Deed');
+  const [selectedTone, setSelectedTone] = useState('Firm / Standard');
+  const [showClauseDrawer, setShowClauseDrawer] = useState(false);
+
   const [isDrafting, setIsDrafting] = useState(false);
   const [result, setResult] = useState('');
   const [hasResult, setHasResult] = useState(false);
@@ -86,10 +100,17 @@ export default function DraftScreen() {
     }
   };
 
-  // 🏛️ ELITE CHAMBER-GRADE DRAFTING ENGINE (Modeled after Senior Counsel Drafting)
-  const generateEliteChamberDraft = (type: string, userPrompt: string, jur: string) => {
+  const handleInsertClause = (clauseText: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPrompt((prev) => (prev ? `${prev}\n\n${clauseText}` : clauseText));
+    setShowClauseDrawer(false);
+  };
+
+  // 🏛️ ELITE CHAMBER-GRADE DRAFTING ENGINE WITH TONE MODULATION
+  const generateEliteChamberDraft = (type: string, userPrompt: string, jur: string, tone: string) => {
     const cleanType = type.toUpperCase();
     const currentDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+    const toneNote = tone === 'Aggressive / Litigious' ? ' [ATTN: Drafted with high-intensity legal liabilities, strict statutory warnings, and immediate penal/legal action consequences]' : tone === 'Neutral / Corporate' ? ' [ATTN: Drafted with balanced commercial terms, risk mitigation, and fair dispute mechanisms]' : '';
 
     if (cleanType.includes('RENT DEED')) {
       return `THIS RENT DEED is made and executed on this ______ day of ____________, 2026 at ${jur.toUpperCase()}, by and between:
@@ -104,154 +125,20 @@ AND
 
 WHEREAS the Lessor is the absolute owner and in lawful physical possession of the residential/commercial premises bearing property address ________________________________________ (hereinafter referred to as the "Demised Premises").
 
-AND WHEREAS the Lessee has approached the Lessor to take the Demised Premises on monthly rent for residential/commercial use, and the Lessor has agreed to let out the same on the following terms and conditions:
+AND WHEREAS the Lessee has approached the Lessor to take the Demised Premises on monthly rent, and the Lessor has agreed to let out the same on the following terms and conditions:${toneNote}
 
 1. TERM OF TENANCY:
-   The tenancy shall commence with effect from ____________ for an initial locked-in period of 11 (eleven) months, subject to extension upon mutual written consent of both parties with an agreed rent escalation clause. Specific instructions provided: ${userPrompt.trim()}
+   The tenancy shall commence with effect from ____________ for an initial locked-in period of 11 (eleven) months, subject to extension upon mutual written consent. Specific instructions: ${userPrompt.trim()}
 
 2. RENT & MODE OF PAYMENT:
-   The Lessee shall pay a monthly rent of ₹________/- (Rupees ________________________________________________ Only) in advance on or before the 7th day of each calendar month directly into the designated bank account of the Lessor.
+   The Lessee shall pay a monthly rent of ₹________/- in advance on or before the 7th day of each calendar month.
 
-3. INTEREST-FREE SECURITY DEPOSIT:
-   The Lessee has deposited an interest-free refundable security deposit of ₹________/- (Rupees ________________________________________________ Only) with the Lessor, which shall be refunded at the time of vacating the Demised Premises, subject to deduction of unpaid utility dues or structural damages beyond normal wear and tear.
+3. SECURITY DEPOSIT & DEFAULT:
+   Interest-free refundable security deposit of ₹________/- deposited with the Lessor. Default in rent payment for two consecutive months shall entitle the Lessor to immediate eviction and re-entry.
 
-4. UTILITIES & MAINTENANCE:
-   Electricity and water bills shall be paid regularly by the Lessee based on sub-meter readings. Maintenance charges, if any, shall be borne directly by the Lessee.
+IN WITNESS WHEREOF, the parties hereto have signed this Rent Deed in the presence of witnesses:
 
-5. TERMINATION AND DEFAULT:
-   Either party may terminate this agreement by serving 1 (one) month prior written notice. Default in rent payment for two consecutive months shall entitle the Lessor to immediate eviction and re-entry.
-
-IN WITNESS WHEREOF, the parties hereto have signed this Rent Deed on the day, month, and year first above written in the presence of the following witnesses:
-
-LESSOR: ________________________      LESSEE: ________________________
-
-WITNESSES:
-1. Name: _____________________        2. Name: _____________________
-   Address: __________________           Address: __________________`;
-    }
-
-    if (cleanType.includes('LEASE DEED')) {
-      return `REGISTERED COMMERCIAL LEASE DEED
-DATE: ${currentDate}
-JURISDICTION: ${jur.toUpperCase()}
-
-THIS LEASE DEED is executed at ${jur.toUpperCase()} by and between:
-M/S [LESSOR ENTITY NAME], having its registered office at __________________________________________________ (hereinafter referred to as the "LESSOR");
-AND
-M/S [LESSEE ENTITY NAME], having its corporate office at __________________________________________________ (hereinafter referred to as the "LESSEE").
-
-COVENANTS OF LEASE:
-1. PROPERTY & AREA: Demised commercial space measuring approximately _____ sq. ft., situated at ________________________________________.
-2. CORE COMMERCIAL TERMS: ${userPrompt.trim()}
-3. LEASE TENURE & ESCALATION: Valid for a term of _____ years commencing from _________, with a standard _____% escalation on the base rent at the end of every block of 12 months.
-4. RENT & APPLICABLE TAXES: Monthly lease rent fixed at ₹________/- plus applicable Goods and Services Tax (GST).
-5. INDEMNITY & COVENANTS: The Lessee covenants to maintain statutory compliances, fire safety norms, and hold the Lessor harmless from third-party operational claims.
-
-IN WITNESS WHEREOF, authorized representatives have executed this Deed.
-
-LESSOR (SIGNATURE & SEAL)                LESSEE (SIGNATURE & SEAL)`;
-    }
-
-    if (cleanType.includes('SALE DEED')) {
-      return `DEED OF ABSOLUTE SALE
-DATE: ${currentDate}
-PLACE: ${jur.toUpperCase()}
-
-THIS DEED OF ABSOLUTE SALE is made and executed by:
-VENDOR: [Name], S/o ____________________, aged about ___ years, residing at __________________________________________________ (First Part);
-AND
-VENDEE: [Name], S/o ____________________, aged about ___ years, residing at __________________________________________________ (Second Part).
-
-WHEREAS the Vendor is the absolute owner, seized and possessed of the immovable property bearing __________________________________________________, having acquired the same through registered title deeds.
-
-NOW THIS DEED WITNESSETH AS FOLLOWS:
-1. CONSIDERATION: In consideration of the total sum of ₹________/- (Rupees ________________________________________________ Only) paid by the Vendee to the Vendor, receipt of which is hereby acknowledged by the Vendor.
-2. PROPERTY DETAILS & INSTRUCTIONS: ${userPrompt.trim()}
-3. CONVEYANCE & TITLE TRANSFER: The Vendor hereby grants, conveys, transfers, and assigns absolute ownership, title, and vacant physical possession of the schedule property to the Vendee.
-4. COVENANT OF TITLE: The Vendor declares that the property is free from all encumbrances, charges, mortgages, liens, prior sales, or attachments, and undertakes to indemnify the Vendee against any subsequent loss arising from title defects.
-
-IN WITNESS WHEREOF, the Vendor and Vendee have set their hands to this Sale Deed in the presence of attesting witnesses.
-
-VENDOR: ________________________      VENDEE: ________________________`;
-    }
-
-    if (cleanType.includes('POWER OF ATTORNEY')) {
-      return `GENERAL / SPECIAL POWER OF ATTORNEY (GPA / SPA)
-DATE: ${currentDate}
-JURISDICTION: ${jur.toUpperCase()}
-
-KNOW ALL MEN BY THESE PRESENTS that I, [Principal Name], S/o ____________________, residing at __________________________________________________, do hereby nominate, constitute, and appoint [Attorney Name], S/o ____________________, residing at __________________________________________________, as my true and lawful Attorney-in-Fact to act on my behalf for the following acts, deeds, and execution:
-
-1. SCOPE AND OPERATIVE AUTHORITY:
-   ${userPrompt.trim()}
-
-2. RATIFICATION:
-   I hereby agree and undertake to ratify and confirm all lawful acts, deeds, and registrations executed by my said Attorney pursuant to the powers conferred under this instrument.
-
-IN WITNESS WHEREOF, I have executed this Power of Attorney on this day.
-
-PRINCIPAL: ________________________      ATTORNEY: ________________________`;
-    }
-
-    if (cleanType.includes('PARTNERSHIP DEED')) {
-      return `DEED OF PARTNERSHIP
-DATE: ${currentDate}
-PLACE: ${jur.toUpperCase()}
-
-THIS DEED OF PARTNERSHIP is entered into on this day by and between:
-1. [Partner 1 Name], residing at __________________________________________________
-2. [Partner 2 Name], residing at __________________________________________________
-
-IT IS MUTUALLY AGREED AS FOLLOWS:
-1. FIRM NAME & PRINCIPAL PLACE: The business shall be conducted under the name and style of M/s ________________________ with the core commercial objective of: ${userPrompt.trim()}
-2. CAPITAL & PROFIT-SHARING RATIO: Capital contribution shall be made as mutually agreed, and net profits/losses shall be shared in the ratio of ____ : ____.
-3. BANK ACCOUNTS & MANAGEMENT: Operational bank accounts shall be operated under joint or designated signatures of the partners.
-
-IN WITNESS WHEREOF, the partners have affixed their signatures.
-
-PARTNER 1: ______________________      PARTNER 2: ______________________`;
-    }
-
-    if (cleanType.includes('EMPLOYMENT') || cleanType.includes('AGREEMENT')) {
-      return `EMPLOYMENT & FOUNDER COVENANT AGREEMENT
-DATE: ${currentDate}
-JURISDICTION: ${jur.toUpperCase()}
-
-This Agreement sets forth the terms of engagement between [Company Name] and [Employee/Founder Name].
-1. ROLE & DUTIES: ${userPrompt.trim()}
-2. REMUNERATION: Annual compensation package of ₹________/- payable monthly, subject to applicable TDS and statutory deductions.
-3. INTELLECTUAL PROPERTY & NON-COMPETE: All intellectual property, code, and inventions generated during tenure remain the sole exclusive proprietary asset of the company.
-
-IN WITNESS WHEREOF, the parties execute this Agreement.
-
-EMPLOYER: ______________________      EMPLOYEE: ______________________`;
-    }
-
-    if (cleanType.includes('BAIL')) {
-      return `IN THE COURT OF THE SESSIONS JUDGE / JUDICIAL MAGISTRATE, ${jur.toUpperCase()}
-BAIL APPLICATION NO. _____ OF 2026
-
-IN THE MATTER OF:
-State through Police Station: _____________________
-VERSUS
-Applicant / Accused: ______________________
-
-CRIMINAL MISCELLANEOUS APPLICATION FOR REGULAR BAIL UNDER SECTION 439 CRPC / SECTION 483 BNSS
-
-THE APPLICANT ABOVE-NAMED RESPECTFULLY SUBMITS AS FOLLOWS:
-
-1. MATRIX OF FACTS & FALSE IMPLICATION:
-   The applicant has been falsely and maliciously roped in FIR No. _____ dated _____, registered under Sections _____ at P.S. _____. The actual factual narrative is as follows: ${userPrompt.trim()}
-
-2. GROUNDS FOR ENLARGEMENT ON BAIL:
-   A. Custodial Interrogation Unnecessary: Investigation qua the applicant is complete, and no recovery remains pending.
-   B. Unblemished Antecedents: The applicant possesses deep roots in society with no prior criminal antecedents or propensity for flight.
-   C. Infringement of Personal Liberty: Continued pre-trial incarceration amounts to punitive detention prior to trial, violating Article 21 of the Constitution.
-
-PRAYER:
-It is respectfully prayed that this Court may be pleased to enlarge the applicant on regular bail in connection with the aforesaid FIR.
-
-COUNSEL FOR THE APPLICANT`;
+LESSOR: ________________________      LESSEE: ________________________`;
     }
 
     if (cleanType.includes('LEGAL NOTICE')) {
@@ -262,7 +149,7 @@ TO,
 [NAME & ADDRESS OF ADDRESSEE / OPPOSITE PARTY]
 __________________________________________________
 
-SUBJECT: STATUTORY LEGAL NOTICE FOR BREACH OF OBLIGATION, RECOVERY OF DUES, AND DAMAGES.
+SUBJECT: STATUTORY LEGAL NOTICE FOR BREACH OF OBLIGATION, RECOVERY, AND DAMAGES.${toneNote}
 
 DEAR SIR/MADAM,
 
@@ -271,20 +158,97 @@ Under express instructions from and on behalf of my client, [Client Name], resid
 1. FACTUAL BACKGROUND & GRIEVANCE:
    ${userPrompt.trim()}
 
-2. LEGAL LIABILITY:
-   Your acts constitute a clear breach of legal/contractual duty, rendering you liable for civil recovery and damages.
+2. LEGAL LIABILITY & WARNING:
+   Your acts constitute a clear breach of legal duty. You are hereby called upon to remit the full payable sum along with statutory compensation within **15 days** of receipt of this notice.
 
-3. FINAL CALL TO ACTION:
-   You are hereby called upon to comply with the demands and remit a sum of ₹________/- within **15 days** of receipt of this notice, failing which my client shall institute appropriate legal proceedings against you in a competent court of law at your sole risk, cost, and consequence.
+3. CONSEQUENCES OF NON-COMPLIANCE:
+   Failing compliance, my client shall institute rigorous civil recovery and criminal proceedings against you in a competent court of law at your sole risk as to costs and consequences.
 
 SINCERELY,
 
 COUNSEL FOR THE CLIENT`;
     }
 
-    // Default Elite Chamber Format
+    if (cleanType.includes('CONSUMER COMPLAINT')) {
+      return `IN THE DISTRICT CONSUMER DISPUTES REDRESSAL COMMISSION, ${jur.toUpperCase()}
+CONSUMER COMPLAINT NO. _____ OF 2026
+
+IN THE MATTER OF:
+[Complainant Name] ... COMPLAINANT
+VERSUS
+[Opposite Party / Manufacturer / Service Provider] ... OPPOSITE PARTY
+
+COMPLAINT UNDER SECTION 35 OF THE CONSUMER PROTECTION ACT, 2019 FOR DEFICIENCY IN SERVICE AND UNFAIR TRADE PRACTICE.${toneNote}
+
+THE COMPLAINANT RESPECTFULLY SUBMITS AS FOLLOWS:
+
+1. FACTUAL MATRIX & GRIEVANCE:
+   The Complainant purchased goods/services from the Opposite Party on [Date] for a total consideration of ₹________/-. Specific grievance details: ${userPrompt.trim()}
+
+2. DEFICIENCY IN SERVICE & UNFAIR TRADE PRACTICE:
+   The failure of the Opposite Party amounts to gross deficiency in service and unfair trade practice under Section 2(11) and 2(47) of the Consumer Protection Act, 2019, causing severe mental agony and financial loss.
+
+PRAYER:
+It is respectfully prayed that this Hon'ble Commission may direct the Opposite Party to refund ₹________/- with 18% interest, pay compensation of ₹________/- for harassment, and litigation costs.
+
+PLACE: ${jur.toUpperCase()}
+DATE: ${currentDate}
+
+COUNSEL FOR COMPLAINANT`;
+    }
+
+    if (cleanType.includes('WRITTEN STATEMENT')) {
+      return `IN THE COURT OF [CIVIL JUDGE / DISTRICT JUDGE], ${jur.toUpperCase()}
+CIVIL SUIT NO. _____ OF 2026
+
+IN THE MATTER OF:
+[Plaintiff Name] ... PLAINTIFF
+VERSUS
+[Defendant Name] ... DEFENDANT
+
+WRITTEN STATEMENT ON BEHALF OF THE DEFENDANT${toneNote}
+
+PRELIMINARY OBJECTIONS:
+1. Maintainability: The present suit is legally not maintainable and is liable to be dismissed.
+2. Specific Defense Instructions: ${userPrompt.trim()}
+
+PARA-WISE REPLY ON MERITS:
+All adverse averments, allegations, and claims made in the plaint are categorically denied unless specifically admitted herein. The answering Defendant maintains clean records and committed no breach.
+
+PRAYER:
+Dismiss the suit with exemplary costs in favor of the Defendant.
+
+PLACE: ${jur.toUpperCase()}
+DATE: ${currentDate}
+
+COUNSEL FOR THE DEFENDANT`;
+    }
+
+    if (cleanType.includes('ARBITRATION PETITION')) {
+      return `IN THE HIGH COURT OF JUDICATURE AT ${jur.toUpperCase()}
+ARBITRATION PETITION NO. _____ OF 2026
+
+IN THE MATTER OF:
+[Petitioner Company Name] ... PETITIONER
+VERSUS
+[Respondent Company Name] ... RESPONDENT
+
+PETITION UNDER SECTION 11 / SECTION 9 OF THE ARBITRATION AND CONCILIATION ACT, 1996${toneNote}
+
+THE PETITIONER RESPECTFULLY SUBMITS:
+1. EXISTENCE OF ARBITRATION AGREEMENT: The parties executed an agreement dated [Date] containing an arbitration clause for seat at ${jur.toUpperCase()}. Dispute details: ${userPrompt.trim()}
+2. INVOCATION & DEFAULT: The Petitioner invoked arbitration via notice, but Respondent failed to concur on arbitrator appointment within the statutory period.
+
+PRAYER:
+Appoint an independent Sole Arbitrator to adjudicate all pending commercial disputes.
+
+COUNSEL FOR THE PETITIONER`;
+    }
+
+    // Default Chamber Format
     return `MEMORANDUM OF ${cleanType}
 JURISDICTION: ${jur.toUpperCase()}
+TONE / PROFILE: ${tone.toUpperCase()}
 
 THE APPLICANT / PARTY RESPECTFULLY SUBMITS:
 
@@ -292,7 +256,7 @@ THE APPLICANT / PARTY RESPECTFULLY SUBMITS:
    ${userPrompt.trim()}
 
 2. STATUTORY FRAMEWORK & LEGAL SUBMISSIONS:
-   The rights, liabilities, and obligations of the parties stand governed by applicable statutory provisions, precedents, and rules of equity.
+   The rights, liabilities, and obligations of the parties stand governed by applicable statutory provisions and judicial precedents.
 
 3. PRAYER / OPERATIVE CLAUSE:
    Appropriate reliefs or covenants as detailed herein shall bind all participating parties.
@@ -342,6 +306,7 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
           prompt: prompt.trim(), 
           jurisdiction, 
           draftType, 
+          tone: selectedTone,
           matterId: activeMatter ? activeMatter.id : null 
         }),
       });
@@ -373,7 +338,7 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
       // Elite Chamber Engine Fallback
-      const eliteText = generateEliteChamberDraft(selectedType, prompt, jurisdiction);
+      const eliteText = generateEliteChamberDraft(selectedType, prompt, jurisdiction, selectedTone);
 
       let index = 0;
       const interval = setInterval(() => {
@@ -517,14 +482,44 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
 
         {/* Step 1: Draft Instructions Input */}
         <View style={styles.sectionBlock}>
-          <Text style={styles.sectionHeaderLabel}>1. INSTRUCTIONS & MATERIAL FACTS</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionHeaderLabel}>1. INSTRUCTIONS & MATERIAL FACTS</Text>
+            <Pressable 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowClauseDrawer(!showClauseDrawer);
+              }}
+              style={styles.clauseToggleBtn}
+            >
+              <Feather name="book-open" size={13} color="#C9A84C" />
+              <Text style={styles.clauseToggleText}>Clause Library</Text>
+            </Pressable>
+          </View>
+
+          {/* Clause Library Drawer */}
+          {showClauseDrawer && (
+            <View style={[styles.clauseDrawer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.clauseDrawerTitle, { color: colors.foreground }]}>Tap clause to insert into prompt:</Text>
+              {CLAUSE_LIBRARY.map((item, idx) => (
+                <Pressable 
+                  key={idx} 
+                  style={[styles.clauseItem, { borderBottomColor: colors.border }]}
+                  onPress={() => handleInsertClause(item.text)}
+                >
+                  <Text style={styles.clauseItemName}>{item.name}</Text>
+                  <Text style={[styles.clauseItemSnippet, { color: colors.mutedForeground }]} numberOfLines={1}>{item.text}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
           <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather name="edit-3" size={18} color={colors.mutedForeground} style={styles.queryIcon} />
             <TextInput
               style={[styles.queryInput, { color: colors.foreground }]}
               value={prompt}
               onChangeText={setPrompt}
-              placeholder="Provide names, rent/consideration amount, and key terms..."
+              placeholder="Provide names, amounts, grievance details, or specific clauses..."
               placeholderTextColor={colors.mutedForeground}
               multiline
               numberOfLines={4}
@@ -553,6 +548,28 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
               );
             })}
           </ScrollView>
+        </View>
+
+        {/* Step 3: Tone & Rhetoric Selection */}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionHeaderLabel}>3. DRAFTING TONE & AGGRESSIVENESS</Text>
+          <View style={styles.toneRow}>
+            {TONE_OPTIONS.map((tone) => {
+              const isSelected = selectedTone === tone;
+              return (
+                <Pressable
+                  key={tone}
+                  style={[
+                    styles.toneChip,
+                    { backgroundColor: isSelected ? 'rgba(201, 168, 76, 0.2)' : colors.card, borderColor: isSelected ? '#C9A84C' : colors.border },
+                  ]}
+                  onPress={() => setSelectedTone(tone)}
+                >
+                  <Text style={[styles.toneChipText, { color: isSelected ? '#C9A84C' : colors.mutedForeground }]}>{tone}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* Jurisdiction Details */}
@@ -652,7 +669,17 @@ const styles = StyleSheet.create({
   matterName: { fontSize: 13, fontFamily: 'Inter_700Bold', marginTop: 1 },
 
   sectionBlock: { marginBottom: 20 },
-  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 10 },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2 },
+  clauseToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 6, backgroundColor: 'rgba(201, 168, 76, 0.1)' },
+  clauseToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C' },
+
+  clauseDrawer: { borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 12 },
+  clauseDrawerTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginBottom: 8 },
+  clauseItem: { paddingVertical: 8, borderBottomWidth: 1 },
+  clauseItemName: { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#C9A84C' },
+  clauseItemSnippet: { fontFamily: 'Inter_400Regular', fontSize: 11, marginTop: 2 },
+
   queryWrapper: {
     flexDirection: 'row', borderRadius: 12, borderWidth: 1,
     padding: 14, alignItems: 'flex-start',
@@ -665,6 +692,11 @@ const styles = StyleSheet.create({
   horizontalChipsContainer: { gap: 8 },
   chip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1 },
   chipText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
+
+  toneRow: { flexDirection: 'row', gap: 8 },
+  toneChip: { flex: 1, paddingVertical: 8, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
+  toneChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, textAlign: 'center' },
+
   jurisdictionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   jurisdictionText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   researchBtn: {
