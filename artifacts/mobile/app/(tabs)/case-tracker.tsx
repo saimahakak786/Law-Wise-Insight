@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 
 // Import custom components
 import Card from '../../components/Card';
@@ -19,7 +20,7 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
-    shouldSetBadge: false,
+    shouldSetBadge: true,
   }),
 });
 
@@ -34,6 +35,7 @@ export default function CauseListScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { jurisdiction } = useApp();
+  const router = useRouter();
 
   const [judgeName, setJudgeName] = useState('');
   const [caseTitle, setCaseTitle] = useState('');
@@ -43,11 +45,36 @@ export default function CauseListScreen() {
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
 
-  // Load saved matters and request permissions on mount
+  // Load saved matters, setup notification channels, and handle notification taps on mount
   useEffect(() => {
     requestNotificationPermissions();
     loadStoredMatters();
+    setupAndroidNotificationChannel();
+
+    // Listen for notification taps to bring user into the app without dismissing notification prematurely
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      // Handle navigation when notification is tapped
+      console.log('Notification tapped with data:', data);
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
+
+  const setupAndroidNotificationChannel = async () => {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('cause-list-reminders', {
+        name: 'Cause List & Deadline Reminders',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#C9A84C',
+        sound: 'default',
+        enableVibrate: true,
+      });
+    }
+  };
 
   const requestNotificationPermissions = async () => {
     try {
@@ -134,11 +161,14 @@ export default function CauseListScreen() {
               content: {
                 title: `⚖️ ${selectedEventType} Reminder`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — Due: ${hearingDate}`,
-                sound: true,
+                sound: 'default',
+                priority: Notifications.AndroidNotificationPriority.HIGH,
+                data: { caseTitle, hearingDate },
               },
               trigger: {
                 type: Notifications.SchedulableTriggerInputTypes.DATE,
                 date: reminderTime,
+                channelId: 'cause-list-reminders',
               },
             });
           }
@@ -168,7 +198,7 @@ export default function CauseListScreen() {
       setSelectedEventType('Hearing');
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', `${selectedEventType} deadline tracked! 24-hour notification scheduled.`);
+      Alert.alert('Success', `${selectedEventType} deadline tracked! 24-hour notification with alert sound scheduled.`);
     } catch (error) {
       console.error('Error adding matter:', error);
       Alert.alert('Error', 'Could not save compliance entry.');
