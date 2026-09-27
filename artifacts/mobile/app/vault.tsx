@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  TextInput, FlatList, Platform, Alert,
+  TextInput, Platform, Alert,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,11 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import Purchases from 'react-native-purchases';
+
+import UpgradeModal from '../../components/UpgradeModal';
+
+const FREE_VAULT_LIMIT = 5;
 
 export default function VaultScreen() {
   const colors = useColors();
@@ -19,10 +24,13 @@ export default function VaultScreen() {
 
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedDoc, setSelectedDoc] = useState<StoredDocument | null>(null);
+  
+  // Paywall state for vault storage limit
+  const [isPro, setIsPro] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
-  // Filter documents by search text or active matter if desired
   const filteredDocs = savedDocuments.filter((doc) => {
     const matchesSearch = doc.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
                           doc.content.toLowerCase().includes(searchFilter.toLowerCase());
@@ -45,6 +53,12 @@ export default function VaultScreen() {
     }
   };
 
+  const handleUpgradeCheck = () => {
+    if (!isPro && savedDocuments.length >= FREE_VAULT_LIMIT) {
+      setShowUpgradeModal(true);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -61,6 +75,29 @@ export default function VaultScreen() {
             Secure repository of all saved research memos, drafts, and client filings.
           </Text>
         </View>
+
+        {/* Free Tier Storage Notice Banner */}
+        {!isPro && (
+          <Pressable 
+            style={[styles.storageBanner, { backgroundColor: colors.card, borderColor: '#C9A84C40' }]}
+            onPress={() => {
+              if (savedDocuments.length >= FREE_VAULT_LIMIT) setShowUpgradeModal(true);
+            }}
+          >
+            <Feather name="shield" size={16} color="#C9A84C" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.storageBannerTitle, { color: colors.foreground }]}>
+                Vault Storage: {savedDocuments.length} / {FREE_VAULT_LIMIT} Free Slots Used
+              </Text>
+              <Text style={[styles.storageBannerSub, { color: colors.mutedForeground }]}>
+                {savedDocuments.length >= FREE_VAULT_LIMIT 
+                  ? 'Free limit reached! Tap to upgrade for unlimited vault space.' 
+                  : 'Upgrade to Pro for unlimited document archiving.'}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={16} color="#C9A84C" />
+          </Pressable>
+        )}
 
         {/* Active Matter Context Indicator */}
         {activeMatter && (
@@ -174,6 +211,17 @@ export default function VaultScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Upgrade Modal for Vault Limit */}
+      <UpgradeModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onSubscribe={() => {
+          setIsPro(true);
+          setShowUpgradeModal(false);
+          Alert.alert('Unlocked!', 'Your LawVise Pro session is active. Enjoy unlimited Vault storage.');
+        }}
+      />
     </View>
   );
 }
@@ -185,6 +233,10 @@ const styles = StyleSheet.create({
   screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   
+  storageBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 10, borderWidth: 1, marginBottom: 16 },
+  storageBannerTitle: { fontFamily: 'Inter_700Bold', fontSize: 13, marginBottom: 2 },
+  storageBannerSub: { fontFamily: 'Inter_400Regular', fontSize: 11 },
+
   matterNotice: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 16 },
   matterNoticeText: { fontFamily: 'Inter_400Regular', fontSize: 12, flex: 1 },
 
