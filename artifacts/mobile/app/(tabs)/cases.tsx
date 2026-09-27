@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, Pressable, FlatList, StyleSheet,
   Modal, TextInput, ScrollView, ActivityIndicator,
@@ -13,6 +13,9 @@ import {
   getGetCasesQueryKey,
 } from '@workspace/api-client-react';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const CASES_STORAGE_KEY = '@lawwise_cases_portfolio';
 
 type CaseStatus = 'active' | 'pending' | 'closed' | 'won' | 'lost';
 
@@ -131,6 +134,34 @@ export default function CasesScreen() {
   const [localCases, setLocalCases] = useState<CaseItem[]>(MOCK_FALLBACK_CASES);
   const [useLocalFallback, setUseLocalFallback] = useState(false);
 
+  // Load local cases from AsyncStorage on mount
+  useEffect(() => {
+    loadStoredCases();
+  }, []);
+
+  const loadStoredCases = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(CASES_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setLocalCases(parsed);
+        }
+      }
+    } catch (e) {
+      console.log('Failed to load local case records', e);
+    }
+  };
+
+  const persistLocalCases = async (updatedList: CaseItem[]) => {
+    try {
+      setLocalCases(updatedList);
+      await AsyncStorage.setItem(CASES_STORAGE_KEY, JSON.stringify(updatedList));
+    } catch (e) {
+      console.log('Failed to save local case records', e);
+    }
+  };
+
   const cases = (remoteError || !remoteCases || useLocalFallback) ? localCases : remoteCases;
   const isLoading = remoteLoading && !useLocalFallback && !remoteCases;
 
@@ -199,7 +230,9 @@ export default function CasesScreen() {
           await updateCase.mutateAsync({ id: String(editingId), data: payload });
           invalidate();
         } catch {
-          setLocalCases(prev => prev.map(c => c.id === editingId ? { ...c, ...payload } : c));
+          // Fallback to updating local storage state
+          const updated = localCases.map(c => c.id === editingId ? { ...c, ...payload } : c);
+          await persistLocalCases(updated);
           setUseLocalFallback(true);
         }
       } else {
@@ -207,11 +240,13 @@ export default function CasesScreen() {
           await createCase.mutateAsync({ data: payload });
           invalidate();
         } catch {
+          // Fallback to saving new item in local storage state
           const newCase: CaseItem = {
             id: Date.now(),
             ...payload,
           };
-          setLocalCases(prev => [newCase, ...prev]);
+          const updated = [newCase, ...localCases];
+          await persistLocalCases(updated);
           setUseLocalFallback(true);
         }
       }
@@ -233,7 +268,8 @@ export default function CasesScreen() {
             await deleteCase.mutateAsync({ id: String(id) });
             invalidate();
           } catch {
-            setLocalCases(prev => prev.filter(c => c.id !== id));
+            const updated = localCases.filter(c => c.id !== id);
+            await persistLocalCases(updated);
             setUseLocalFallback(true);
           }
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -412,9 +448,9 @@ export default function CasesScreen() {
               <Text style={[styles.modalCancel, { color: colors.mutedForeground }]}>Cancel</Text>
             </Pressable>
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>{editingId ? 'Edit Case Record' : 'New Case Record'}</Text>
-            <Pressable onPress={handleSave} disabled={!form.title.trim() || createCase.isPending || updateCase.isPending}>
+            <Pressable onPress={handleSave} disabled={!form.title.trim()}>
               <Text style={[styles.modalSave, { color: form.title.trim() ? '#C9A84C' : colors.mutedForeground }]}>
-                {createCase.isPending || updateCase.isPending ? 'Saving...' : 'Save'}
+                Save
               </Text>
             </Pressable>
           </View>
