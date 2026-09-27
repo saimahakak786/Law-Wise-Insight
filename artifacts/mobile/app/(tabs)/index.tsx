@@ -19,7 +19,6 @@ const QUICK_ACTIONS = [
   { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat' },
   { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/clientintake' },
   { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/cause' },
-
   { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft' },
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
   { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research' },
@@ -38,7 +37,6 @@ const MOCK_FALLBACK_CASES = [
   { id: 3, title: 'Verma Employment Arbitration', status: 'active', nextHearing: 'Sep 18, 11:00 AM' },
 ];
 
-// Max duration limit per dictation session (2 minutes = 120 seconds)
 const MAX_RECORDING_SECONDS = 120;
 
 export default function HomeScreen() {
@@ -57,7 +55,6 @@ export default function HomeScreen() {
   const recentDocs = documents?.slice(0, 3) ?? [];
   const activeCases = cases?.filter((c: any) => c.status === 'active') ?? [];
 
-  // Voice Dictation & Structuring States
   const [isRecording, setIsRecording] = useState(false);
   const [isFormatting, setIsFormatting] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -167,7 +164,6 @@ export default function HomeScreen() {
     Alert.alert('Success', 'Structured brief securely logged to your case files.');
   };
 
-  // Quick Action Handler - Navigates directly, letting target screens manage their own trial states
   const handleQuickActionPress = (action: typeof QUICK_ACTIONS[0]) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(action.route as any);
@@ -203,6 +199,35 @@ export default function HomeScreen() {
 
       {/* Jurisdiction Selector */}
       <JurisdictionSelector />
+
+      {/* 🌟 FACT MATCHER FEATURE HERO CARD (MAIN FEATURE) */}
+      <LinearGradient
+        colors={['#241B0F', '#120D07', '#1F170A']}
+        style={styles.factMatcherHeroCard}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.factMatcherHeroLeft}>
+          <View style={styles.badgeRow}>
+            <View style={styles.livePulseDot} />
+            <Text style={styles.factMatcherBadgeText}>CORE FEATURE</Text>
+          </View>
+          <Text style={styles.factMatcherTitle}>AI Fact Matcher</Text>
+          <Text style={styles.factMatcherSub}>Cross-examine witness statements against case evidence & uncover factual contradictions instantly.</Text>
+          <Pressable
+            style={styles.factMatcherBtn}
+            onPress={() => { 
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); 
+              router.push('/(tabs)/factmatcher' as any); 
+            }}
+          >
+            <Feather name="git-merge" size={15} color="#070D24" />
+            <Text style={styles.factMatcherBtnText}>Launch Fact Matcher</Text>
+          </Pressable>
+        </View>
+        <View style={styles.factMatcherIconContainer}>
+          <Feather name="layers" size={40} color="#C9A84C" />
+        </View>
+      </LinearGradient>
 
       {/* Hero Banner */}
       <LinearGradient
@@ -457,6 +482,23 @@ const styles = StyleSheet.create({
   name: { fontFamily: 'Inter_700Bold', fontSize: 22 },
   avatarBadge: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#070D24' },
+  
+  // Fact Matcher Hero Card Styles
+  factMatcherHeroCard: {
+    marginHorizontal: 20, borderRadius: 16, padding: 20,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 16, borderWidth: 1, borderColor: '#C9A84C55',
+  },
+  factMatcherHeroLeft: { flex: 1, paddingRight: 10 },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  livePulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#C9A84C' },
+  factMatcherBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 10, color: '#C9A84C', letterSpacing: 1.2 },
+  factMatcherTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#FFFFFF', marginBottom: 6 },
+  factMatcherSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#D1D5DB', marginBottom: 14, lineHeight: 17 },
+  factMatcherBtn: { backgroundColor: '#C9A84C', borderRadius: 8, paddingVertical: 9, paddingHorizontal: 14, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  factMatcherBtnText: { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#070D24' },
+  factMatcherIconContainer: { width: 64, height: 64, borderRadius: 16, backgroundColor: '#C9A84C15', borderWidth: 1, borderColor: '#C9A84C33', alignItems: 'center', justifyContent: 'center' },
+
   heroBanner: {
     marginHorizontal: 20, borderRadius: 16, padding: 20,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16,
