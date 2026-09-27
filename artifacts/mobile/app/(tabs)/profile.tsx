@@ -49,7 +49,7 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Feather name="user-check" size={22} color="#C9A84C" />
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Account & Settings</Text>
+          <Text style={[styles.headerTitle, { color: colors.title }]}>Account & Settings</Text>
         </View>
         <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
           Manage your professional counsel credentials and app preferences.
@@ -141,14 +141,14 @@ export default function ProfileScreen() {
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>About LawVise</Text>
+            <Text style={[styles.modalTitle, { color: colors.title }]}>About LawVise</Text>
             <Pressable onPress={() => setShowAboutUsModal(false)} style={styles.closeBtn}>
               <Feather name="x" size={22} color={colors.foreground} />
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
             <View style={styles.aboutBanner}>
-              <Feather name=" Compass" size={36} color="#C9A84C" style={{ marginBottom: 12 }} />
+              <Feather name="compass" size={36} color="#C9A84C" style={{ marginBottom: 12 }} />
               <Text style={[styles.termsHeading, { color: colors.foreground, textAlign: 'center', fontSize: 18 }]}>
                 Empowering Modern Legal Practice
               </Text>
@@ -164,11 +164,13 @@ export default function ProfileScreen() {
 
             <Text style={[styles.termsHeading, { color: colors.foreground, marginTop: 20 }]}>Core Capabilities</Text>
             <Text style={[styles.termsText, { color: colors.mutedForeground, lineHeight: 22 }]}>
+              • <Text style={{ fontFamily: 'Inter_700Bold', color: colors.foreground }}>Voice Dictation:</Text> Real-time speech-to-text dictation for seamless courtroom notes and rapid brief dictation.{'\n'}
+              • <Text style={{ fontFamily: 'Inter_700Bold', color: colors.foreground }}>Client Intake:</Text> Structured onboarding workflows to capture client credentials and case files instantly.{'\n'}
+              • <Text style={{ fontFamily: 'Inter_700Bold', color: colors.foreground }}>Drafting:</Text> AI-powered legal document generation tailored to multi-jurisdictional frameworks.{'\n'}
+              • <Text style={{ fontFamily: 'Inter_700Bold', color: colors.foreground }}>Analyze:</Text> Deep case law and precedent analysis providing instant insights and risk assessment.{'\n'}
               • Instant Fact Matching & Precedent Search{'\n'}
-              • Multi-Jurisdiction Limitation & Deadline Engine{'\n'}
               • Secure Encrypted Client Document Vault{'\n'}
-              • Cause List & Hearing Schedule Tracking{'\n'}
-              • AI-Powered Legal Document Drafting
+              • Cause List & Hearing Schedule Tracking
             </Text>
           </ScrollView>
         </View>
@@ -183,7 +185,7 @@ export default function ProfileScreen() {
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Privacy & Terms</Text>
+            <Text style={[styles.modalTitle, { color: colors.title }]}>Privacy & Terms</Text>
             <Pressable onPress={() => setShowTermsModal(false)} style={styles.closeBtn}>
               <Feather name="x" size={22} color={colors.foreground} />
             </Pressable>
@@ -216,7 +218,7 @@ export default function ProfileScreen() {
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Select Payment Method</Text>
+            <Text style={[styles.modalTitle, { color: colors.title }]}>Select Payment Method</Text>
             <Pressable onPress={() => setShowPaywallModal(false)} style={styles.closeBtn}>
               <Feather name="x" size={22} color={colors.foreground} />
             </Pressable>
