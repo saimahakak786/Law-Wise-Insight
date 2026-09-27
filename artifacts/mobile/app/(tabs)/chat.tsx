@@ -26,6 +26,50 @@ const SUGGESTIONS = [
   'What is the limitation period for a cheque bounce case?',
 ];
 
+// Helper parser to format markdown (## headings, bold text, lists) cleanly in React Native text
+const renderFormattedContent = (content: string, textColor: string) => {
+  const lines = content.split('\n');
+  return lines.map((line, lineIndex) => {
+    let trimmed = line.trim();
+    let isHeader = false;
+    let isBullet = false;
+
+    if (trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
+      isHeader = true;
+      trimmed = trimmed.replace(/^#+\s*/, '');
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
+      isBullet = true;
+      trimmed = trimmed.replace(/^[-•]\s*/, '• ');
+    }
+
+    // Split inline bold tags (**text**)
+    const parts = trimmed.split(/(\*\*.*?\*\*)/g);
+
+    return (
+      <Text
+        key={lineIndex}
+        style={[
+          isHeader ? styles.mdHeader : isBullet ? styles.mdBullet : styles.mdLine,
+          { color: textColor },
+          isHeader && { color: '#C9A84C' }, // Give headers a nice accent tint or keep primary color
+        ]}
+      >
+        {parts.map((part, partIndex) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return (
+              <Text key={partIndex} style={{ fontFamily: 'Inter_700Bold', color: textColor }}>
+                {part.slice(2, -2)}
+              </Text>
+            );
+          }
+          return part;
+        })}
+        {lineIndex < lines.length - 1 ? '\n' : ''}
+      </Text>
+    );
+  });
+};
+
 export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -96,15 +140,15 @@ export default function ChatScreen() {
       const id = streamingIdRef.current;
       const lowerQuery = text.toLowerCase();
       let mockReply = `Under ${jurisdiction} jurisdiction, your query regarding "${text}" involves established statutory guidelines and judicial principles.\n\n` +
-        `1. PRIMARY LEGAL POSITION:\nStatutory frameworks protect individual rights while balancing compliance standards, documentation, and formal procedures.\n\n` +
-        `2. RECOMMENDED STEPS:\n- Maintain detailed records and written notices.\n- Consult qualified counsel if formal dispute resolution or litigation becomes necessary.\n\n` +
+        `## 1. PRIMARY LEGAL POSITION\nStatutory frameworks protect individual rights while balancing compliance standards, documentation, and formal procedures.\n\n` +
+        `## 2. RECOMMENDED STEPS\n- Maintain detailed records and written notices.\n- Consult qualified counsel if formal dispute resolution or litigation becomes necessary.\n\n` +
         `(Note: Simulated via LawVise Secure Offline Assistant)`;
 
       if (lowerQuery.includes('tenant')) {
         mockReply = `As a tenant under ${jurisdiction} law, your rights include:\n\n` +
-          `1. Right to peaceful enjoyment and essential services.\n` +
-          `2. Protection against arbitrary eviction without proper statutory notice.\n` +
-          `3. Right to a formal written lease agreement detailing rent terms and security deposit refund policies.\n\n` +
+          `• Right to peaceful enjoyment and essential services.\n` +
+          `• Protection against arbitrary eviction without proper statutory notice.\n` +
+          `• Right to a formal written lease agreement detailing rent terms and security deposit refund policies.\n\n` +
           `Always ensure your rent receipts are documented.`;
       } else if (lowerQuery.includes('consumer')) {
         mockReply = `To file a consumer complaint in ${jurisdiction}:\n\n` +
@@ -155,10 +199,10 @@ export default function ChatScreen() {
               <ActivityIndicator size="small" color="#C9A84C" />
               <Text style={[styles.typingText, { color: colors.mutedForeground }]}>Thinking...</Text>
             </View>
+          ) : isUser ? (
+            <Text style={[styles.bubbleText, { color: '#070D24' }]}>{item.content}</Text>
           ) : (
-            <Text style={[styles.bubbleText, { color: isUser ? '#070D24' : colors.foreground }]}>
-              {item.content}
-            </Text>
+            renderFormattedContent(item.content, colors.foreground)
           )}
         </View>
       </View>
@@ -175,7 +219,7 @@ export default function ChatScreen() {
           <Feather name="shield" size={20} color="#C9A84C" />
         </View>
         <View>
-          <Text style={styles.headerTitle}>LawVise AI</Text>
+          <Text style={[styles.headerTitle, { color: colors.title }]}>LawVise AI</Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Legal Assistant • {jurisdiction}</Text>
         </View>
         <View style={[styles.onlineDot]} />
@@ -198,7 +242,7 @@ export default function ChatScreen() {
             <View style={styles.emptyIcon}>
               <Feather name="shield" size={40} color="#C9A84C" />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Ask LawVise</Text>
+            <Text style={[styles.emptyTitle, { color: colors.title }]}>Ask LawVise</Text>
             <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
               Get instant AI-powered legal guidance on your rights, laws, and legal procedures
             </Text>
@@ -253,7 +297,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20,
     paddingBottom: 14, borderBottomWidth: 1,
   },
-  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#FFFFFF' },
+  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
   headerSub: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 1 },
   aiAvatarLarge: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#C9A84C18', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#C9A84C40' },
   onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E', marginLeft: 'auto' },
@@ -265,6 +309,9 @@ const styles = StyleSheet.create({
   userBubble: { backgroundColor: '#C9A84C', borderBottomRightRadius: 4 },
   aiBubble: { borderBottomLeftRadius: 4 },
   bubbleText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 21 },
+  mdHeader: { fontFamily: 'Inter_700Bold', fontSize: 14, lineHeight: 22, marginTop: 6, marginBottom: 2 },
+  mdBullet: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 21, paddingLeft: 4 },
+  mdLine: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 21 },
   typingDots: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   typingText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
