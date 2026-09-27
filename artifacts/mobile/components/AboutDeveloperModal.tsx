@@ -26,14 +26,14 @@ export default function DeveloperModal({ visible, onClose }: DeveloperModalProps
             <Feather name="shield" size={20} color="#C9A84C" />
           </View>
 
-          <Text style={styles.modalTitle}>About Developer</Text>
+          <Text style={[styles.modalTitle, { color: colors.title }]}>About Developer</Text>
 
-          {/* High-Standard Compact Name Formatting */}
+          {/* High-Standard Compact Name Formatting (Standard Text Color) */}
           <View style={styles.developerInfoBox}>
             <Text style={[styles.developerName, { color: colors.foreground }]}>
-              Developed by <Text style={styles.highlightName}>Adv. Saima Hakak</Text>
+              Developed by <Text style={[styles.highlightName, { color: colors.foreground }]}>Adv. Saima Hakak</Text>
             </Text>
-            <Text style={[styles.firmSubText, { color: '#C9A84C' }]}>Saima Hakak & Associates</Text>
+            <Text style={[styles.firmSubText, { color: colors.mutedForeground }]}>Saima Hakak & Associates</Text>
           </View>
 
           <Text style={[styles.developerBio, { color: colors.mutedForeground }]}>
@@ -90,7 +90,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontFamily: 'Inter_700Bold',
     fontSize: 16,
-    color: '#FFFFFF',
     marginBottom: 16,
     letterSpacing: 0.5,
   },
@@ -105,7 +104,6 @@ const styles = StyleSheet.create({
   },
   highlightName: {
     fontFamily: 'Inter_700Bold',
-    color: '#C9A84C',
   },
   firmSubText: {
     fontFamily: 'Inter_600SemiBold',
