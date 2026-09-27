@@ -51,17 +51,23 @@ export default function CauseListScreen() {
     loadStoredMatters();
     setupAndroidNotificationChannel();
 
-    // Listen for notification taps to bring user into the app without dismissing notification prematurely
+    // Listen for notification taps to bring user into the app and navigate via router
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
-      // Handle navigation when notification is tapped
       console.log('Notification tapped with data:', data);
+      
+      // Navigate to the app screen when tapped
+      try {
+        router.push('/(tabs)');
+      } catch (err) {
+        console.log('Navigation routing error:', err);
+      }
     });
 
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [router]);
 
   const setupAndroidNotificationChannel = async () => {
     if (Platform.OS === 'android') {
