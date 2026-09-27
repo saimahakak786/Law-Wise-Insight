@@ -86,72 +86,68 @@ export default function DraftScreen() {
     }
   };
 
-  // 🏛️ COMPREHENSIVE COMMERCIAL & LITIGATION DRAFTING ENGINE
-  const generateComprehensiveDraft = (type: string, userPrompt: string, jur: string) => {
+  // 🏛️ ELITE CHAMBER-GRADE DRAFTING ENGINE (Modeled after Senior Counsel Drafting)
+  const generateEliteChamberDraft = (type: string, userPrompt: string, jur: string) => {
     const cleanType = type.toUpperCase();
     const currentDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
     if (cleanType.includes('RENT DEED')) {
-      return `RENT DEED / AGREEMENT
-DATE: ${currentDate}
-PLACE: ${jur.toUpperCase()}
+      return `THIS RENT DEED is made and executed on this ______ day of ____________, 2026 at ${jur.toUpperCase()}, by and between:
 
-This Rent Deed is made and executed on this day by and between:
-
-LESSOR / LANDLORD: 
-[Name], residing at ___________________________ (hereinafter referred to as the "Lessor", which expression shall unless repugnant to the context include heirs, legal representatives, and assigns) of the FIRST PART;
+1. LESSOR: 
+[Name], S/o / W/o [Father's/Spouse's Name], residing at __________________________________________________ (hereinafter called the "LESSOR", which expression shall unless repugnant to the context include his/her heirs, legal representatives, executors, and administrators) of the FIRST PART;
 
 AND
 
-LESSEE / TENANT:
-[Name], residing at ___________________________ (hereinafter referred to as the "Lessee", which expression shall include successors and permitted assigns) of the SECOND PART.
+2. LESSEE: 
+[Name], S/o / W/o [Father's/Spouse's Name], residing at __________________________________________________ (hereinafter called the "LESSEE", which expression shall unless repugnant to the context include his/her heirs, legal representatives, successors, and permitted assigns) of the SECOND PART.
 
-WHEREAS the Lessor is the absolute owner and in lawful possession of the residential/commercial premises situated at ________________________ (hereinafter referred to as the "Demised Premises").
+WHEREAS the Lessor is the absolute owner and in lawful physical possession of the residential/commercial premises bearing property address ________________________________________ (hereinafter referred to as the "Demised Premises").
 
-AND WHEREAS the Lessee has approached the Lessor for taking the Demised Premises on rent, and the Lessor has agreed to let out the same subject to the following terms and conditions:
+AND WHEREAS the Lessee has approached the Lessor to take the Demised Premises on monthly rent for residential/commercial use, and the Lessor has agreed to let out the same on the following terms and conditions:
 
-1. TENANCY PERIOD & COMMENCEMENT:
-   The tenancy shall commence from _________ for an initial lock-in period of 11 months, renewable mutually upon agreed rent escalation. Specific terms provided: ${userPrompt.trim()}
+1. TERM OF TENANCY:
+   The tenancy shall commence with effect from ____________ for an initial locked-in period of 11 (eleven) months, subject to extension upon mutual written consent of both parties with an agreed rent escalation clause. Specific instructions provided: ${userPrompt.trim()}
 
-2. RENT & PAYMENT TERMS:
-   The monthly rent shall be ₹________/- (Rupees ________________ Only), payable in advance on or before the 7th day of each English calendar month.
+2. RENT & MODE OF PAYMENT:
+   The Lessee shall pay a monthly rent of ₹________/- (Rupees ________________________________________________ Only) in advance on or before the 7th day of each calendar month directly into the designated bank account of the Lessor.
 
 3. INTEREST-FREE SECURITY DEPOSIT:
-   The Lessee has paid an interest-free refundable security deposit of ₹________/- to the Lessor, refundable at the time of vacating the premises after adjusting any outstanding utility bills or property damages.
+   The Lessee has deposited an interest-free refundable security deposit of ₹________/- (Rupees ________________________________________________ Only) with the Lessor, which shall be refunded at the time of vacating the Demised Premises, subject to deduction of unpaid utility dues or structural damages beyond normal wear and tear.
 
 4. UTILITIES & MAINTENANCE:
-   Electricity and water charges shall be borne by the Lessee strictly in accordance with sub-meter readings. Maintenance charges shall be paid directly to the society/authorities.
+   Electricity and water bills shall be paid regularly by the Lessee based on sub-meter readings. Maintenance charges, if any, shall be borne directly by the Lessee.
 
-5. TERMINATION CLAUSE:
-   Either party may terminate this agreement by giving 1 (one) month prior written notice to the other party.
+5. TERMINATION AND DEFAULT:
+   Either party may terminate this agreement by serving 1 (one) month prior written notice. Default in rent payment for two consecutive months shall entitle the Lessor to immediate eviction and re-entry.
 
-IN WITNESS WHEREOF, the parties have signed this Rent Deed on the date first above written in the presence of witnesses.
+IN WITNESS WHEREOF, the parties hereto have signed this Rent Deed on the day, month, and year first above written in the presence of the following witnesses:
 
 LESSOR: ________________________      LESSEE: ________________________
 
 WITNESSES:
-1. ______________________
-2. ______________________`;
+1. Name: _____________________        2. Name: _____________________
+   Address: __________________           Address: __________________`;
     }
 
     if (cleanType.includes('LEASE DEED')) {
-      return `COMMERCIAL LEASE DEED
+      return `REGISTERED COMMERCIAL LEASE DEED
 DATE: ${currentDate}
 JURISDICTION: ${jur.toUpperCase()}
 
-THIS REGISTERED LEASE DEED is made between:
-LESSOR: [Name/Company Name], having its registered office at ___________________________ (First Part);
+THIS LEASE DEED is executed at ${jur.toUpperCase()} by and between:
+M/S [LESSOR ENTITY NAME], having its registered office at __________________________________________________ (hereinafter referred to as the "LESSOR");
 AND
-LESSEE: [Name/Company Name], having its principal office at ___________________________ (Second Part).
+M/S [LESSEE ENTITY NAME], having its corporate office at __________________________________________________ (hereinafter referred to as the "LESSEE").
 
-TERMS OF LEASE & COVENANTS:
-1. PROPERTY DESCRIPTION: The Lessor hereby demises to the Lessee the commercial space measuring approx. _____ sq. ft. located at ________________________.
-2. CORE INSTRUCTIONS & COVENANTS: ${userPrompt.trim()}
-3. LEASE TERM: The lease shall be valid for a period of _____ years, commencing from _________ with an escalation clause of _____% every year.
-4. RENT & GST: The monthly lease rent is fixed at ₹________/- plus applicable GST.
-5. MAINTENANCE & INDEMNITY: Lessee shall maintain the premises in pristine condition and indemnify Lessor against third-party claims arising from internal business operations.
+COVENANTS OF LEASE:
+1. PROPERTY & AREA: Demised commercial space measuring approximately _____ sq. ft., situated at ________________________________________.
+2. CORE COMMERCIAL TERMS: ${userPrompt.trim()}
+3. LEASE TENURE & ESCALATION: Valid for a term of _____ years commencing from _________, with a standard _____% escalation on the base rent at the end of every block of 12 months.
+4. RENT & APPLICABLE TAXES: Monthly lease rent fixed at ₹________/- plus applicable Goods and Services Tax (GST).
+5. INDEMNITY & COVENANTS: The Lessee covenants to maintain statutory compliances, fire safety norms, and hold the Lessor harmless from third-party operational claims.
 
-IN WITNESS WHEREOF, authorized signatories have executed this Deed.
+IN WITNESS WHEREOF, authorized representatives have executed this Deed.
 
 LESSOR (SIGNATURE & SEAL)                LESSEE (SIGNATURE & SEAL)`;
     }
@@ -161,20 +157,20 @@ LESSOR (SIGNATURE & SEAL)                LESSEE (SIGNATURE & SEAL)`;
 DATE: ${currentDate}
 PLACE: ${jur.toUpperCase()}
 
-THIS DEED OF SALE is executed on this day by and between:
-VENDOR (SELLER): [Name], aged about ___ years, residing at ___________________________ (First Part);
+THIS DEED OF ABSOLUTE SALE is made and executed by:
+VENDOR: [Name], S/o ____________________, aged about ___ years, residing at __________________________________________________ (First Part);
 AND
-VENDEE (PURCHASER): [Name], aged about ___ years, residing at ___________________________ (Second Part).
+VENDEE: [Name], S/o ____________________, aged about ___ years, residing at __________________________________________________ (Second Part).
 
-WHEREAS the Vendor is the absolute and undisputed owner of the immovable property bearing ________________________.
+WHEREAS the Vendor is the absolute owner, seized and possessed of the immovable property bearing __________________________________________________, having acquired the same through registered title deeds.
 
 NOW THIS DEED WITNESSETH AS FOLLOWS:
-1. SALE CONSIDERATION: In consideration of the total agreed sale price of ₹________/- (Rupees ________________ Only) paid by the Vendee to the Vendor, the receipt whereof the Vendor acknowledges.
-2. SPECIFIC COVENANTS & PROPERTY DETAILS: ${userPrompt.trim()}
-3. TRANSFER OF TITLE & POSSESSION: The Vendor hereby transfers, assigns, and conveys all absolute ownership rights, title, and physical vacant possession of the said property to the Vendee.
-4. INDEMNITY & ENCUMBRANCE: The Vendor declares that the property is free from all encumbrances, mortgages, liens, or litigation, and undertakes to indemnify the Vendee against any future title defects.
+1. CONSIDERATION: In consideration of the total sum of ₹________/- (Rupees ________________________________________________ Only) paid by the Vendee to the Vendor, receipt of which is hereby acknowledged by the Vendor.
+2. PROPERTY DETAILS & INSTRUCTIONS: ${userPrompt.trim()}
+3. CONVEYANCE & TITLE TRANSFER: The Vendor hereby grants, conveys, transfers, and assigns absolute ownership, title, and vacant physical possession of the schedule property to the Vendee.
+4. COVENANT OF TITLE: The Vendor declares that the property is free from all encumbrances, charges, mortgages, liens, prior sales, or attachments, and undertakes to indemnify the Vendee against any subsequent loss arising from title defects.
 
-IN WITNESS WHEREOF, the parties have signed this Sale Deed in the presence of attesting witnesses.
+IN WITNESS WHEREOF, the Vendor and Vendee have set their hands to this Sale Deed in the presence of attesting witnesses.
 
 VENDOR: ________________________      VENDEE: ________________________`;
     }
@@ -184,15 +180,15 @@ VENDOR: ________________________      VENDEE: ________________________`;
 DATE: ${currentDate}
 JURISDICTION: ${jur.toUpperCase()}
 
-KNOW ALL MEN BY THESE PRESENTS that I, [Principal Name], residing at ___________________________, do hereby appoint, constitute, and empower [Attorney Name], residing at ___________________________, as my lawful Attorney to act on my behalf for the following specific acts and deeds:
+KNOW ALL MEN BY THESE PRESENTS that I, [Principal Name], S/o ____________________, residing at __________________________________________________, do hereby nominate, constitute, and appoint [Attorney Name], S/o ____________________, residing at __________________________________________________, as my true and lawful Attorney-in-Fact to act on my behalf for the following acts, deeds, and execution:
 
-1. SCOPE AND AUTHORITY:
+1. SCOPE AND OPERATIVE AUTHORITY:
    ${userPrompt.trim()}
 
 2. RATIFICATION:
-   I hereby ratify and confirm all lawful acts, deeds, and things done by my said Attorney pursuant to this Power of Attorney as if performed by me personally.
+   I hereby agree and undertake to ratify and confirm all lawful acts, deeds, and registrations executed by my said Attorney pursuant to the powers conferred under this instrument.
 
-IN WITNESS WHEREOF, I have executed this instrument on this date.
+IN WITNESS WHEREOF, I have executed this Power of Attorney on this day.
 
 PRINCIPAL: ________________________      ATTORNEY: ________________________`;
     }
@@ -202,29 +198,29 @@ PRINCIPAL: ________________________      ATTORNEY: ________________________`;
 DATE: ${currentDate}
 PLACE: ${jur.toUpperCase()}
 
-This Partnership Deed is entered into by and between:
-1. [Partner 1 Name], residing at ___________________________
-2. [Partner 2 Name], residing at ___________________________
+THIS DEED OF PARTNERSHIP is entered into on this day by and between:
+1. [Partner 1 Name], residing at __________________________________________________
+2. [Partner 2 Name], residing at __________________________________________________
 
-WHEREAS the parties have agreed to carry on business in partnership under the following terms:
-1. FIRM NAME & OBJECT: The business shall be carried on under the name and style of M/s ________________________ with the core objective of: ${userPrompt.trim()}
-2. CAPITAL CONTRIBUTION & PROFIT SHARING: Capital shall be contributed as mutually agreed, and net profits/losses shall be shared in the ratio of ____ : ____.
-3. MANAGEMENT & BANK ACCOUNTS: Bank accounts shall be operated jointly or severally by designated partners.
+IT IS MUTUALLY AGREED AS FOLLOWS:
+1. FIRM NAME & PRINCIPAL PLACE: The business shall be conducted under the name and style of M/s ________________________ with the core commercial objective of: ${userPrompt.trim()}
+2. CAPITAL & PROFIT-SHARING RATIO: Capital contribution shall be made as mutually agreed, and net profits/losses shall be shared in the ratio of ____ : ____.
+3. BANK ACCOUNTS & MANAGEMENT: Operational bank accounts shall be operated under joint or designated signatures of the partners.
 
-IN WITNESS WHEREOF, the partners have signed this Deed.
+IN WITNESS WHEREOF, the partners have affixed their signatures.
 
 PARTNER 1: ______________________      PARTNER 2: ______________________`;
     }
 
     if (cleanType.includes('EMPLOYMENT') || cleanType.includes('AGREEMENT')) {
-      return `EMPLOYMENT / FOUNDER AGREEMENT
+      return `EMPLOYMENT & FOUNDER COVENANT AGREEMENT
 DATE: ${currentDate}
 JURISDICTION: ${jur.toUpperCase()}
 
-This Agreement is made between [Company Name] and [Employee/Founder Name].
-1. POSITION & DUTIES: ${userPrompt.trim()}
-2. COMPENSATION & BENEFITS: Annual CTC of ₹________/- payable monthly, subject to statutory deductions.
-3. CONFIDENTIALITY & IP: All intellectual property created during employment shall remain the exclusive property of the company.
+This Agreement sets forth the terms of engagement between [Company Name] and [Employee/Founder Name].
+1. ROLE & DUTIES: ${userPrompt.trim()}
+2. REMUNERATION: Annual compensation package of ₹________/- payable monthly, subject to applicable TDS and statutory deductions.
+3. INTELLECTUAL PROPERTY & NON-COMPETE: All intellectual property, code, and inventions generated during tenure remain the sole exclusive proprietary asset of the company.
 
 IN WITNESS WHEREOF, the parties execute this Agreement.
 
@@ -232,7 +228,7 @@ EMPLOYER: ______________________      EMPLOYEE: ______________________`;
     }
 
     if (cleanType.includes('BAIL')) {
-      return `IN THE COURT OF SESSION / JUDICIAL MAGISTRATE, ${jur.toUpperCase()}
+      return `IN THE COURT OF THE SESSIONS JUDGE / JUDICIAL MAGISTRATE, ${jur.toUpperCase()}
 BAIL APPLICATION NO. _____ OF 2026
 
 IN THE MATTER OF:
@@ -242,62 +238,74 @@ Applicant / Accused: ______________________
 
 CRIMINAL MISCELLANEOUS APPLICATION FOR REGULAR BAIL UNDER SECTION 439 CRPC / SECTION 483 BNSS
 
-THE APPLICANT RESPECTFULLY SUBMITS AS FOLLOWS:
+THE APPLICANT ABOVE-NAMED RESPECTFULLY SUBMITS AS FOLLOWS:
 
-1. CORE SYNOPSIS & CONTEXT:
-   The applicant stands falsely implicated in FIR No. _____ dated _____, registered under Sections _____ at Police Station _____. Factual matrix: ${userPrompt.trim()}
+1. MATRIX OF FACTS & FALSE IMPLICATION:
+   The applicant has been falsely and maliciously roped in FIR No. _____ dated _____, registered under Sections _____ at P.S. _____. The actual factual narrative is as follows: ${userPrompt.trim()}
 
 2. GROUNDS FOR ENLARGEMENT ON BAIL:
-   A. No Custodial Necessity: Investigation is complete; custodial interrogation is unnecessary.
-   B. Clean Antecedents: The applicant has unblemished antecedents with zero risk of flight.
-   C. Right to Personal Liberty: Continued pre-trial detention violates Article 21 of the Constitution.
+   A. Custodial Interrogation Unnecessary: Investigation qua the applicant is complete, and no recovery remains pending.
+   B. Unblemished Antecedents: The applicant possesses deep roots in society with no prior criminal antecedents or propensity for flight.
+   C. Infringement of Personal Liberty: Continued pre-trial incarceration amounts to punitive detention prior to trial, violating Article 21 of the Constitution.
 
 PRAYER:
-It is prayed that this Court may grant regular bail to the applicant.
+It is respectfully prayed that this Court may be pleased to enlarge the applicant on regular bail in connection with the aforesaid FIR.
 
 COUNSEL FOR THE APPLICANT`;
     }
 
     if (cleanType.includes('LEGAL NOTICE')) {
-      return `MEMORANDUM OF LEGAL NOTICE
+      return `BY SPEED POST / REGISTERED AD / EMAIL
 DATE: ${currentDate}
-JURISDICTION: ${jur.toUpperCase()}
 
-UNDER INSTRUCTIONS FROM AND ON BEHALF OF MY CLIENT, I do hereby serve you with this Legal Notice as follows:
+TO,
+[NAME & ADDRESS OF ADDRESSEE / OPPOSITE PARTY]
+__________________________________________________
 
-1. CORE GRIEVANCE & FACTS:
+SUBJECT: STATUTORY LEGAL NOTICE FOR BREACH OF OBLIGATION, RECOVERY OF DUES, AND DAMAGES.
+
+DEAR SIR/MADAM,
+
+Under express instructions from and on behalf of my client, [Client Name], resident of __________________________________________________, I serve upon you this formal legal notice:
+
+1. FACTUAL BACKGROUND & GRIEVANCE:
    ${userPrompt.trim()}
 
-2. LEGAL LIABILITY & DEMAND:
-   You are hereby called upon to rectify the breach / make payment of dues / cease illegal actions within 15 days of receipt of this notice, failing which my client shall be constrained to initiate appropriate civil and criminal legal proceedings against you at your sole risk, cost, and consequences.
+2. LEGAL LIABILITY:
+   Your acts constitute a clear breach of legal/contractual duty, rendering you liable for civil recovery and damages.
 
-ADVOCATE FOR THE CLIENT`;
+3. FINAL CALL TO ACTION:
+   You are hereby called upon to comply with the demands and remit a sum of ₹________/- within **15 days** of receipt of this notice, failing which my client shall institute appropriate legal proceedings against you in a competent court of law at your sole risk, cost, and consequence.
+
+SINCERELY,
+
+COUNSEL FOR THE CLIENT`;
     }
 
-    // Generic fallback for other litigation/court petitions
-    return `IN THE COURT / FORUM OF: ${jur.toUpperCase()}
-DOCUMENT TYPE: ${cleanType}
+    // Default Elite Chamber Format
+    return `MEMORANDUM OF ${cleanType}
+JURISDICTION: ${jur.toUpperCase()}
 
 THE APPLICANT / PARTY RESPECTFULLY SUBMITS:
 
-1. FACTUAL BACKGROUND & INSTRUCTIONS:
+1. FACTUAL MATRIX & INSTRUCTIONS:
    ${userPrompt.trim()}
 
-2. GOVERNING COVENANTS & LEGAL GROUNDS:
-   The rights, liabilities, and obligations of the parties are governed in accordance with applicable statutory provisions and principles of equity and contract law.
+2. STATUTORY FRAMEWORK & LEGAL SUBMISSIONS:
+   The rights, liabilities, and obligations of the parties stand governed by applicable statutory provisions, precedents, and rules of equity.
 
-3. OPERATIVE TERMS / PRAYER:
-   All parties shall adhere strictly to the stipulated terms herein.
+3. PRAYER / OPERATIVE CLAUSE:
+   Appropriate reliefs or covenants as detailed herein shall bind all participating parties.
 
 PLACE: ${jur.toUpperCase()}
 DATE: ${currentDate}
 
-COUNSEL / AUTHORIZED SIGNATORY`;
+COUNSEL / AUTHORIZED REPRESENTATIVE`;
   };
 
   const handleDraft = async () => {
     if (!prompt.trim()) { 
-      Alert.alert('Enter Prompt', 'Please describe the facts, terms, or background for this document.'); 
+      Alert.alert('Enter Prompt', 'Please specify facts, terms, party names, or background.'); 
       return; 
     }
 
@@ -364,15 +372,15 @@ COUNSEL / AUTHORIZED SIGNATORY`;
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      // Offline / fallback generator utilizing selectedType accurately
-      const comprehensiveText = generateComprehensiveDraft(selectedType, prompt, jurisdiction);
+      // Elite Chamber Engine Fallback
+      const eliteText = generateEliteChamberDraft(selectedType, prompt, jurisdiction);
 
       let index = 0;
       const interval = setInterval(() => {
-        setResult(comprehensiveText.slice(0, index));
+        setResult(eliteText.slice(0, index));
         index += 45;
-        if (index > comprehensiveText.length) {
-          setResult(comprehensiveText);
+        if (index > eliteText.length) {
+          setResult(eliteText);
           clearInterval(interval);
           setIsDrafting(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -412,13 +420,13 @@ COUNSEL / AUTHORIZED SIGNATORY`;
     if (!result) return;
     await Clipboard.setStringAsync(result);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied', 'Legal document copied to clipboard.');
+    Alert.alert('Copied', 'Elite legal draft copied to clipboard.');
   };
 
   const handleShare = async () => {
     if (!result) return;
     try {
-      const filename = FileSystem.cacheDirectory + `legal_document.txt`;
+      const filename = FileSystem.cacheDirectory + `chamber_draft.txt`;
       await FileSystem.writeAsStringAsync(filename, result, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(filename);
     } catch {
@@ -448,11 +456,11 @@ COUNSEL / AUTHORIZED SIGNATORY`;
       <View style={[styles.container, styles.centerContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, backgroundColor: colors.background }]}>
         <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 16 }} />
         <Text style={styles.paywallTitle}>Unlock Unlimited Drafting</Text>
-        <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free drafting credits. Upgrade to Pro for unlimited deeds, leases, and litigations.</Text>
+        <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free drafting credits. Upgrade to Pro for unlimited senior counsel-grade deeds and petitions.</Text>
 
         <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: colors.mutedForeground }}>/ month</Text></Text>
-          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited Deeds, Leases, Petitions & Notices</Text></View>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited Chamber Deeds, Leases & Petitions</Text></View>
           <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Advanced Legal Research & Precedent Finder</Text></View>
         </View>
 
@@ -480,10 +488,10 @@ COUNSEL / AUTHORIZED SIGNATORY`;
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
             <Feather name="file-text" size={22} color="#C9A84C" />
-            <Text style={styles.screenTitle}>Smart Legal Drafting</Text>
+            <Text style={styles.screenTitle}>Chamber Draft Engine</Text>
           </View>
           <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-            Generate binding contracts, rent deeds, lease deeds, sale deeds, and court petitions instantly. ({freeUsesLeft} free trial uses remaining)
+            Senior counsel-grade drafting for deeds, contracts, and court petitions. ({freeUsesLeft} free trial uses remaining)
           </Text>
         </View>
 
@@ -509,14 +517,14 @@ COUNSEL / AUTHORIZED SIGNATORY`;
 
         {/* Step 1: Draft Instructions Input */}
         <View style={styles.sectionBlock}>
-          <Text style={styles.sectionHeaderLabel}>1. DRAFT SPECIFICATIONS & URGENCY</Text>
+          <Text style={styles.sectionHeaderLabel}>1. INSTRUCTIONS & MATERIAL FACTS</Text>
           <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather name="edit-3" size={18} color={colors.mutedForeground} style={styles.queryIcon} />
             <TextInput
               style={[styles.queryInput, { color: colors.foreground }]}
               value={prompt}
               onChangeText={setPrompt}
-              placeholder="Describe facts, property details, party names, or terms..."
+              placeholder="Provide names, rent/consideration amount, and key terms..."
               placeholderTextColor={colors.mutedForeground}
               multiline
               numberOfLines={4}
@@ -527,7 +535,7 @@ COUNSEL / AUTHORIZED SIGNATORY`;
 
         {/* Step 2: Document Type Selection */}
         <View style={styles.sectionBlock}>
-          <Text style={styles.sectionHeaderLabel}>2. DOCUMENT CATEGORY</Text>
+          <Text style={styles.sectionHeaderLabel}>2. DOCUMENT & DEED CATEGORY</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChipsContainer}>
             {DRAFT_TYPES.map((type) => {
               const isSelected = selectedType === type;
@@ -565,7 +573,7 @@ COUNSEL / AUTHORIZED SIGNATORY`;
             <>
               <Feather name="cpu" size={18} color="#070D24" />
               <Text style={styles.researchBtnText}>
-                {freeUsesLeft > 0 ? `Generate Professional Draft (${freeUsesLeft} free left)` : 'Generate Professional Draft (Upgrade Required)'}
+                {freeUsesLeft > 0 ? `Generate Chamber Draft (${freeUsesLeft} free left)` : 'Generate Chamber Draft (Upgrade Required)'}
               </Text>
             </>
           )}
@@ -582,7 +590,7 @@ COUNSEL / AUTHORIZED SIGNATORY`;
             {isDrafting && !result ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color="#C9A84C" />
-                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Drafting professional agreement...</Text>
+                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Crafting professional chamber document...</Text>
               </View>
             ) : null}
             <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
