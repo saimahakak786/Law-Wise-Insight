@@ -9,6 +9,9 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases from 'react-native-purchases';
+import * as Clipboard from 'expo-clipboard';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 // Import custom components
 import Card from '../../components/Card';
@@ -21,7 +24,7 @@ export default function FactMatcherScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { getToken } = useAuth();
-  const { jurisdiction, language } = useApp();
+  const { jurisdiction, language, saveDocument } = useApp();
 
   const [facts, setFacts] = useState('');
   const [loading, setLoading] = useState(false);
@@ -250,6 +253,83 @@ export default function FactMatcherScreen() {
     }
   };
 
+  // --- Action Handlers: Copy, Save, PDF Export ---
+  const handleCopy = async (item: any) => {
+    await Clipboard.setStringAsync(`Case: ${item.title}\nCitation: ${item.citation}\nPrinciple: ${item.principle}`);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Copied', 'Precedent copied to clipboard.');
+  };
+
+  const handleSaveToVault = async (item: any) => {
+    try {
+      await saveDocument({
+        title: item.title,
+        documentType: 'Precedent Match',
+        content: `Citation: ${item.citation}\nRelevance: ${item.relevance}\n\nPrinciple:\n${item.principle}\n\nFacts Analyzed:\n${facts}`,
+        analysisType: 'Fact Matcher',
+        matterId: null,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Saved', 'Precedent saved to your Vault successfully.');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to save to vault.');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (results.length === 0) {
+      Alert.alert('No Results', 'No precedents available to export.');
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const htmlContent = `
+        <html>
+          <head>
+            <style>
+              body { font-family: 'Helvetica', Arial, sans-serif; padding: 30px; color: #111; }
+              h1 { color: #C9A84C; font-size: 22px; border-bottom: 2px solid #C9A84C; padding-bottom: 8px; }
+              .meta { font-size: 12px; color: #555; margin-bottom: 20px; }
+              .facts-box { background: #f8f9fa; padding: 12px; border-left: 4px solid #C9A84C; margin-bottom: 20px; font-size: 13px; }
+              .card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; page-break-inside: avoid; }
+              .citation { background: #fff3cd; color: #856404; padding: 3px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; display: inline-block; }
+              .title { font-size: 15px; font-weight: bold; margin: 8px 0; }
+              .principle { font-size: 13px; color: #333; line-height: 1.5; }
+            </style>
+          </head>
+          <body>
+            <h1>LawVise - Precedent Match Report</h1>
+            <div class="meta">Jurisdiction: <b>${jurisdiction}</b> | Date: ${new Date().toLocaleDateString()}</div>
+            
+            <div class="facts-box">
+              <strong>Analyzed Facts:</strong><br/>
+              ${facts}
+            </div>
+
+            <h3>Matched Precedents (${results.length})</h3>
+            ${results.map(item => `
+              <div class="card">
+                <span class="citation">${item.citation}</span>
+                <div class="title">${item.title}</div>
+                <div class="principle">${item.principle}</div>
+              </div>
+            `).join('')}
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        Alert.alert('PDF Generated', `File saved to: ${uri}`);
+      }
+    } catch (error) {
+      Alert.alert('Export Error', 'Could not generate PDF report.');
+    }
+  };
+
   const handleUpgrade = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
@@ -341,12 +421,15 @@ export default function FactMatcherScreen() {
           />
         </Card>
 
-        {/* Results Header */}
+        {/* Results Header & PDF Export Button */}
         <View style={styles.resultsHeaderRow}>
           <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Matched Precedents</Text>
-          <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>{results.length}</Text>
-          </View>
+          {results.length > 0 && (
+            <Pressable style={styles.pdfExportBtn} onPress={handleExportPDF}>
+              <Feather name="download" size={14} color="#C9A84C" />
+              <Text style={styles.pdfExportText}>Export PDF</Text>
+            </Pressable>
+          )}
         </View>
         
         {loading && (
@@ -372,6 +455,18 @@ export default function FactMatcherScreen() {
               </View>
               <Text style={[styles.caseTitle, { color: colors.foreground }]}>{item.title}</Text>
               <Text style={[styles.principleText, { color: colors.mutedForeground }]}>{item.principle}</Text>
+
+              {/* Action Bar (Copy & Save) */}
+              <View style={styles.actionRow}>
+                <Pressable style={styles.actionBtn} onPress={() => handleCopy(item)}>
+                  <Feather name="copy" size={14} color="#C9A84C" />
+                  <Text style={styles.actionBtnText}>Copy</Text>
+                </Pressable>
+                <Pressable style={styles.actionBtn} onPress={() => handleSaveToVault(item)}>
+                  <Feather name="bookmark" size={14} color="#C9A84C" />
+                  <Text style={styles.actionBtnText}>Save to Vault</Text>
+                </Pressable>
+              </View>
             </Card>
           ))
         )}
@@ -400,6 +495,8 @@ const styles = StyleSheet.create({
   },
   resultsHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   resultsHeader: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  pdfExportBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#C9A84C20', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C40' },
+  pdfExportText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   countBadge: { backgroundColor: '#C9A84C20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: '#C9A84C40' },
   countBadgeText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_700Bold' },
   loaderContainer: { alignItems: 'center', paddingVertical: 30, gap: 10 },
@@ -412,7 +509,10 @@ const styles = StyleSheet.create({
   badgeText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   matchScore: { fontSize: 13, color: '#C9A84C', fontFamily: 'Inter_700Bold' },
   caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 6 },
-  principleText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 20 },
+  principleText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 20, marginBottom: 12 },
+  actionRow: { flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: 'rgba(201, 168, 76, 0.15)', paddingTop: 12, marginTop: 4 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#C9A84C15', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  actionBtnText: { color: '#C9A84C', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
 
   paywallTitle: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#FFFFFF', textAlign: 'center', marginBottom: 10 },
   paywallSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
