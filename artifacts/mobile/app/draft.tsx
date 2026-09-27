@@ -17,24 +17,26 @@ import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases from 'react-native-purchases';
 import MatterModal from '@/components/MatterModal';
-import { LegalTheme } from '@/constants/theme';
 
 const DRAFT_TYPES = [
-  'Stay / Injunction IA',
-  'Interlocutory App (IA)',
-  'Legal Notice',
   'Bail Application',
-  'Written Statement',
-  'Sale Deed',
+  'Stay / Injunction IA',
+  'Legal Notice',
+  'Civil Suit / Plaint',
   'Writ Petition',
+  'Written Statement',
+  'Criminal Complaint',
   'Affidavit',
-  'Contract',
-  'Agreement',
-  'Petition'
+  'Rent Deed',
+  'Lease Deed',
+  'Sale Deed',
+  'Power of Attorney (GPA/SPA)',
+  'Partnership Deed',
+  'Employment / Founder Agreement'
 ];
 
 const FREE_LIMIT_KEY = '@lawvise_draft_free_count';
-const MAX_FREE_USES = 4; // 4 free uses limit for testing
+const MAX_FREE_USES = 4;
 
 export default function DraftScreen() {
   const colors = useColors();
@@ -45,17 +47,14 @@ export default function DraftScreen() {
   const { jurisdiction, activeMatter, setActiveMatter, saveDocument } = useApp();
 
   const [prompt, setPrompt] = useState('');
-  const [selectedType, setSelectedType] = useState('Stay / Injunction IA');
+  const [selectedType, setSelectedType] = useState('Rent Deed');
   const [isDrafting, setIsDrafting] = useState(false);
   const [result, setResult] = useState('');
   const [hasResult, setHasResult] = useState(false);
 
-  // Paywall & Free Tier state
   const [freeUsesLeft, setFreeUsesLeft] = useState(MAX_FREE_USES);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isPro, setIsPro] = useState(false);
-
-  // Modal visibility state for Firm Matter Workspace
   const [showMatterModal, setShowMatterModal] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -87,9 +86,218 @@ export default function DraftScreen() {
     }
   };
 
+  // 🏛️ COMPREHENSIVE COMMERCIAL & LITIGATION DRAFTING ENGINE
+  const generateComprehensiveDraft = (type: string, userPrompt: string, jur: string) => {
+    const cleanType = type.toUpperCase();
+    const currentDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    if (cleanType.includes('RENT DEED')) {
+      return `RENT DEED / AGREEMENT
+DATE: ${currentDate}
+PLACE: ${jur.toUpperCase()}
+
+This Rent Deed is made and executed on this day by and between:
+
+LESSOR / LANDLORD: 
+[Name], residing at ___________________________ (hereinafter referred to as the "Lessor", which expression shall unless repugnant to the context include heirs, legal representatives, and assigns) of the FIRST PART;
+
+AND
+
+LESSEE / TENANT:
+[Name], residing at ___________________________ (hereinafter referred to as the "Lessee", which expression shall include successors and permitted assigns) of the SECOND PART.
+
+WHEREAS the Lessor is the absolute owner and in lawful possession of the residential/commercial premises situated at ________________________ (hereinafter referred to as the "Demised Premises").
+
+AND WHEREAS the Lessee has approached the Lessor for taking the Demised Premises on rent, and the Lessor has agreed to let out the same subject to the following terms and conditions:
+
+1. TENANCY PERIOD & COMMENCEMENT:
+   The tenancy shall commence from _________ for an initial lock-in period of 11 months, renewable mutually upon agreed rent escalation. Specific terms provided: ${userPrompt.trim()}
+
+2. RENT & PAYMENT TERMS:
+   The monthly rent shall be ₹________/- (Rupees ________________ Only), payable in advance on or before the 7th day of each English calendar month.
+
+3. INTEREST-FREE SECURITY DEPOSIT:
+   The Lessee has paid an interest-free refundable security deposit of ₹________/- to the Lessor, refundable at the time of vacating the premises after adjusting any outstanding utility bills or property damages.
+
+4. UTILITIES & MAINTENANCE:
+   Electricity and water charges shall be borne by the Lessee strictly in accordance with sub-meter readings. Maintenance charges shall be paid directly to the society/authorities.
+
+5. TERMINATION CLAUSE:
+   Either party may terminate this agreement by giving 1 (one) month prior written notice to the other party.
+
+IN WITNESS WHEREOF, the parties have signed this Rent Deed on the date first above written in the presence of witnesses.
+
+LESSOR: ________________________      LESSEE: ________________________
+
+WITNESSES:
+1. ______________________
+2. ______________________`;
+    }
+
+    if (cleanType.includes('LEASE DEED')) {
+      return `COMMERCIAL LEASE DEED
+DATE: ${currentDate}
+JURISDICTION: ${jur.toUpperCase()}
+
+THIS REGISTERED LEASE DEED is made between:
+LESSOR: [Name/Company Name], having its registered office at ___________________________ (First Part);
+AND
+LESSEE: [Name/Company Name], having its principal office at ___________________________ (Second Part).
+
+TERMS OF LEASE & COVENANTS:
+1. PROPERTY DESCRIPTION: The Lessor hereby demises to the Lessee the commercial space measuring approx. _____ sq. ft. located at ________________________.
+2. CORE INSTRUCTIONS & COVENANTS: ${userPrompt.trim()}
+3. LEASE TERM: The lease shall be valid for a period of _____ years, commencing from _________ with an escalation clause of _____% every year.
+4. RENT & GST: The monthly lease rent is fixed at ₹________/- plus applicable GST.
+5. MAINTENANCE & INDEMNITY: Lessee shall maintain the premises in pristine condition and indemnify Lessor against third-party claims arising from internal business operations.
+
+IN WITNESS WHEREOF, authorized signatories have executed this Deed.
+
+LESSOR (SIGNATURE & SEAL)                LESSEE (SIGNATURE & SEAL)`;
+    }
+
+    if (cleanType.includes('SALE DEED')) {
+      return `DEED OF ABSOLUTE SALE
+DATE: ${currentDate}
+PLACE: ${jur.toUpperCase()}
+
+THIS DEED OF SALE is executed on this day by and between:
+VENDOR (SELLER): [Name], aged about ___ years, residing at ___________________________ (First Part);
+AND
+VENDEE (PURCHASER): [Name], aged about ___ years, residing at ___________________________ (Second Part).
+
+WHEREAS the Vendor is the absolute and undisputed owner of the immovable property bearing ________________________.
+
+NOW THIS DEED WITNESSETH AS FOLLOWS:
+1. SALE CONSIDERATION: In consideration of the total agreed sale price of ₹________/- (Rupees ________________ Only) paid by the Vendee to the Vendor, the receipt whereof the Vendor acknowledges.
+2. SPECIFIC COVENANTS & PROPERTY DETAILS: ${userPrompt.trim()}
+3. TRANSFER OF TITLE & POSSESSION: The Vendor hereby transfers, assigns, and conveys all absolute ownership rights, title, and physical vacant possession of the said property to the Vendee.
+4. INDEMNITY & ENCUMBRANCE: The Vendor declares that the property is free from all encumbrances, mortgages, liens, or litigation, and undertakes to indemnify the Vendee against any future title defects.
+
+IN WITNESS WHEREOF, the parties have signed this Sale Deed in the presence of attesting witnesses.
+
+VENDOR: ________________________      VENDEE: ________________________`;
+    }
+
+    if (cleanType.includes('POWER OF ATTORNEY')) {
+      return `GENERAL / SPECIAL POWER OF ATTORNEY (GPA / SPA)
+DATE: ${currentDate}
+JURISDICTION: ${jur.toUpperCase()}
+
+KNOW ALL MEN BY THESE PRESENTS that I, [Principal Name], residing at ___________________________, do hereby appoint, constitute, and empower [Attorney Name], residing at ___________________________, as my lawful Attorney to act on my behalf for the following specific acts and deeds:
+
+1. SCOPE AND AUTHORITY:
+   ${userPrompt.trim()}
+
+2. RATIFICATION:
+   I hereby ratify and confirm all lawful acts, deeds, and things done by my said Attorney pursuant to this Power of Attorney as if performed by me personally.
+
+IN WITNESS WHEREOF, I have executed this instrument on this date.
+
+PRINCIPAL: ________________________      ATTORNEY: ________________________`;
+    }
+
+    if (cleanType.includes('PARTNERSHIP DEED')) {
+      return `DEED OF PARTNERSHIP
+DATE: ${currentDate}
+PLACE: ${jur.toUpperCase()}
+
+This Partnership Deed is entered into by and between:
+1. [Partner 1 Name], residing at ___________________________
+2. [Partner 2 Name], residing at ___________________________
+
+WHEREAS the parties have agreed to carry on business in partnership under the following terms:
+1. FIRM NAME & OBJECT: The business shall be carried on under the name and style of M/s ________________________ with the core objective of: ${userPrompt.trim()}
+2. CAPITAL CONTRIBUTION & PROFIT SHARING: Capital shall be contributed as mutually agreed, and net profits/losses shall be shared in the ratio of ____ : ____.
+3. MANAGEMENT & BANK ACCOUNTS: Bank accounts shall be operated jointly or severally by designated partners.
+
+IN WITNESS WHEREOF, the partners have signed this Deed.
+
+PARTNER 1: ______________________      PARTNER 2: ______________________`;
+    }
+
+    if (cleanType.includes('EMPLOYMENT') || cleanType.includes('AGREEMENT')) {
+      return `EMPLOYMENT / FOUNDER AGREEMENT
+DATE: ${currentDate}
+JURISDICTION: ${jur.toUpperCase()}
+
+This Agreement is made between [Company Name] and [Employee/Founder Name].
+1. POSITION & DUTIES: ${userPrompt.trim()}
+2. COMPENSATION & BENEFITS: Annual CTC of ₹________/- payable monthly, subject to statutory deductions.
+3. CONFIDENTIALITY & IP: All intellectual property created during employment shall remain the exclusive property of the company.
+
+IN WITNESS WHEREOF, the parties execute this Agreement.
+
+EMPLOYER: ______________________      EMPLOYEE: ______________________`;
+    }
+
+    if (cleanType.includes('BAIL')) {
+      return `IN THE COURT OF SESSION / JUDICIAL MAGISTRATE, ${jur.toUpperCase()}
+BAIL APPLICATION NO. _____ OF 2026
+
+IN THE MATTER OF:
+State through Police Station: _____________________
+VERSUS
+Applicant / Accused: ______________________
+
+CRIMINAL MISCELLANEOUS APPLICATION FOR REGULAR BAIL UNDER SECTION 439 CRPC / SECTION 483 BNSS
+
+THE APPLICANT RESPECTFULLY SUBMITS AS FOLLOWS:
+
+1. CORE SYNOPSIS & CONTEXT:
+   The applicant stands falsely implicated in FIR No. _____ dated _____, registered under Sections _____ at Police Station _____. Factual matrix: ${userPrompt.trim()}
+
+2. GROUNDS FOR ENLARGEMENT ON BAIL:
+   A. No Custodial Necessity: Investigation is complete; custodial interrogation is unnecessary.
+   B. Clean Antecedents: The applicant has unblemished antecedents with zero risk of flight.
+   C. Right to Personal Liberty: Continued pre-trial detention violates Article 21 of the Constitution.
+
+PRAYER:
+It is prayed that this Court may grant regular bail to the applicant.
+
+COUNSEL FOR THE APPLICANT`;
+    }
+
+    if (cleanType.includes('LEGAL NOTICE')) {
+      return `MEMORANDUM OF LEGAL NOTICE
+DATE: ${currentDate}
+JURISDICTION: ${jur.toUpperCase()}
+
+UNDER INSTRUCTIONS FROM AND ON BEHALF OF MY CLIENT, I do hereby serve you with this Legal Notice as follows:
+
+1. CORE GRIEVANCE & FACTS:
+   ${userPrompt.trim()}
+
+2. LEGAL LIABILITY & DEMAND:
+   You are hereby called upon to rectify the breach / make payment of dues / cease illegal actions within 15 days of receipt of this notice, failing which my client shall be constrained to initiate appropriate civil and criminal legal proceedings against you at your sole risk, cost, and consequences.
+
+ADVOCATE FOR THE CLIENT`;
+    }
+
+    // Generic fallback for other litigation/court petitions
+    return `IN THE COURT / FORUM OF: ${jur.toUpperCase()}
+DOCUMENT TYPE: ${cleanType}
+
+THE APPLICANT / PARTY RESPECTFULLY SUBMITS:
+
+1. FACTUAL BACKGROUND & INSTRUCTIONS:
+   ${userPrompt.trim()}
+
+2. GOVERNING COVENANTS & LEGAL GROUNDS:
+   The rights, liabilities, and obligations of the parties are governed in accordance with applicable statutory provisions and principles of equity and contract law.
+
+3. OPERATIVE TERMS / PRAYER:
+   All parties shall adhere strictly to the stipulated terms herein.
+
+PLACE: ${jur.toUpperCase()}
+DATE: ${currentDate}
+
+COUNSEL / AUTHORIZED SIGNATORY`;
+  };
+
   const handleDraft = async () => {
     if (!prompt.trim()) { 
-      Alert.alert('Enter Prompt', 'Please describe the facts, urgency, and interim relief required for this draft.'); 
+      Alert.alert('Enter Prompt', 'Please describe the facts, terms, or background for this document.'); 
       return; 
     }
 
@@ -125,7 +333,7 @@ export default function DraftScreen() {
         body: JSON.stringify({ 
           prompt: prompt.trim(), 
           jurisdiction, 
-          draftType,
+          draftType, 
           matterId: activeMatter ? activeMatter.id : null 
         }),
       });
@@ -156,36 +364,20 @@ export default function DraftScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      const fallbackText = `IN THE COURT / FORUM OF: ${jurisdiction.toUpperCase()}\n` +
-        `ACTIVE MATTER: ${activeMatter ? activeMatter.title : 'General Practice'}\n` +
-        `DOCUMENT TYPE: ${selectedType.toUpperCase()}\n\n` +
-        `------------------------------------------------------------------------------------\n` +
-        `MEMORANDUM OF ${selectedType.toUpperCase()}\n` +
-        `------------------------------------------------------------------------------------\n\n` +
-        `1. CAUSE TITLE & PARTICULARS:\n` +
-        `   - Subject / Emergency: "${prompt.trim()}"\n` +
-        `   - Governing Framework: Applicable statutory provisions and procedural codes under ${jurisdiction}.\n\n` +
-        `2. GROUNDS FOR URGENCY / INTERIM RELIEF:\n` +
-        `   - That the applicant has a strong prima facie case in their favor.\n` +
-        `   - That the balance of convenience lies heavily in favor of the applicant, and irreparable loss or injury shall be caused if interim protection is not granted.\n` +
-        `   - Specific factual matrix: ${prompt.trim()}\n\n` +
-        `3. PRAYER / INTERIM DIRECTIONS SOUGHT:\n` +
-        `   - It is most respectfully prayed that this Hon'ble Court may be pleased to grant an ad-interim ex-parte stay / injunction restraining the respondents from acting contrary to law, pending final adjudication of the main matter.\n\n` +
-        `VERIFICATION:\n` +
-        `I, the Applicant/Counsel, do hereby verify that the contents of this ${selectedType} are true and correct to the best of my knowledge and instructions.\n\n` +
-        `(Generated via LawVise Senior Counsel Drafting Engine)`;
+      // Offline / fallback generator utilizing selectedType accurately
+      const comprehensiveText = generateComprehensiveDraft(selectedType, prompt, jurisdiction);
 
       let index = 0;
       const interval = setInterval(() => {
-        setResult(fallbackText.slice(0, index));
-        index += 35;
-        if (index > fallbackText.length) {
-          setResult(fallbackText);
+        setResult(comprehensiveText.slice(0, index));
+        index += 45;
+        if (index > comprehensiveText.length) {
+          setResult(comprehensiveText);
           clearInterval(interval);
           setIsDrafting(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
-      }, 20);
+      }, 12);
       return;
     } finally {
       setIsDrafting(false);
@@ -220,17 +412,17 @@ export default function DraftScreen() {
     if (!result) return;
     await Clipboard.setStringAsync(result);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied', 'Legal draft copied to clipboard.');
+    Alert.alert('Copied', 'Legal document copied to clipboard.');
   };
 
   const handleShare = async () => {
     if (!result) return;
     try {
-      const filename = FileSystem.cacheDirectory + `legal_draft.txt`;
+      const filename = FileSystem.cacheDirectory + `legal_document.txt`;
       await FileSystem.writeAsStringAsync(filename, result, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(filename);
     } catch {
-      Alert.alert('Share Failed', 'Could not share the legal draft.');
+      Alert.alert('Share Failed', 'Could not share the document.');
     }
   };
 
@@ -245,9 +437,9 @@ export default function DraftScreen() {
         matterId: activeMatter ? activeMatter.id : null,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Saved', 'Legal draft saved to your firm vault & matter log.');
+      Alert.alert('Saved', 'Document saved to your firm vault & matter log.');
     } catch {
-      Alert.alert('Save Failed', 'Could not save draft to vault.');
+      Alert.alert('Save Failed', 'Could not save to vault.');
     }
   };
 
@@ -256,11 +448,11 @@ export default function DraftScreen() {
       <View style={[styles.container, styles.centerContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, backgroundColor: colors.background }]}>
         <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 16 }} />
         <Text style={styles.paywallTitle}>Unlock Unlimited Drafting</Text>
-        <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free drafting credits. Upgrade to Pro for unlimited AI legal drafting, petitions, and document analysis.</Text>
+        <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free drafting credits. Upgrade to Pro for unlimited deeds, leases, and litigations.</Text>
 
         <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: colors.mutedForeground }}>/ month</Text></Text>
-          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited AI Contract & Notice Drafting</Text></View>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited Deeds, Leases, Petitions & Notices</Text></View>
           <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Advanced Legal Research & Precedent Finder</Text></View>
         </View>
 
@@ -291,11 +483,11 @@ export default function DraftScreen() {
             <Text style={styles.screenTitle}>Smart Legal Drafting</Text>
           </View>
           <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
-            Generate binding contracts, injunction stay IAs, bail applications, and court petitions instantly. ({freeUsesLeft} free trial uses remaining)
+            Generate binding contracts, rent deeds, lease deeds, sale deeds, and court petitions instantly. ({freeUsesLeft} free trial uses remaining)
           </Text>
         </View>
 
-        {/* Firm Matter Workspace Banner (Triggers Modal) */}
+        {/* Firm Matter Workspace Banner */}
         <Pressable 
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -324,7 +516,7 @@ export default function DraftScreen() {
               style={[styles.queryInput, { color: colors.foreground }]}
               value={prompt}
               onChangeText={setPrompt}
-              placeholder="Describe emergency, interim protection required, parties, grounds..."
+              placeholder="Describe facts, property details, party names, or terms..."
               placeholderTextColor={colors.mutedForeground}
               multiline
               numberOfLines={4}
@@ -390,7 +582,7 @@ export default function DraftScreen() {
             {isDrafting && !result ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color="#C9A84C" />
-                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Drafting comprehensive legal clauses...</Text>
+                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Drafting professional agreement...</Text>
               </View>
             ) : null}
             <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
@@ -438,26 +630,15 @@ const styles = StyleSheet.create({
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
 
   matterBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    flexDirection: 'row', alignItems: 'center', borderRadius: 10,
+    borderWidth: 1, padding: 12, marginBottom: 20,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
   matterIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 32, height: 32, borderRadius: 8,
     backgroundColor: 'rgba(201, 168, 76, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
+    justifyContent: 'center', alignItems: 'center', marginRight: 10,
   },
   matterLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.5 },
   matterName: { fontSize: 13, fontFamily: 'Inter_700Bold', marginTop: 1 },
@@ -474,9 +655,7 @@ const styles = StyleSheet.create({
     lineHeight: 22, minHeight: 90,
   },
   horizontalChipsContainer: { gap: 8 },
-  chip: {
-    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1,
-  },
+  chip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1 },
   chipText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
   jurisdictionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   jurisdictionText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
@@ -490,7 +669,7 @@ const styles = StyleSheet.create({
   resultHeaderText: { fontFamily: 'Inter_700Bold', fontSize: 15, flex: 1 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
-  resultText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24, marginBottom: 16 },
+  resultText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 22, marginBottom: 16 },
 
   actionBarContainer: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 14, gap: 10 },
   actionRow: { flexDirection: 'row', gap: 8 },
