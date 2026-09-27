@@ -47,7 +47,7 @@ const CLAUSE_LIBRARY = [
 ];
 
 const FREE_LIMIT_KEY = '@lawvise_draft_free_count';
-const MAX_FREE_USES = 4;
+const MAX_FREE_USES = 7;
 
 export default function DraftScreen() {
   const colors = useColors();
