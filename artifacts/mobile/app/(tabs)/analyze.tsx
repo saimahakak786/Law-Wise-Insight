@@ -78,7 +78,7 @@ export default function AnalyzeScreen() {
   const [isProUser, setIsProUser] = useState(false);
   const [freeUsageCount, setFreeUsageCount] = useState(0);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const FREE_LIMIT = 4; // Expanded free quota to 4 uses
+  const FREE_LIMIT = 4;
 
   const handleUploadDocument = async () => {
     try {
@@ -87,20 +87,34 @@ export default function AnalyzeScreen() {
         copyToCacheDirectory: true,
       });
 
-      if (pickerResult.canceled) return;
+      if (pickerResult.canceled || !pickerResult.assets || pickerResult.assets.length === 0) {
+        return;
+      }
+      
       const asset = pickerResult.assets[0];
+      if (!asset || !asset.uri) {
+        throw new Error('Selected file URI is invalid.');
+      }
 
       setIsExtracting(true);
       setUploadMode('upload');
 
-      const fileBase64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+      // Safely read file string as base64 using expo-file-system
+      const fileBase64 = await FileSystem.readAsStringAsync(asset.uri, { 
+        encoding: FileSystem.EncodingType.Base64 
+      });
+
       const token = await getToken();
       const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
       
       const response = await fetch(`https://${domain}/api/lawwise/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fileBase64, mimeType: asset.mimeType ?? 'application/octet-stream', fileName: asset.name }),
+        body: JSON.stringify({ 
+          fileBase64, 
+          mimeType: asset.mimeType ?? 'application/octet-stream', 
+          fileName: asset.name ?? 'uploaded_document' 
+        }),
       });
 
       if (!response.ok) {
@@ -115,8 +129,8 @@ export default function AnalyzeScreen() {
       }
 
       setDocText(extracted);
-      setUploadedFileName(asset.name);
-      const guessed = guessDocType(asset.name);
+      setUploadedFileName(asset.name ?? 'Document');
+      const guessed = guessDocType(asset.name ?? '');
       if (guessed) setDocType(guessed);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -138,13 +152,20 @@ export default function AnalyzeScreen() {
       }
 
       const pickerResult = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
-      if (pickerResult.canceled) return;
+      if (pickerResult.canceled || !pickerResult.assets || pickerResult.assets.length === 0) return;
+      
       const asset = pickerResult.assets[0];
+      if (!asset || !asset.uri) {
+        throw new Error('Captured photo URI is invalid.');
+      }
 
       setIsExtracting(true);
       setUploadMode('camera');
 
-      const fileBase64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+      const fileBase64 = await FileSystem.readAsStringAsync(asset.uri, { 
+        encoding: FileSystem.EncodingType.Base64 
+      });
+      
       const token = await getToken();
       const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
 
@@ -176,7 +197,6 @@ export default function AnalyzeScreen() {
       return;
     }
 
-    // Check free limit quota (4 free tries)
     if (!isProUser && freeUsageCount >= FREE_LIMIT) {
       setShowUpgradeModal(true);
       return;
@@ -220,7 +240,6 @@ export default function AnalyzeScreen() {
       setResult(analysisOutput);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Save to Matter Vault
       try {
         const title = `${docType} Analysis — ${new Date().toLocaleDateString()}`;
         saveDocument.mutate({
@@ -229,7 +248,6 @@ export default function AnalyzeScreen() {
       } catch {}
 
     } catch (err: any) {
-      // Fallback robust response if live backend call fails or network offline
       const fallbackReport = `[Live Analysis Fallback Report]\n\n` +
         `Jurisdiction: ${jurisdiction}\nDocument Type: ${docType}\nAnalysis Type: ${analysisType}\n\n` +
         `1. COMPLIANCE REVIEW:\nDetailed scrutiny indicates standard legal alignment under regional provisions.\n\n` +
@@ -304,7 +322,6 @@ export default function AnalyzeScreen() {
         contentContainerStyle={{ paddingTop: insets.top + (Platform.OS === 'web' ? 40 : 16), paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Title Section */}
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
             <Feather name="cpu" size={22} color={colors.primary} />
@@ -315,7 +332,6 @@ export default function AnalyzeScreen() {
           </Text>
         </View>
 
-        {/* Step 1: Input Source */}
         <View style={styles.sectionBlock}>
           <Text style={[styles.sectionHeaderLabel, { color: colors.primary }]}>1. SOURCE INPUT</Text>
           
@@ -352,7 +368,7 @@ export default function AnalyzeScreen() {
                 </Pressable>
                 <Pressable
                   style={[styles.actionTile, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => setUploadMode('paste')}
+                  onPress={() => setDocText(' ')}
                 >
                   <Feather name="edit-3" size={18} color={colors.primary} />
                   <Text style={[styles.actionTileText, { color: colors.foreground }]}>Paste Text</Text>
@@ -386,7 +402,6 @@ export default function AnalyzeScreen() {
           )}
         </View>
 
-        {/* Step 2: Document Classification */}
         <View style={styles.sectionBlock}>
           <Text style={[styles.sectionHeaderLabel, { color: colors.primary }]}>2. DOCUMENT CLASSIFICATION</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChipsContainer}>
@@ -413,7 +428,6 @@ export default function AnalyzeScreen() {
           </ScrollView>
         </View>
 
-        {/* Step 3: Analysis Depth */}
         <View style={styles.sectionBlock}>
           <Text style={[styles.sectionHeaderLabel, { color: colors.primary }]}>3. SELECT ANALYSIS MODULE</Text>
           <View style={styles.analysisModuleGrid}>
@@ -445,7 +459,6 @@ export default function AnalyzeScreen() {
           </View>
         </View>
 
-        {/* Action Execute Button */}
         <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
           <Pressable
             style={[styles.eliteAnalyzeBtn, { backgroundColor: colors.primary }, (!docText.trim() || isAnalyzing) && { opacity: 0.5 }]}
