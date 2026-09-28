@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Alert,
 } from 'react-native';
 import { useSignIn, useSSO } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
@@ -17,6 +18,7 @@ import { Link, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 
 import Button from '../../components/Button';
 
@@ -44,7 +46,7 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [signInError, setSignInError] = useState(''); // Added custom UI error state
+  const [signInError, setSignInError] = useState('');
   const otpInputRef = useRef<TextInput>(null);
 
   // Forgot password state
@@ -71,20 +73,14 @@ export default function SignInPage() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      const result = await signIn.password({ emailAddress: identifier.trim(), password });
+      await signIn.password({ emailAddress: identifier.trim(), password });
       
-      if (result.error) {
-        setSignInError(result.error.message || 'Invalid email or password.');
-        return;
-      }
-
       if (signIn.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await signIn.finalize({ navigate });
       }
     } catch (e: any) {
-      // Catch network or Clerk server exceptions gracefully instead of crashing
-      const errorMessage = e?.errors?.[0]?.message || e?.message || 'Server error occurred during sign in. Please try again.';
+      const errorMessage = e?.errors?.[0]?.message || e?.message || 'Invalid email or password. Please try again.';
       setSignInError(errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
@@ -108,14 +104,32 @@ export default function SignInPage() {
     }
   };
 
+  const handlePasteOTP = async () => {
+    try {
+      const clipboardContent = await Clipboard.getStringAsync();
+      const digitsOnly = clipboardContent.replace(/\D/g, '').slice(0, 6);
+      if (digitsOnly.length > 0) {
+        setCode(digitsOnly);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Alert.alert('Clipboard Empty', 'No valid code found on clipboard.');
+      }
+    } catch (err) {
+      console.log('Paste error', err);
+    }
+  };
+
   const handleGoogle = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setGoogleLoading(true);
+    setSignInError('');
+
     try {
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl: AuthSession.makeRedirectUri(),
       });
+
       if (createdSessionId && setActive) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await setActive({
@@ -125,8 +139,11 @@ export default function SignInPage() {
           },
         });
       }
-    } catch {
-      // handled
+    } catch (e: any) {
+      const errorMessage = e?.errors?.[0]?.message || e?.message;
+      if (errorMessage && !errorMessage.includes('cancel')) {
+        setSignInError('Google sign-in was interrupted. Please try again.');
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -170,15 +187,13 @@ export default function SignInPage() {
     }
   };
 
-  // Verification State (e.g., needs_client_trust or MFA challenge)
+  // Verification State (MFA challenge)
   if (signIn.status === 'needs_client_trust' || signIn.status === 'needs_second_factor') {
     useEffect(() => {
       const sendInitialCode = async () => {
         try {
           await signIn.mfa.sendEmailCode();
-        } catch {
-          // Fallback handled silently or via UI
-        }
+        } catch {}
       };
       sendInitialCode();
     }, [signIn]);
@@ -188,6 +203,15 @@ export default function SignInPage() {
         <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 24 }} />
         <Text style={styles.title}>Verify Identity</Text>
         <Text style={styles.subtitle}>Enter the verification code sent to your email</Text>
+
+        {/* Clipboard Paste Button */}
+        <Pressable 
+          onPress={handlePasteOTP} 
+          style={{ marginBottom: 16, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: '#131D3D', borderRadius: 8, borderWidth: 1, borderColor: '#1B2448', flexDirection: 'row', alignItems: 'center', gap: 6 }}
+        >
+          <Feather name="clipboard" size={14} color="#C9A84C" />
+          <Text style={{ color: '#C9A84C', fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>Paste Code from Clipboard</Text>
+        </Pressable>
 
         {/* Segmented OTP Boxes Container */}
         <Pressable style={styles.otpContainer} onPress={() => otpInputRef.current?.focus()}>
@@ -225,9 +249,6 @@ export default function SignInPage() {
         </Pressable>
 
         {signInError ? <Text style={styles.error}>{signInError}</Text> : null}
-        {errors?.fields?.code && (
-          <Text style={styles.error}>{errors.fields.code.message}</Text>
-        )}
         
         <View style={{ width: '100%', marginTop: 16 }}>
           <Button
@@ -245,9 +266,7 @@ export default function SignInPage() {
             try {
               await signIn.mfa.sendEmailCode();
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } catch {
-              // Handle error if needed
-            }
+            } catch {}
           }} 
           style={styles.linkBtn}
         >
@@ -377,7 +396,6 @@ export default function SignInPage() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
         <View style={styles.logoRow}>
           <Feather name="shield" size={32} color="#C9A84C" />
           <Text style={styles.logoText}>LawVise</Text>
@@ -386,7 +404,6 @@ export default function SignInPage() {
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in to your legal workspace</Text>
 
-        {/* Email Identifier Input */}
         <View style={styles.inputWrapper}>
           <Feather name="mail" size={18} color="#8B9CC5" style={styles.inputIcon} />
           <TextInput
@@ -400,11 +417,7 @@ export default function SignInPage() {
             autoCorrect={false}
           />
         </View>
-        {errors?.fields?.identifier && (
-          <Text style={styles.error}>{errors.fields.identifier.message}</Text>
-        )}
 
-        {/* Password */}
         <View style={styles.inputWrapper}>
           <Feather name="lock" size={18} color="#8B9CC5" style={styles.inputIcon} />
           <TextInput
@@ -419,14 +432,9 @@ export default function SignInPage() {
             <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#8B9CC5" />
           </Pressable>
         </View>
-        {errors?.fields?.password && (
-          <Text style={styles.error}>{errors.fields.password.message}</Text>
-        )}
 
-        {/* Custom Server/API Error Display */}
         {signInError ? <Text style={styles.error}>{signInError}</Text> : null}
 
-        {/* Forgot Password link */}
         <Pressable
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setForgotIdentifier(identifier); setForgotStep('send_code'); setForgotError(''); }}
           style={styles.forgotBtn}
@@ -434,7 +442,6 @@ export default function SignInPage() {
           <Text style={styles.forgotText}>Forgot Password?</Text>
         </Pressable>
 
-        {/* Sign In Button */}
         <Button
           title={fetchStatus === 'fetching' ? "Signing In..." : "Sign In"}
           variant="primary"
@@ -443,14 +450,12 @@ export default function SignInPage() {
           style={{ marginTop: 4 }}
         />
 
-        {/* Divider */}
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>or continue with</Text>
           <View style={styles.dividerLine} />
         </View>
 
-        {/* Google */}
         <Pressable style={styles.socialBtn} onPress={handleGoogle} disabled={googleLoading}>
           {googleLoading
             ? <ActivityIndicator color="#FFFFFF" size="small" />
@@ -462,7 +467,6 @@ export default function SignInPage() {
             )}
         </Pressable>
 
-        {/* Sign up link */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>New to LawVise? </Text>
           <Link href="/(auth)/sign-up">
@@ -502,7 +506,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   
-  /* OTP Segmented Box Styles */
   otpContainer: {
     width: '100%',
     marginBottom: 16,
