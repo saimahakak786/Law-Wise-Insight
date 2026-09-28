@@ -13,7 +13,8 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import Purchases from 'react-native-purchases';
 
-import UpgradeModal from '../../components/UpgradeModal';
+import UpgradeModal from '@/components/UpgradeModal';
+
 
 const FREE_VAULT_LIMIT = 5;
 
