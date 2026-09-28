@@ -38,7 +38,7 @@ export default function SignInPage() {
   useWarmUpBrowser();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signIn, errors, fetchStatus } = useSignIn();
+  const { signIn, fetchStatus } = useSignIn();
   const { startSSOFlow } = useSSO();
 
   const [identifier, setIdentifier] = useState('');
@@ -56,6 +56,7 @@ export default function SignInPage() {
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [forgotError, setForgotError] = useState('');
+  const resetOtpInputRef = useRef<TextInput>(null);
 
   const navigate = useCallback(
     ({ decorateUrl }: { session?: unknown; decorateUrl: (url: string) => string }) => {
@@ -104,12 +105,16 @@ export default function SignInPage() {
     }
   };
 
-  const handlePasteOTP = async () => {
+  const handlePasteOTP = async (isReset = false) => {
     try {
       const clipboardContent = await Clipboard.getStringAsync();
       const digitsOnly = clipboardContent.replace(/\D/g, '').slice(0, 6);
       if (digitsOnly.length > 0) {
-        setCode(digitsOnly);
+        if (isReset) {
+          setResetCode(digitsOnly);
+        } else {
+          setCode(digitsOnly);
+        }
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         Alert.alert('Clipboard Empty', 'No valid code found on clipboard.');
@@ -165,25 +170,31 @@ export default function SignInPage() {
 
   const handleResetPassword = async () => {
     if (!resetCode || !newPassword) { setForgotError('Please fill in both fields.'); return; }
+    if (newPassword.length < 6) { setForgotError('Password must be at least 6 characters.'); return; }
     setForgotError('');
     setForgotStep('resetting');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     try {
+      // Correct Clerk password-reset method call
       const result = await signIn.attemptFirstFactor({
         strategy: 'reset_password_email_code',
-        code: resetCode,
+        code: resetCode.trim(),
         password: newPassword,
       });
-      if (result.status === 'complete' && result.createdSessionId) {
+
+      if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.push('/');
+        await signIn.finalize({ navigate });
       } else {
-        setForgotError('Password reset failed. Please check your code.');
+        setForgotError('Password reset incomplete. Please verify the code.');
         setForgotStep('reset_password');
       }
     } catch (e: any) {
-      setForgotError(e?.errors?.[0]?.message ?? 'Failed to reset password.');
+      const errorMessage = e?.errors?.[0]?.message || e?.message || 'Failed to reset password. Please check your code.';
+      setForgotError(errorMessage);
       setForgotStep('reset_password');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
@@ -204,16 +215,14 @@ export default function SignInPage() {
         <Text style={styles.title}>Verify Identity</Text>
         <Text style={styles.subtitle}>Enter the verification code sent to your email</Text>
 
-        {/* Clipboard Paste Button */}
         <Pressable 
-          onPress={handlePasteOTP} 
-          style={{ marginBottom: 16, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: '#131D3D', borderRadius: 8, borderWidth: 1, borderColor: '#1B2448', flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          onPress={() => handlePasteOTP(false)} 
+          style={styles.pasteBtn}
         >
           <Feather name="clipboard" size={14} color="#C9A84C" />
-          <Text style={{ color: '#C9A84C', fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>Paste Code from Clipboard</Text>
+          <Text style={styles.pasteText}>Paste Code from Clipboard</Text>
         </Pressable>
 
-        {/* Segmented OTP Boxes Container */}
         <Pressable style={styles.otpContainer} onPress={() => otpInputRef.current?.focus()}>
           <TextInput
             ref={otpInputRef}
@@ -340,15 +349,25 @@ export default function SignInPage() {
           <Text style={styles.title}>Enter New Password</Text>
           <Text style={styles.subtitle}>Check your email for the reset code</Text>
 
+          <Pressable 
+            onPress={() => handlePasteOTP(true)} 
+            style={styles.pasteBtn}
+          >
+            <Feather name="clipboard" size={14} color="#C9A84C" />
+            <Text style={styles.pasteText}>Paste Code from Clipboard</Text>
+          </Pressable>
+
           <View style={styles.inputWrapper}>
             <Feather name="hash" size={18} color="#8B9CC5" style={styles.inputIcon} />
             <TextInput
               style={[styles.inputField, { flex: 1 }]}
               value={resetCode}
               onChangeText={setResetCode}
-              placeholder="Reset code"
+              placeholder="Reset code (6 digits)"
               placeholderTextColor="#8B9CC5"
+              keyboardPosition="below-text"
               keyboardType="numeric"
+              maxLength={6}
               autoFocus
             />
           </View>
@@ -359,7 +378,7 @@ export default function SignInPage() {
               style={[styles.inputField, { flex: 1 }]}
               value={newPassword}
               onChangeText={setNewPassword}
-              placeholder="New password"
+              placeholder="New password (min 6 chars)"
               placeholderTextColor="#8B9CC5"
               secureTextEntry={!showNewPassword}
             />
@@ -374,7 +393,7 @@ export default function SignInPage() {
             title={forgotStep === 'resetting' ? "Resetting..." : "Confirm & Reset Password"}
             variant="primary"
             onPress={handleResetPassword}
-            disabled={!resetCode || !newPassword || forgotStep === 'resetting'}
+            disabled={!resetCode || newPassword.length < 6 || forgotStep === 'resetting'}
             style={{ marginTop: 8 }}
           />
 
@@ -506,6 +525,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   
+  pasteBtn: {
+    marginBottom: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#131D3D',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1B2448',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'center',
+  },
+  pasteText: { color: '#C9A84C', fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+
   otpContainer: {
     width: '100%',
     marginBottom: 16,
