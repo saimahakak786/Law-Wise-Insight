@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
-  Platform, Alert, Modal,
+  Platform, Alert, Modal, TextInput,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { useUser, useClerk } from '@clerk/expo';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import AboutDeveloperModal from '@/components/AboutDeveloperModal';
+import Button from '@/components/Button';
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -22,6 +23,12 @@ export default function ProfileScreen() {
   const [showAboutDevModal, setShowAboutDevModal] = useState(false);
   const [showAboutUsModal, setShowAboutUsModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+
+  // Edit profile states
+  const [firstNameInput, setFirstNameInput] = useState(user?.firstName ?? '');
+  const [lastNameInput, setLastNameInput] = useState(user?.lastName ?? '');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Fallback to email handle or 'User' if firstName isn't set yet
   const emailFallback = user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] ?? 'User';
@@ -30,6 +37,28 @@ export default function ProfileScreen() {
   const firstName = user?.firstName ?? formattedFallback;
   const lastName = user?.lastName ?? '';
   const email = user?.emailAddresses?.[0]?.emailAddress ?? 'counsel@lawvise.com';
+
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+    setIsUpdating(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      await user.update({
+        firstName: firstNameInput.trim(),
+        lastName: lastNameInput.trim(),
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowEditProfileModal(false);
+      Alert.alert('Success', 'Your profile has been successfully updated.');
+    } catch (e: any) {
+      const errorMessage = e?.errors?.[0]?.message || 'Failed to update profile. Please try again.';
+      Alert.alert('Error', errorMessage);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleSignOut = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -65,6 +94,19 @@ export default function ProfileScreen() {
         </View>
         <Text style={[styles.profileName, { color: colors.foreground }]}>{firstName} {lastName}</Text>
         <Text style={[styles.profileEmail, { color: colors.mutedForeground }]}>{email}</Text>
+
+        <Pressable 
+          style={styles.editProfileBtn}
+          onPress={() => {
+            setFirstNameInput(user?.firstName ?? '');
+            setLastNameInput(user?.lastName ?? '');
+            Haptics.selectionAsync();
+            setShowEditProfileModal(true);
+          }}
+        >
+          <Feather name="edit-2" size={14} color="#C9A84C" />
+          <Text style={styles.editProfileText}>Edit Profile</Text>
+        </Pressable>
       </View>
 
       {/* Professional Tier & Upgrade Card */}
@@ -132,7 +174,66 @@ export default function ProfileScreen() {
         <Text style={styles.signOutText}>Sign Out</Text>
       </Pressable>
 
-      {/* About Us / Company Mission Modal */}
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={showEditProfileModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEditProfileModal(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.title }]}>Edit Profile</Text>
+            <Pressable onPress={() => setShowEditProfileModal(false)} style={styles.closeBtn}>
+              <Feather name="x" size={22} color={colors.foreground} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} showsVerticalScrollIndicator={false}>
+            <Text style={[styles.termsText, { color: colors.mutedForeground }]}>
+              Update your personal credentials displayed across your professional workspace.
+            </Text>
+
+            <View>
+              <Text style={[styles.inputLabel, { color: colors.foreground }]}>First Name</Text>
+              <View style={[styles.inputWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Feather name="user" size={18} color="#8B9CC5" style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.inputField, { color: colors.foreground }]}
+                  value={firstNameInput}
+                  onChangeText={setFirstNameInput}
+                  placeholder="First name"
+                  placeholderTextColor="#8B9CC5"
+                />
+              </View>
+            </View>
+
+            <View>
+              <Text style={[styles.inputLabel, { color: colors.foreground }]}>Last Name</Text>
+              <View style={[styles.inputWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Feather name="user" size={18} color="#8B9CC5" style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.inputField, { color: colors.foreground }]}
+                  value={lastNameInput}
+                  onChangeText={setLastNameInput}
+                  placeholder="Last name"
+                  placeholderTextColor="#8B9CC5"
+                />
+              </View>
+            </View>
+
+            <View style={{ marginTop: 12 }}>
+              <Button
+                title={isUpdating ? "Saving Changes..." : "Save Changes"}
+                variant="primary"
+                onPress={handleUpdateProfile}
+                disabled={isUpdating}
+              />
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* About Us Modal */}
       <Modal
         visible={showAboutUsModal}
         animationType="slide"
@@ -160,17 +261,6 @@ export default function ProfileScreen() {
             <Text style={[styles.termsHeading, { color: colors.foreground, marginTop: 16 }]}>Our Mission</Text>
             <Text style={[styles.termsText, { color: colors.mutedForeground }]}>
               LawVise bridges cutting-edge artificial intelligence with rigorous legal workflow standards across India, the US, UK, and UAE. We empower attorneys, advocates, and legal firms to streamline case briefs, analyze precedents instantly, and manage litigation portfolios with absolute precision.
-            </Text>
-
-            <Text style={[styles.termsHeading, { color: colors.foreground, marginTop: 20 }]}>Core Capabilities</Text>
-            <Text style={[styles.termsText, { color: colors.mutedForeground, lineHeight: 22 }]}>
-              • <Text style={{ fontFamily: 'Inter_700Bold', color: colors.foreground }}>Voice Dictation:</Text> Real-time speech-to-text dictation for seamless courtroom notes and rapid brief dictation.{'\n'}
-              • <Text style={{ fontFamily: 'Inter_700Bold', color: colors.foreground }}>Client Intake:</Text> Structured onboarding workflows to capture client credentials and case files instantly.{'\n'}
-              • <Text style={{ fontFamily: 'Inter_700Bold', color: colors.foreground }}>Drafting:</Text> AI-powered legal document generation tailored to multi-jurisdictional frameworks.{'\n'}
-              • <Text style={{ fontFamily: 'Inter_700Bold', color: colors.foreground }}>Analyze:</Text> Deep case law and precedent analysis providing instant insights and risk assessment.{'\n'}
-              • Instant Fact Matching & Precedent Search{'\n'}
-              • Secure Encrypted Client Document Vault{'\n'}
-              • Cause List & Hearing Schedule Tracking
             </Text>
           </ScrollView>
         </View>
@@ -209,7 +299,7 @@ export default function ProfileScreen() {
         onClose={() => setShowAboutDevModal(false)}
       />
 
-      {/* Subscription Paywall Modal with UPI, Cards, and Wallets */}
+      {/* Subscription Paywall Modal */}
       <Modal
         visible={showPaywallModal}
         animationType="slide"
@@ -229,7 +319,6 @@ export default function ProfileScreen() {
               Choose your preferred billing method for LawVise Professional Access across US, UK, UAE, and India jurisdictions.
             </Text>
 
-            {/* UPI Option */}
             <Pressable 
               style={[styles.paymentOptionCard, { backgroundColor: colors.card, borderColor: '#C9A84C' }]}
               onPress={() => {
@@ -246,7 +335,6 @@ export default function ProfileScreen() {
               <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
             </Pressable>
 
-            {/* Debit & Credit Cards Option */}
             <Pressable 
               style={[styles.paymentOptionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => {
@@ -259,23 +347,6 @@ export default function ProfileScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.paymentTitle, { color: colors.foreground }]}>Debit & Credit Cards</Text>
                 <Text style={[styles.paymentDesc, { color: colors.mutedForeground }]}>Visa, MasterCard, RuPay, Maestro, Amex</Text>
-              </View>
-              <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-            </Pressable>
-
-            {/* International Digital Wallets Option */}
-            <Pressable 
-              style={[styles.paymentOptionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => {
-                Haptics.selectionAsync();
-                Alert.alert('Digital Wallet', 'Connecting to Apple Pay / Google Pay checkout...');
-                setShowPaywallModal(false);
-              }}
-            >
-              <Feather name="shield" size={22} color="#C9A84C" />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.paymentTitle, { color: colors.foreground }]}>Apple Pay & Google Pay</Text>
-                <Text style={[styles.paymentDesc, { color: colors.mutedForeground }]}>One-touch secure biometric checkout</Text>
               </View>
               <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
             </Pressable>
@@ -297,6 +368,8 @@ const styles = StyleSheet.create({
   avatarLargeText: { fontFamily: 'Inter_700Bold', fontSize: 24, color: '#070D24' },
   profileName: { fontFamily: 'Inter_700Bold', fontSize: 16, textAlign: 'center' },
   profileEmail: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', marginTop: 2 },
+  editProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#C9A84C15', borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C40' },
+  editProfileText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#C9A84C' },
   profileHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 14, width: '100%', marginBottom: 14 },
   avatarContainer: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   upgradeButton: { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 10, width: '100%', alignItems: 'center' },
@@ -313,6 +386,10 @@ const styles = StyleSheet.create({
   aboutBanner: { alignItems: 'center', paddingVertical: 12 },
   termsHeading: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 8 },
   termsText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 20 },
+  inputLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, marginBottom: 6 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, height: 52 },
+  inputIcon: { marginRight: 10 },
+  inputField: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 15 },
   paymentOptionCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, borderWidth: 1, gap: 14 },
   paymentTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },
   paymentDesc: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
