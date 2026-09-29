@@ -19,10 +19,10 @@ import Purchases from 'react-native-purchases';
 import MatterModal from '@/components/MatterModal';
 
 const DRAFT_TYPES = [
-  'Bail Application',
-  'Stay / Injunction IA',
   'Legal Notice',
+  'Bail Application',
   'Civil Suit / Plaint',
+  'Stay / Injunction IA',
   'Consumer Complaint',
   'Written Statement',
   'Arbitration Petition',
@@ -40,10 +40,10 @@ const DRAFT_TYPES = [
 const TONE_OPTIONS = ['Firm / Standard', 'Aggressive / Litigious', 'Neutral / Corporate'];
 
 const CLAUSE_LIBRARY = [
-  { name: 'Arbitration Clause', text: 'Any dispute, controversy, or claim arising out of or relating to this contract, including its formation or breach, shall be settled by arbitration in accordance with the Arbitration and Conciliation Act, 1996.' },
-  { name: 'Indemnification', text: 'The Party of the Second Part shall indemnify, defend, and hold harmless the Party of the First Part against any losses, liabilities, claims, damages, or expenses arising out of breach of representations.' },
-  { name: 'Force Majeure', text: 'Neither party shall be liable for any failure or delay in performance under this Agreement due to acts of God, war, pandemic, government restrictions, or other unforeseen circumstances beyond reasonable control.' },
-  { name: 'Governing Jurisdiction', text: 'This Agreement shall be governed by and construed in accordance with the laws of India, and the courts at the designated jurisdiction shall have exclusive territorial jurisdiction.' }
+  { name: 'Arbitration Clause', text: 'Any dispute, controversy, or claim arising out of or relating to this contract, including its formation or breach, shall be settled by binding arbitration in accordance with the Arbitration and Conciliation Act, 1996, with the seat and venue at the designated jurisdiction.' },
+  { name: 'Indemnification & Hold Harmless', text: 'The Second Party hereby undertakes to fully indemnify, defend, and hold harmless the First Party against all losses, liabilities, claims, damages, statutory penalties, and reasonable legal expenses arising out of any material breach of representations.' },
+  { name: 'Force Majeure', text: 'Neither party shall be held in default or liable for failure to perform obligations under this Agreement if such failure stems from acts of God, war, pandemics, government restrictions, or extraordinary circumstances beyond reasonable control.' },
+  { name: 'Governing Law & Jurisdiction', text: 'This Agreement shall be governed by, construed, and enforced in accordance with the substantive laws in force, and the courts at the principal place of business shall have exclusive territorial jurisdiction.' }
 ];
 
 const FREE_LIMIT_KEY = '@lawvise_draft_free_count';
@@ -58,7 +58,7 @@ export default function DraftScreen() {
   const { jurisdiction, activeMatter, setActiveMatter, saveDocument } = useApp();
 
   const [prompt, setPrompt] = useState('');
-  const [selectedType, setSelectedType] = useState('Rent Deed');
+  const [selectedType, setSelectedType] = useState('Legal Notice');
   const [selectedTone, setSelectedTone] = useState('Firm / Standard');
   const [showClauseDrawer, setShowClauseDrawer] = useState(false);
 
@@ -106,67 +106,71 @@ export default function DraftScreen() {
     setShowClauseDrawer(false);
   };
 
-  // 🏛️ ELITE CHAMBER-GRADE DRAFTING ENGINE WITH TONE MODULATION
-  const generateEliteChamberDraft = (type: string, userPrompt: string, jur: string, tone: string) => {
+  // 🏛️ SENIOR ADVOCATE CHAMBER-GRADE RIGOROUS DRAFTING ENGINE
+  const generateAdvocateChamberDraft = (type: string, userPrompt: string, jur: string, tone: string) => {
     const cleanType = type.toUpperCase();
     const currentDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-    const toneNote = tone === 'Aggressive / Litigious' ? ' [ATTN: Drafted with high-intensity legal liabilities, strict statutory warnings, and immediate penal/legal action consequences]' : tone === 'Neutral / Corporate' ? ' [ATTN: Drafted with balanced commercial terms, risk mitigation, and fair dispute mechanisms]' : '';
-
-    if (cleanType.includes('RENT DEED')) {
-      return `THIS RENT DEED is made and executed on this ______ day of ____________, 2026 at ${jur.toUpperCase()}, by and between:
-
-1. LESSOR: 
-[Name], S/o / W/o [Father's/Spouse's Name], residing at __________________________________________________ (hereinafter called the "LESSOR", which expression shall unless repugnant to the context include his/her heirs, legal representatives, executors, and administrators) of the FIRST PART;
-
-AND
-
-2. LESSEE: 
-[Name], S/o / W/o [Father's/Spouse's Name], residing at __________________________________________________ (hereinafter called the "LESSEE", which expression shall unless repugnant to the context include his/her heirs, legal representatives, successors, and permitted assigns) of the SECOND PART.
-
-WHEREAS the Lessor is the absolute owner and in lawful physical possession of the residential/commercial premises bearing property address ________________________________________ (hereinafter referred to as the "Demised Premises").
-
-AND WHEREAS the Lessee has approached the Lessor to take the Demised Premises on monthly rent, and the Lessor has agreed to let out the same on the following terms and conditions:${toneNote}
-
-1. TERM OF TENANCY:
-   The tenancy shall commence with effect from ____________ for an initial locked-in period of 11 (eleven) months, subject to extension upon mutual written consent. Specific instructions: ${userPrompt.trim()}
-
-2. RENT & MODE OF PAYMENT:
-   The Lessee shall pay a monthly rent of ₹________/- in advance on or before the 7th day of each calendar month.
-
-3. SECURITY DEPOSIT & DEFAULT:
-   Interest-free refundable security deposit of ₹________/- deposited with the Lessor. Default in rent payment for two consecutive months shall entitle the Lessor to immediate eviction and re-entry.
-
-IN WITNESS WHEREOF, the parties hereto have signed this Rent Deed in the presence of witnesses:
-
-LESSOR: ________________________      LESSEE: ________________________`;
-    }
+    const instructionBody = userPrompt.trim();
+    const isAggressive = tone === 'Aggressive / Litigious';
 
     if (cleanType.includes('LEGAL NOTICE')) {
-      return `BY SPEED POST / REGISTERED AD / EMAIL
+      return `CHAMBERS OF LEGAL COUNSEL & ADVOCATES
+JURISDICTION: ${jur.toUpperCase()}
+REF NO: LV/NOTICE/2026/0929
 DATE: ${currentDate}
 
+BY SPEED POST / REGISTERED AD / ELECTRONIC MAIL
+
 TO,
-[NAME & ADDRESS OF ADDRESSEE / OPPOSITE PARTY]
-__________________________________________________
+THE NOTICEE / OPPOSITE PARTY
+(As per instructions provided in chambers)
 
-SUBJECT: STATUTORY LEGAL NOTICE FOR BREACH OF OBLIGATION, RECOVERY, AND DAMAGES.${toneNote}
+SUBJECT: STATUTORY LEGAL NOTICE FOR BREACH OF OBLIGATION, FRAUDULENT DEFAULT, AND CLAIM FOR RECOVERY OF LIQUIDATED DAMAGES WITH INTEREST.
 
-DEAR SIR/MADAM,
+DEAR SIR / MADAM,
 
-Under express instructions from and on behalf of my client, [Client Name], resident of __________________________________________________, I serve upon you this formal legal notice:
+Under express, specific instructions from and on behalf of my client, acting through chambers, I serve upon you this formal statutory legal notice under the governing substantive and procedural laws of ${jur.toUpperCase()}:
 
-1. FACTUAL BACKGROUND & GRIEVANCE:
-   ${userPrompt.trim()}
+1. FACTUAL ANTECEDENTS & NARRATIVE:
+   That the answering client states that ${instructionBody}
 
-2. LEGAL LIABILITY & WARNING:
-   Your acts constitute a clear breach of legal duty. You are hereby called upon to remit the full payable sum along with statutory compensation within **15 days** of receipt of this notice.
+2. MATERIAL BREACH & CULPABILITY:
+   That your acts, omissions, misrepresentations, and subsequent failure to fulfill commitments constitute a grave and material breach of legal obligations, resulting in severe financial detriment, loss of business standing, and actionable injury to our client.
 
-3. CONSEQUENCES OF NON-COMPLIANCE:
-   Failing compliance, my client shall institute rigorous civil recovery and criminal proceedings against you in a competent court of law at your sole risk as to costs and consequences.
+3. STATUTORY LIABILITY & CLAIM:
+   That in light of the aforesaid defaults, you are jointly and severally liable to make good the losses incurred by our client, alongside accrued statutory interest calculated at 18% per annum.
 
-SINCERELY,
+4. FINAL DEMAND & WARNING:
+   That through this notice, you are called upon to unconditionally cure the aforesaid breach and remit the entire outstanding liquidated sum within **15 (fifteen) days** from the receipt hereof. ${isAggressive ? 'Take explicit notice that failure to comply shall compel our client to initiate uncompromising civil execution and criminal prosecution under applicable penal codes without any further reference.' : 'Your prompt cooperation is expected to avoid unnecessary legal escalation.'}
 
-COUNSEL FOR THE CLIENT`;
+COPY KEPT FOR RECORDS IN CHAMBERS.
+
+ADVOCATE FOR THE CLIENT`;
+    }
+
+    if (cleanType.includes('BAIL APPLICATION')) {
+      return `IN THE COURT OF THE SESSIONS JUDGE / MAGISTRATE, ${jur.toUpperCase()}
+BAIL APPLICATION NO. _____ OF 2026
+
+IN THE MATTER OF:
+APPLICANT / ACCUSED ... PETITIONER
+VERSUS
+STATE OF ${jur.toUpperCase()} ... RESPONDENT
+
+APPLICATION UNDER SECTION 439 / 483 OF THE CODE OF CRIMINAL PROCEDURE FOR GRANT OF REGULAR BAIL IN FIR NO. _____ REGISTERED UNDER POLICE STATION __________.
+
+MOST RESPECTFULLY SHOWETH:
+1. That the applicant has been falsely, maliciously, and wrongfully implicated in the above-noted FIR due to ulterior motives and professional animosity. The factual background substantiating the defense is as follows: ${instructionBody}
+2. That custodial interrogation of the applicant is neither warranted nor required, as all material investigations and alleged recoveries stand fully completed.
+3. That the applicant has deep roots in society, has a clean antecedents record, and undertakes to abide by all stringent terms and conditions imposed by this Hon'ble Court without absconding or tampering with evidence.
+
+PRAYER:
+It is most respectfully prayed that this Hon'ble Court may be pleased to enlarge the applicant on regular bail in the interest of justice and equity.
+
+PLACE: ${jur.toUpperCase()}
+DATE: ${currentDate}
+
+COUNSEL FOR THE PETITIONER`;
     }
 
     if (cleanType.includes('CONSUMER COMPLAINT')) {
@@ -174,22 +178,18 @@ COUNSEL FOR THE CLIENT`;
 CONSUMER COMPLAINT NO. _____ OF 2026
 
 IN THE MATTER OF:
-[Complainant Name] ... COMPLAINANT
+AGGRIEVED CONSUMER ... COMPLAINANT
 VERSUS
-[Opposite Party / Manufacturer / Service Provider] ... OPPOSITE PARTY
+MANUFACTURER / SERVICE PROVIDER ... OPPOSITE PARTY
 
-COMPLAINT UNDER SECTION 35 OF THE CONSUMER PROTECTION ACT, 2019 FOR DEFICIENCY IN SERVICE AND UNFAIR TRADE PRACTICE.${toneNote}
+COMPLAINT UNDER SECTION 35 OF THE CONSUMER PROTECTION ACT, 2019 FOR DEFICIENCY IN SERVICE, GROSS NEGLIGENCE, AND UNFAIR TRADE PRACTICE.
 
 THE COMPLAINANT RESPECTFULLY SUBMITS AS FOLLOWS:
-
-1. FACTUAL MATRIX & GRIEVANCE:
-   The Complainant purchased goods/services from the Opposite Party on [Date] for a total consideration of ₹________/-. Specific grievance details: ${userPrompt.trim()}
-
-2. DEFICIENCY IN SERVICE & UNFAIR TRADE PRACTICE:
-   The failure of the Opposite Party amounts to gross deficiency in service and unfair trade practice under Section 2(11) and 2(47) of the Consumer Protection Act, 2019, causing severe mental agony and financial loss.
+1. That the Complainant availed goods / services from the Opposite Party upon valid consideration. Core grievance details: ${instructionBody}
+2. That the failure of the Opposite Party to deliver merchantable quality amounts to gross deficiency in service and unfair trade practice under Section 2(11) and 2(47) of the Consumer Protection Act, 2019, causing immense mental agony and financial loss.
 
 PRAYER:
-It is respectfully prayed that this Hon'ble Commission may direct the Opposite Party to refund ₹________/- with 18% interest, pay compensation of ₹________/- for harassment, and litigation costs.
+It is respectfully prayed that this Hon'ble Commission may direct the Opposite Party to refund the full consideration with 18% interest, award compensation of ₹________/- for harassment, and litigation costs.
 
 PLACE: ${jur.toUpperCase()}
 DATE: ${currentDate}
@@ -197,79 +197,33 @@ DATE: ${currentDate}
 COUNSEL FOR COMPLAINANT`;
     }
 
-    if (cleanType.includes('WRITTEN STATEMENT')) {
-      return `IN THE COURT OF [CIVIL JUDGE / DISTRICT JUDGE], ${jur.toUpperCase()}
-CIVIL SUIT NO. _____ OF 2026
+    // Comprehensive Advocate Chamber Draft for all other categories
+    return `BEFORE THE COMPETENT FORUM / COURT OF ${jur.toUpperCase()}
+MEMORANDUM OF ${cleanType}
+CASE FILE REF NO: 2026/LV/CHAMBER
 
 IN THE MATTER OF:
-[Plaintiff Name] ... PLAINTIFF
-VERSUS
-[Defendant Name] ... DEFENDANT
+STAKEHOLDERS & CONTESTING PARTIES
 
-WRITTEN STATEMENT ON BEHALF OF THE DEFENDANT${toneNote}
-
-PRELIMINARY OBJECTIONS:
-1. Maintainability: The present suit is legally not maintainable and is liable to be dismissed.
-2. Specific Defense Instructions: ${userPrompt.trim()}
-
-PARA-WISE REPLY ON MERITS:
-All adverse averments, allegations, and claims made in the plaint are categorically denied unless specifically admitted herein. The answering Defendant maintains clean records and committed no breach.
-
-PRAYER:
-Dismiss the suit with exemplary costs in favor of the Defendant.
-
-PLACE: ${jur.toUpperCase()}
-DATE: ${currentDate}
-
-COUNSEL FOR THE DEFENDANT`;
-    }
-
-    if (cleanType.includes('ARBITRATION PETITION')) {
-      return `IN THE HIGH COURT OF JUDICATURE AT ${jur.toUpperCase()}
-ARBITRATION PETITION NO. _____ OF 2026
-
-IN THE MATTER OF:
-[Petitioner Company Name] ... PETITIONER
-VERSUS
-[Respondent Company Name] ... RESPONDENT
-
-PETITION UNDER SECTION 11 / SECTION 9 OF THE ARBITRATION AND CONCILIATION ACT, 1996${toneNote}
-
-THE PETITIONER RESPECTFULLY SUBMITS:
-1. EXISTENCE OF ARBITRATION AGREEMENT: The parties executed an agreement dated [Date] containing an arbitration clause for seat at ${jur.toUpperCase()}. Dispute details: ${userPrompt.trim()}
-2. INVOCATION & DEFAULT: The Petitioner invoked arbitration via notice, but Respondent failed to concur on arbitrator appointment within the statutory period.
-
-PRAYER:
-Appoint an independent Sole Arbitrator to adjudicate all pending commercial disputes.
-
-COUNSEL FOR THE PETITIONER`;
-    }
-
-    // Default Chamber Format
-    return `MEMORANDUM OF ${cleanType}
-JURISDICTION: ${jur.toUpperCase()}
-TONE / PROFILE: ${tone.toUpperCase()}
-
-THE APPLICANT / PARTY RESPECTFULLY SUBMITS:
-
-1. FACTUAL MATRIX & INSTRUCTIONS:
-   ${userPrompt.trim()}
+STATEMENT OF FACTS, GROUNDS & SUBMISSIONS:
+1. FACTUAL MATRIX & SPECIFIC INSTRUCTIONS:
+   ${instructionBody}
 
 2. STATUTORY FRAMEWORK & LEGAL SUBMISSIONS:
-   The rights, liabilities, and obligations of the parties stand governed by applicable statutory provisions and judicial precedents.
+   The rights, liabilities, and obligations of the contesting parties stand strictly governed by applicable statutory enactments, binding judicial precedents, and principles of natural justice within the territorial jurisdiction of ${jur.toUpperCase()}.
 
-3. PRAYER / OPERATIVE CLAUSE:
-   Appropriate reliefs or covenants as detailed herein shall bind all participating parties.
+3. PRAYER & OPERATIVE RELIEF SOUGHT:
+   In light of the aforesaid facts, legal submissions, and injury sustained, appropriate executive, civil, or judicial orders as detailed herein are solicited to secure the ends of justice.
 
 PLACE: ${jur.toUpperCase()}
 DATE: ${currentDate}
 
-COUNSEL / AUTHORIZED REPRESENTATIVE`;
+COUNSEL / ADVOCATE ON RECORD`;
   };
 
   const handleDraft = async () => {
     if (!prompt.trim()) { 
-      Alert.alert('Enter Prompt', 'Please specify facts, terms, party names, or background.'); 
+      Alert.alert('Enter Instructions', 'Please provide factual background, party names, or monetary figures.'); 
       return; 
     }
 
@@ -337,20 +291,20 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      // Elite Chamber Engine Fallback
-      const eliteText = generateEliteChamberDraft(selectedType, prompt, jurisdiction, selectedTone);
+      // Senior Advocate Chamber Engine Fallback
+      const advocateText = generateAdvocateChamberDraft(selectedType, prompt, jurisdiction, selectedTone);
 
       let index = 0;
       const interval = setInterval(() => {
-        setResult(eliteText.slice(0, index));
-        index += 45;
-        if (index > eliteText.length) {
-          setResult(eliteText);
+        setResult(advocateText.slice(0, index));
+        index += 50;
+        if (index > advocateText.length) {
+          setResult(advocateText);
           clearInterval(interval);
           setIsDrafting(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
-      }, 12);
+      }, 10);
       return;
     } finally {
       setIsDrafting(false);
@@ -385,13 +339,13 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
     if (!result) return;
     await Clipboard.setStringAsync(result);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied', 'Elite legal draft copied to clipboard.');
+    Alert.alert('Copied', 'Advocate-grade draft copied to clipboard.');
   };
 
   const handleShare = async () => {
     if (!result) return;
     try {
-      const filename = FileSystem.cacheDirectory + `chamber_draft.txt`;
+      const filename = FileSystem.cacheDirectory + `advocate_chamber_draft.txt`;
       await FileSystem.writeAsStringAsync(filename, result, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(filename);
     } catch {
@@ -424,9 +378,9 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
         <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free drafting credits. Upgrade to Pro for unlimited senior counsel-grade deeds and petitions.</Text>
 
         <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: colors.mutedForeground }}>/ month</Text></Text>
-          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited Chamber Deeds, Leases & Petitions</Text></View>
-          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Advanced Legal Research & Precedent Finder</Text></View>
+          <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: '#FFFFFF' }}>/ month</Text></Text>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: '#FFFFFF' }]}>Unlimited Chamber Deeds, Leases & Petitions</Text></View>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: '#FFFFFF' }]}>Advanced Legal Research & Precedent Finder</Text></View>
         </View>
 
         <Pressable style={styles.upgradeBtn} onPress={handleUpgrade}>
@@ -434,7 +388,7 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
         </Pressable>
 
         <Pressable onPress={() => setShowPaywall(false)} style={{ marginTop: 16, padding: 8 }}>
-          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>Back to drafting</Text>
+          <Text style={{ color: '#C9A84C', fontFamily: 'Inter_600SemiBold' }}>Back to drafting</Text>
         </Pressable>
       </View>
     );
@@ -452,10 +406,10 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
         {/* Header Section */}
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
-            <Feather name="file-text" size={22} color="#C9A84C" />
+            <Feather name="file-text" size={24} color="#C9A84C" />
             <Text style={styles.screenTitle}>Chamber Draft Engine</Text>
           </View>
-          <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
+          <Text style={styles.screenSub}>
             Senior counsel-grade drafting for deeds, contracts, and court petitions. ({freeUsesLeft} free trial uses remaining)
           </Text>
         </View>
@@ -472,12 +426,12 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
             <Feather name="briefcase" size={16} color="#C9A84C" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.matterLabel, { color: colors.mutedForeground }]}>FIRM MATTER WORKSPACE</Text>
-            <Text style={[styles.matterName, { color: colors.foreground }]} numberOfLines={1}>
+            <Text style={styles.matterLabel}>FIRM MATTER WORKSPACE</Text>
+            <Text style={styles.matterName} numberOfLines={1}>
               {activeMatter ? activeMatter.title : 'General Practice (Tap to assign matter)'}
             </Text>
           </View>
-          <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+          <Feather name="chevron-down" size={16} color="#C9A84C" />
         </Pressable>
 
         {/* Step 1: Draft Instructions Input */}
@@ -499,7 +453,7 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
           {/* Clause Library Drawer */}
           {showClauseDrawer && (
             <View style={[styles.clauseDrawer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.clauseDrawerTitle, { color: colors.foreground }]}>Tap clause to insert into prompt:</Text>
+              <Text style={styles.clauseDrawerTitle}>Tap clause to insert into prompt:</Text>
               {CLAUSE_LIBRARY.map((item, idx) => (
                 <Pressable 
                   key={idx} 
@@ -507,20 +461,20 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
                   onPress={() => handleInsertClause(item.text)}
                 >
                   <Text style={styles.clauseItemName}>{item.name}</Text>
-                  <Text style={[styles.clauseItemSnippet, { color: colors.mutedForeground }]} numberOfLines={1}>{item.text}</Text>
+                  <Text style={styles.clauseItemSnippet} numberOfLines={1}>{item.text}</Text>
                 </Pressable>
               ))}
             </View>
           )}
 
           <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="edit-3" size={18} color={colors.mutedForeground} style={styles.queryIcon} />
+            <Feather name="edit-3" size={18} color="#C9A84C" style={styles.queryIcon} />
             <TextInput
-              style={[styles.queryInput, { color: colors.foreground }]}
+              style={[styles.queryInput, { color: '#FFFFFF' }]}
               value={prompt}
               onChangeText={setPrompt}
               placeholder="Provide names, amounts, grievance details, or specific clauses..."
-              placeholderTextColor={colors.mutedForeground}
+              placeholderTextColor="#8B9CC5"
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -543,7 +497,7 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
                   ]}
                   onPress={() => setSelectedType(type)}
                 >
-                  <Text style={[styles.chipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{type}</Text>
+                  <Text style={[styles.chipText, { color: isSelected ? '#070D24' : '#FFFFFF', fontFamily: isSelected ? 'Inter_700Bold' : 'Inter_500Medium' }]}>{type}</Text>
                 </Pressable>
               );
             })}
@@ -565,7 +519,7 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
                   ]}
                   onPress={() => setSelectedTone(tone)}
                 >
-                  <Text style={[styles.toneChipText, { color: isSelected ? '#C9A84C' : colors.mutedForeground }]}>{tone}</Text>
+                  <Text style={[styles.toneChipText, { color: isSelected ? '#C9A84C' : '#FFFFFF' }]}>{tone}</Text>
                 </Pressable>
               );
             })}
@@ -574,8 +528,8 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
 
         {/* Jurisdiction Details */}
         <View style={styles.jurisdictionRow}>
-          <Feather name="globe" size={13} color={colors.mutedForeground} />
-          <Text style={[styles.jurisdictionText, { color: colors.mutedForeground }]}>Jurisdiction: {jurisdiction}</Text>
+          <Feather name="globe" size={14} color="#C9A84C" />
+          <Text style={styles.jurisdictionText}>Jurisdiction: {jurisdiction}</Text>
         </View>
 
         {/* Generate Button */}
@@ -598,19 +552,19 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
 
         {/* Result Display Section & Action Bar */}
         {hasResult && (
-          <View style={[styles.resultContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.resultContainer, { backgroundColor: colors.card, borderColor: '#C9A84C' }]}>
             <View style={styles.resultHeader}>
-              <Feather name="file-text" size={16} color="#C9A84C" />
-              <Text style={[styles.resultHeaderText, { color: colors.foreground }]}>{selectedType} Output</Text>
+              <Feather name="file-text" size={18} color="#C9A84C" />
+              <Text style={styles.resultHeaderText}>{selectedType} Output</Text>
               {isDrafting && <ActivityIndicator color="#C9A84C" size="small" />}
             </View>
             {isDrafting && !result ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color="#C9A84C" />
-                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Crafting professional chamber document...</Text>
+                <Text style={styles.loadingText}>Crafting advocate-grade chamber document...</Text>
               </View>
             ) : null}
-            <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
+            <Text style={styles.resultText}>{result}</Text>
 
             {/* Draft Action Bar */}
             {!isDrafting && result ? (
@@ -649,36 +603,36 @@ COUNSEL / AUTHORIZED REPRESENTATIVE`;
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centerContainer: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  headerContainer: { marginBottom: 12 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
-  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  headerContainer: { marginBottom: 16 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, color: '#FFFFFF' },
+  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#FFFFFF', opacity: 0.85 },
 
   matterBanner: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: 10,
-    borderWidth: 1, padding: 12, marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center', borderRadius: 12,
+    borderWidth: 1, padding: 14, marginBottom: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
   matterIconBox: {
-    width: 32, height: 32, borderRadius: 8,
-    backgroundColor: 'rgba(201, 168, 76, 0.15)',
-    justifyContent: 'center', alignItems: 'center', marginRight: 10,
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: 'rgba(201, 168, 76, 0.2)',
+    justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
-  matterLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.5 },
-  matterName: { fontSize: 13, fontFamily: 'Inter_700Bold', marginTop: 1 },
+  matterLabel: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1, color: '#C9A84C' },
+  matterName: { fontSize: 14, fontFamily: 'Inter_700Bold', marginTop: 2, color: '#FFFFFF' },
 
   sectionBlock: { marginBottom: 20 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2 },
-  clauseToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 6, backgroundColor: 'rgba(201, 168, 76, 0.1)' },
-  clauseToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C' },
+  sectionHeaderLabel: { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#C9A84C', letterSpacing: 1.2 },
+  clauseToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, backgroundColor: 'rgba(201, 168, 76, 0.15)' },
+  clauseToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#C9A84C' },
 
-  clauseDrawer: { borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 12 },
-  clauseDrawerTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginBottom: 8 },
-  clauseItem: { paddingVertical: 8, borderBottomWidth: 1 },
-  clauseItemName: { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#C9A84C' },
-  clauseItemSnippet: { fontFamily: 'Inter_400Regular', fontSize: 11, marginTop: 2 },
+  clauseDrawer: { borderRadius: 12, borderWidth: 1, padding: 14, marginBottom: 12 },
+  clauseDrawerTitle: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#FFFFFF', marginBottom: 8 },
+  clauseItem: { paddingVertical: 10, borderBottomWidth: 1 },
+  clauseItemName: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#C9A84C' },
+  clauseItemSnippet: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#FFFFFF', opacity: 0.8, marginTop: 3 },
 
   queryWrapper: {
     flexDirection: 'row', borderRadius: 12, borderWidth: 1,
@@ -686,43 +640,43 @@ const styles = StyleSheet.create({
   },
   queryIcon: { marginRight: 10, marginTop: 2 },
   queryInput: {
-    flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14,
-    lineHeight: 22, minHeight: 90,
+    flex: 1, fontFamily: 'Inter_400Regular', fontSize: 15,
+    lineHeight: 22, minHeight: 100, color: '#FFFFFF',
   },
   horizontalChipsContainer: { gap: 8 },
-  chip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1 },
-  chipText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
+  chip: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 20, borderWidth: 1 },
+  chipText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
 
   toneRow: { flexDirection: 'row', gap: 8 },
-  toneChip: { flex: 1, paddingVertical: 8, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
-  toneChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, textAlign: 'center' },
+  toneChip: { flex: 1, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
+  toneChipText: { fontFamily: 'Inter_700Bold', fontSize: 12, textAlign: 'center', color: '#FFFFFF' },
 
-  jurisdictionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
-  jurisdictionText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
+  jurisdictionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
+  jurisdictionText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#FFFFFF' },
   researchBtn: {
-    backgroundColor: '#C9A84C', borderRadius: 12, height: 52,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24,
+    backgroundColor: '#C9A84C', borderRadius: 12, height: 54,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 24,
   },
   researchBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
-  resultContainer: { borderRadius: 12, borderWidth: 1, padding: 16 },
+  resultContainer: { borderRadius: 14, borderWidth: 1.5, padding: 18 },
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  resultHeaderText: { fontFamily: 'Inter_700Bold', fontSize: 15, flex: 1 },
+  resultHeaderText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#FFFFFF', flex: 1 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
-  resultText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 22, marginBottom: 16 },
+  loadingText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#FFFFFF' },
+  resultText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24, color: '#FFFFFF', marginBottom: 20 },
 
-  actionBarContainer: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 14, gap: 10 },
-  actionRow: { flexDirection: 'row', gap: 8 },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C' },
+  actionBarContainer: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)', paddingTop: 14, gap: 10 },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#C9A84C', backgroundColor: 'rgba(201, 168, 76, 0.05)' },
   primaryActionBtn: { backgroundColor: '#C9A84C', width: '100%', borderWidth: 0 },
-  actionBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#C9A84C' },
+  actionBtnText: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#C9A84C' },
 
   paywallTitle: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#FFFFFF', textAlign: 'center', marginBottom: 10 },
-  paywallSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  paywallSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#FFFFFF', opacity: 0.85, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   priceCard: { width: '100%', borderRadius: 16, borderWidth: 1, padding: 20, marginBottom: 24 },
   priceText: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#C9A84C', marginBottom: 16, textAlign: 'center' },
   featureBullet: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  featureText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
+  featureText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#FFFFFF' },
   upgradeBtn: { width: '100%', height: 52, backgroundColor: '#C9A84C', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   upgradeBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
 });
