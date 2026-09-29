@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -11,23 +11,42 @@ interface VoiceDictationProps {
   onUpgradePress: () => void;
 }
 
+const MAX_RECORDING_DURATION_MS = 5 * 60 * 1000; // 5 Minutes max limit
+
 export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress }: VoiceDictationProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProUser, setIsProUser] = useState(false);
   const [canUse, setCanUse] = useState(true);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  
+  // Live Timer States
+  const [secondsElapsed, setSecondsElapsed] = useState(0);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     checkUserStatus();
     requestMicrophonePermission();
 
     return () => {
+      cleanupTimers();
       if (recording) {
         recording.stopAndUnloadAsync();
       }
     };
   }, []);
+
+  const cleanupTimers = () => {
+    if (recordingTimerRef.current) {
+      clearTimeout(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (intervalTimerRef.current) {
+      clearInterval(intervalTimerRef.current);
+      intervalTimerRef.current = null;
+    }
+  };
 
   const requestMicrophonePermission = async () => {
     try {
@@ -50,6 +69,12 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
     }
   };
 
+  const formatTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const startRecording = async () => {
     try {
       await Audio.setAudioModeAsync({
@@ -62,16 +87,31 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       );
       setRecording(newRecording);
       setIsRecording(true);
+      setSecondsElapsed(0);
+
+      // Start live visual counter (every 1 second)
+      intervalTimerRef.current = setInterval(() => {
+        setSecondsElapsed((prev) => prev + 1);
+      }, 1000);
+
+      // Set 5-minute hard auto-stop timer
+      recordingTimerRef.current = setTimeout(async () => {
+        Alert.alert('Maximum Limit Reached', 'Voice dictation has automatically stopped at the 5-minute limit.');
+        await stopAndUploadRecording();
+      }, MAX_RECORDING_DURATION_MS);
+
     } catch (err) {
       console.error('Failed to start recording', err);
       Alert.alert('Error', 'Could not start audio recording.');
       setIsRecording(false);
+      cleanupTimers();
     }
   };
 
   const stopAndUploadRecording = async () => {
     if (!recording) return;
 
+    cleanupTimers();
     setIsRecording(false);
     setIsProcessing(true);
 
@@ -153,7 +193,7 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       {isProcessing ? (
         <View style={styles.processingRow}>
           <ActivityIndicator color="#C9A84C" size="small" />
-          <Text style={styles.processingText}>Transcribing courtroom audio...</Text>
+          <Text style={styles.processingText}>Transcribing courtroom audio (Max 5m)...</Text>
         </View>
       ) : (
         <View style={styles.wrapperRow}>
@@ -168,12 +208,8 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
             />
             <Text style={[styles.micText, isRecording && { color: '#FFFFFF' }]}>
               {isRecording 
-                ? 'Tap to Stop & Transcribe' 
-                : isProUser 
-                  ? 'Voice Dictation (Pro)' 
-                  : canUse 
-                    ? 'Voice Dictation (Free Trial)' 
-                    : 'Voice Dictation (Locked)'}
+                ? `Recording ${formatTime(secondsElapsed)} / 05:00` 
+                : 'Voice Dictation (Max 5m)'}
             </Text>
           </Pressable>
 
