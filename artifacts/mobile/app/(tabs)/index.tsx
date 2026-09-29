@@ -40,7 +40,7 @@ const MOCK_FALLBACK_CASES = [
   { id: 3, title: 'Verma Employment Arbitration', status: 'active', nextHearing: 'Sep 18, 11:00 AM' },
 ];
 
-const MAX_RECORDING_SECONDS = 120;
+const MAX_RECORDING_SECONDS = 300; // Updated to 5 minutes (300 seconds)
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -65,7 +65,7 @@ export default function HomeScreen() {
   const [transcript, setTranscript] = useState('');
   const [savedMemos, setSavedMemos] = useState<string[]>([]);
   
-  const [freeDictationsLeft, setFreeDictationsLeft] = useState(3);
+  const [freeDictationsLeft, setFreeDictationsLeft] = useState(50); // Updated to 50 free limits for testing
   const [isProUser, setIsProUser] = useState(false);
 
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function HomeScreen() {
 
   const handleAutoStopRecording = async () => {
     await stopAndProcessRecording();
-    Alert.alert('Time Limit Reached', 'Free dictations are capped at 2 minutes. Upgrade to Pro for unlimited length.');
+    Alert.alert('Time Limit Reached', 'Free dictations are capped at 5 minutes. Upgrade to Pro for unlimited length.');
   };
 
   const startRealRecording = async () => {
@@ -137,8 +137,6 @@ export default function HomeScreen() {
         setRecording(null);
         console.log('Recorded audio file stored at:', uri);
 
-        // TODO: Send `uri` to your backend API or OpenAI Whisper for speech-to-text transcription.
-        // For now, we simulate transcription processing of your recorded audio session:
         await new Promise((resolve) => setTimeout(resolve, 1200));
       }
 
@@ -163,7 +161,7 @@ export default function HomeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert(
         'Pro Feature Required',
-        'You have used your 3 free trial dictations. Upgrade to LawVise Pro for unlimited secure voice dictations.',
+        'You have used your 50 free trial dictations. Upgrade to LawVise Pro for unlimited secure voice dictations.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Unlock Unlimited Pro', onPress: () => setIsProUser(true) }
@@ -335,7 +333,7 @@ export default function HomeScreen() {
         <View style={[styles.tierBadge, { backgroundColor: isProUser ? '#C9A84C25' : '#1B2448' }]}>
           <Feather name={isProUser ? 'award' : 'lock'} size={12} color="#C9A84C" />
           <Text style={styles.tierBadgeText}>
-            {isProUser ? 'Pro (Unlimited)' : `${freeDictationsLeft} Free Left (Max 2m)`}
+            {isProUser ? 'Pro (Unlimited)' : `${freeDictationsLeft} Free Left (Max 5m)`}
           </Text>
         </View>
       </View>
@@ -351,7 +349,7 @@ export default function HomeScreen() {
         </View>
 
         <Text style={[styles.dictationStatusText, { color: isRecording ? '#EF4444' : colors.foreground }]}>
-          {isRecording ? `Recording Audio... (${formatTime(recordingSeconds)} / 2:00)` : 'Tap to Dictate Courtroom Notes'}
+          {isRecording ? `Recording Audio... (${formatTime(recordingSeconds)} / 5:00)` : 'Tap to Dictate Courtroom Notes'}
         </Text>
         <Text style={[styles.dictationStatusSub, { color: colors.mutedForeground }]}>
           {isRecording ? 'Microphone active...' : 'Spoken words are automatically structured into professional court summaries.'}
@@ -362,7 +360,7 @@ export default function HomeScreen() {
           onPress={handleToggleRecording}
         >
           <Text style={styles.dictationActionBtnText}>
-            {isRecording ? 'Stop & Structure Brief' : (freeDictationsLeft > 0 || isProUser ? 'Start Voice Dictation (Max 2m)' : 'Unlock Unlimited Pro')}
+            {isRecording ? 'Stop & Structure Brief' : (freeDictationsLeft > 0 || isProUser ? 'Start Voice Dictation (Max 5m)' : 'Unlock Unlimited Pro')}
           </Text>
         </Pressable>
 
