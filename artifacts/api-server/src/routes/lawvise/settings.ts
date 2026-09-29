@@ -6,26 +6,31 @@ import { eq } from "drizzle-orm";
 
 const router = Router();
 
-router.get("/lawvise/settings", requireAuth, async (req, res): Promise<void> => {
+router.get("/lawwise/settings", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
 
-  let [settings] = await db
-    .select()
-    .from(userSettingsTable)
-    .where(eq(userSettingsTable.userId, userId));
+  try {
+    let [settings] = await db
+      .select()
+      .from(userSettingsTable)
+      .where(eq(userSettingsTable.userId, userId));
 
-  if (!settings) {
-    // Create default settings
-    [settings] = await db
-      .insert(userSettingsTable)
-      .values({ userId })
-      .returning();
+    if (!settings) {
+      // Create default settings
+      [settings] = await db
+        .insert(userSettingsTable)
+        .values({ userId })
+        .returning();
+    }
+
+    res.json(settings);
+  } catch (err) {
+    req.log.error({ err, userId }, "Failed to fetch user settings");
+    res.status(500).json({ error: "Failed to retrieve settings. Please try again." });
   }
-
-  res.json(settings);
 });
 
-router.put("/lawvise/settings", requireAuth, async (req, res): Promise<void> => {
+router.put("/lawwise/settings", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const parsed = UpdateSettingsBody.safeParse(req.body);
   if (!parsed.success) {
@@ -33,16 +38,21 @@ router.put("/lawvise/settings", requireAuth, async (req, res): Promise<void> => 
     return;
   }
 
-  const [settings] = await db
-    .insert(userSettingsTable)
-    .values({ userId, ...parsed.data })
-    .onConflictDoUpdate({
-      target: userSettingsTable.userId,
-      set: { ...parsed.data, updatedAt: new Date() },
-    })
-    .returning();
+  try {
+    const [settings] = await db
+      .insert(userSettingsTable)
+      .values({ userId, ...parsed.data })
+      .onConflictDoUpdate({
+        target: userSettingsTable.userId,
+        set: { ...parsed.data, updatedAt: new Date() },
+      })
+      .returning();
 
-  res.json(settings);
+    res.json(settings);
+  } catch (err) {
+    req.log.error({ err, userId }, "Failed to update user settings");
+    res.status(500).json({ error: "Failed to update settings. Please try again." });
+  }
 });
 
 export default router;
