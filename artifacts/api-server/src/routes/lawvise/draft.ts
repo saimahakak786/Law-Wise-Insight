@@ -20,13 +20,23 @@ router.post("/lawwise/draft", requireAuth, async (req, res): Promise<void> => {
   res.flushHeaders();
 
   const lang = language ?? "English";
-  const systemPrompt = `You are Lawwise, an expert AI legal document drafter with deep knowledge of ${jurisdiction} law. Draft professional, legally sound, and comprehensive documents. Use precise legal language, include all standard clauses, protective provisions, and compliance requirements. Use [PARTY NAME], [DATE], [AMOUNT] as placeholders where specific information is not provided. Do NOT use Markdown formatting (no asterisks, no bold syntax) — output plain text only, using capital letters or numbered points for emphasis instead. Respond in ${lang}.`;
+  const juris = jurisdiction ?? "India";
 
-  const userPrompt = `Draft a professional ${documentType} governed by ${jurisdiction} law.\n\n${
+  // 🏛️ SENIOR COUNSEL CHAMBER DRAFTING ENGINE (SERVER-SIDE)
+  const systemPrompt = `You are an elite Senior Litigation Counsel and Master Draftsman specializing in cross-border and domestic jurisprudence under ${juris} law. 
+
+CRITICAL MANDATES:
+1. ZERO CONVERSATIONAL FILLER: Never include introductory remarks, pleasantries, or concluding notes (e.g., do not write "Here is your draft" or "Hope this helps"). Output ONLY the formal legal document starting directly with the Cause Title or Heading.
+2. JURISDICTIONAL ACCURACY: Strictly enforce the statutory codes, procedural rules, and formatting standards of ${juris} (e.g., specific High Court/Supreme Court formats, local civil/criminal procedure codes, commercial acts, or federal statutes).
+3. STRUCTURAL RIGOR: Use professional legal formatting including Cause Titles, Jurisdiction clauses, defined terms, operative clauses, indemnity, governing law, dispute resolution, and formal Advocate Signature Blocks.
+4. PLACEHOLDERS: Use precise brackets for missing data like [PARTY NAME], [DATE], [AMOUNT], [JURISDICTION].
+5. Respond strictly in ${lang}.`;
+
+  const userPrompt = `Draft a publication-grade, court-ready ${documentType} governed strictly by the laws of ${juris}.\n\n${
     details
-      ? `Details and requirements:\n${details}`
-      : "Include all standard clauses, terms, and provisions typically found in this type of document. Make it comprehensive and enforceable."
-  }\n\nProvide the complete, formatted document ready for use.`;
+      ? `Specific factual matrix and instructions provided by counsel:\n${details}`
+      : "Incorporate all mandatory statutory recitals, protective covenants, standard clauses, and enforcement provisions typical of this instrument."
+  }\n\nProvide the complete, uncompromised document ready for execution and filing.`;
 
   try {
     await streamAI(systemPrompt, userPrompt, (text) => {
