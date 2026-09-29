@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  TextInput, ActivityIndicator, Platform, Alert, Modal,
+  TextInput, ActivityIndicator, Platform, Alert, Modal, KeyboardAvoidingView,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import { fetch } from 'expo/fetch';
+import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
@@ -72,6 +72,18 @@ export default function ResearchScreen() {
     } catch {
       setIsPro(false);
     }
+  };
+
+  // Helper to clean raw markdown symbols from AI text output
+  const cleanMarkdown = (text: string) => {
+    if (!text) return '';
+    return text
+      .replace(/#{1,6}\s*/g, '') // Remove headers (#, ##, ###)
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold (**text**)
+      .replace(/\*(.*?)\*/g, '$1') // Remove italic (*text*)
+      .replace(/__(.*?)__/g, '$1') // Remove underline (__text__)
+      .replace(/---/g, '') // Remove horizontal rules
+      .trim();
   };
 
   const handleResearch = async () => {
@@ -193,16 +205,16 @@ export default function ResearchScreen() {
 
   const handleCopy = async () => {
     if (!result) return;
-    await Clipboard.setStringAsync(result);
+    await Clipboard.setStringAsync(cleanMarkdown(result));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied', 'Research memorandum copied to clipboard.');
+    Alert.alert('Copied', 'Clean research memorandum copied to clipboard.');
   };
 
   const handleShare = async () => {
     if (!result) return;
     try {
       const filename = FileSystem.cacheDirectory + `research_memo.txt`;
-      await FileSystem.writeAsStringAsync(filename, result, { encoding: FileSystem.EncodingType.UTF8 });
+      await FileSystem.writeAsStringAsync(filename, cleanMarkdown(result), { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(filename);
     } catch {
       Alert.alert('Share Failed', 'Could not share the research memorandum.');
@@ -213,6 +225,7 @@ export default function ResearchScreen() {
     if (!result) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
+      const cleanResultText = cleanMarkdown(result);
       const htmlContent = `
         <html>
           <head>
@@ -226,16 +239,24 @@ export default function ResearchScreen() {
           <body>
             <h1>LawVise Official Legal Citation Paper</h1>
             <div class="badge">Jurisdiction: ${jurisdiction.toUpperCase()} | Scope: ${selectedType}</div>
-            <div class="content">${result.replace(/\n/g, '<br/>')}</div>
+            <div class="content">${cleanResultText.replace(/\n/g, '<br/>')}</div>
           </body>
         </html>
       `;
 
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      
+      // Save with a clean, readable custom filename instead of UUID
+      const sanitizedTitle = query ? query.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) : 'Legal_Research';
+      const customFileName = `LawVise_${sanitizedTitle}_Citation_Paper.pdf`;
+      const permanentUri = FileSystem.documentDirectory + customFileName;
+      
+      await FileSystem.moveAsync({ from: uri, to: permanentUri });
+
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Citation Paper PDF' });
+        await Sharing.shareAsync(permanentUri, { mimeType: 'application/pdf', dialogTitle: 'Export Citation Paper PDF' });
       } else {
-        Alert.alert('PDF Generated', `File saved at: ${uri}`);
+        Alert.alert('PDF Generated', `File saved at: ${permanentUri}`);
       }
     } catch {
       Alert.alert('Export Failed', 'Could not generate PDF document.');
@@ -247,7 +268,8 @@ export default function ResearchScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const markdownContent = `# LawVise Legal Citation Paper\n\n> Jurisdiction: ${jurisdiction.toUpperCase()} | Scope: ${selectedType}\n\n---\n\n${result}`;
-      const filename = FileSystem.cacheDirectory + `Citation_Paper_${Date.now()}.md`;
+      const sanitizedTitle = query ? query.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 25) : 'Citation';
+      const filename = FileSystem.cacheDirectory + `LawVise_${sanitizedTitle}.md`;
       await FileSystem.writeAsStringAsync(filename, markdownContent, { encoding: FileSystem.EncodingType.UTF8 });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(filename, { mimeType: 'text/markdown', dialogTitle: 'Export Markdown Citation Paper' });
@@ -263,7 +285,7 @@ export default function ResearchScreen() {
       await saveDocument({
         title: `Research: ${query.slice(0, 30)}...`,
         documentType: 'research',
-        content: result,
+        content: cleanMarkdown(result),
         analysisType: selectedType.toLowerCase(),
         matterId: activeMatter ? activeMatter.id : null,
       });
@@ -275,7 +297,7 @@ export default function ResearchScreen() {
   };
 
   const parsePaperSections = (rawText: string) => {
-    const cleaned = rawText.replace(/###\s*/g, '').replace(/\*\*/g, '');
+    const cleaned = cleanMarkdown(rawText);
     const parts = cleaned.split(/\n(?=[0-9]+\.\s|[A-Z\s]{4,}:)/);
     return parts.map((part, index) => {
       const lines = part.trim().split('\n');
@@ -305,10 +327,13 @@ export default function ResearchScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 100, paddingHorizontal: 20 }}
         onContentSizeChange={() => hasResult && scrollRef.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -417,7 +442,7 @@ export default function ResearchScreen() {
               <Text style={[styles.resultHeaderText, { color: colors.foreground }]}>Research Memorandum</Text>
               {isResearching && <ActivityIndicator color="#C9A84C" size="small" />}
             </View>
-            <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
+            <Text style={[styles.resultText, { color: colors.foreground }]}>{cleanMarkdown(result)}</Text>
 
             {!isResearching && result ? (
               <View style={styles.actionBarContainer}>
@@ -481,7 +506,7 @@ export default function ResearchScreen() {
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
+          <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 80 }}>
             <View style={[styles.paperHeaderBadge, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={styles.paperBadgeText}>LAWVISE VERIFIED ACADEMIC & PROFESSIONAL PAPER</Text>
               <Text style={[styles.paperSubText, { color: colors.mutedForeground }]}>Jurisdiction: {jurisdiction.toUpperCase()} | Scope: {selectedType}</Text>
@@ -497,12 +522,12 @@ export default function ResearchScreen() {
             ) : (
               <View style={[styles.paperSectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Text style={styles.paperSectionTitle}>COMPLETE MEMORANDUM TEXT</Text>
-                <Text style={[styles.paperSectionContent, { color: colors.foreground, lineHeight: 26 }]}>{result}</Text>
+                <Text style={[styles.paperSectionContent, { color: colors.foreground, lineHeight: 26 }]}>{cleanMarkdown(result)}</Text>
               </View>
             )}
           </ScrollView>
 
-          <View style={[styles.paperModalFooter, { borderTopColor: colors.border, backgroundColor: colors.card, flexDirection: 'row', gap: 10 }]}>
+          <View style={[styles.paperModalFooter, { borderTopColor: colors.border, backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom, 16), flexDirection: 'row', gap: 10 }]}>
             <Pressable style={[styles.actionBtn, { flex: 1, borderColor: '#C9A84C' }]} onPress={handleExportPDF}>
               <Feather name="file-text" size={15} color="#C9A84C" />
               <Text style={styles.actionBtnText}>Export PDF</Text>
@@ -525,7 +550,7 @@ export default function ResearchScreen() {
         activeMatter={activeMatter}
         onSelectMatter={(matter) => setActiveMatter(matter)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
