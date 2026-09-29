@@ -233,7 +233,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      {/* About Us Modal */}
+      {/* About Us / LawVise Modal */}
       <Modal
         visible={showAboutUsModal}
         animationType="slide"
@@ -247,20 +247,41 @@ export default function ProfileScreen() {
               <Feather name="x" size={22} color={colors.foreground} />
             </Pressable>
           </View>
-          <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
             <View style={styles.aboutBanner}>
               <Feather name="compass" size={36} color="#C9A84C" style={{ marginBottom: 12 }} />
               <Text style={[styles.termsHeading, { color: colors.foreground, textAlign: 'center', fontSize: 18 }]}>
-                Empowering Modern Legal Practice
+                LawVise v1.0.0
               </Text>
-              <Text style={[styles.termsText, { color: colors.mutedForeground, textAlign: 'center', marginTop: 4 }]}>
+              <Text style={[styles.termsText, { color: '#C9A84C', textAlign: 'center', marginTop: 2, fontFamily: 'Inter_600SemiBold', fontSize: 13 }]}>
+                Your Intelligent Multi-Jurisdictional Legal Copilot
+              </Text>
+              <Text style={[styles.termsText, { color: colors.mutedForeground, textAlign: 'center', marginTop: 8 }]}>
                 Intelligent multi-jurisdictional AI research, case tracking, and secure vault infrastructure designed for elite legal counsel.
               </Text>
             </View>
 
-            <Text style={[styles.termsHeading, { color: colors.foreground, marginTop: 16 }]}>Our Mission</Text>
+            <Text style={[styles.termsHeading, { color: colors.foreground, marginTop: 16 }]}>Core Capabilities</Text>
             <Text style={[styles.termsText, { color: colors.mutedForeground }]}>
-              LawVise bridges cutting-edge artificial intelligence with rigorous legal workflow standards across India, the US, UK, and UAE. We empower attorneys, advocates, and legal firms to streamline case briefs, analyze precedents instantly, and manage litigation portfolios with absolute precision.
+              • <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>AI Legal Research & Streaming:</Text> Instant analysis of case law, statutes, and legal arguments with real-time streaming responses.{'\n'}
+              • <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>Multi-Jurisdiction Support:</Text> Tailored legal insights covering India, the United States, the United Kingdom, and the United Arab Emirates (UAE).{'\n'}
+              • <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>Secure Document Vault:</Text> Encrypted storage and document management for confidential briefs, contracts, and case files.{'\n'}
+              • <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>Litigation & Hearing Alarms:</Text> Built-in notification reminders and docket tracking for court dates.
+            </Text>
+
+            <Text style={[styles.termsHeading, { color: colors.foreground, marginTop: 20 }]}>Our Mission</Text>
+            <Text style={[styles.termsText, { color: colors.mutedForeground }]}>
+              LawVise bridges cutting-edge artificial intelligence with rigorous legal workflow standards. We empower attorneys, advocates, and legal firms to streamline case briefs, analyze precedents instantly, and manage litigation portfolios with absolute precision.
+            </Text>
+
+            <Text style={[styles.termsHeading, { color: colors.foreground, marginTop: 20 }]}>Professional Attribution</Text>
+            <Text style={[styles.termsText, { color: '#9CA3AF', fontFamily: 'Inter_400Regular' }]}>
+              Developed by Adv. Saima Hakak. Designed with precision for legal professionals worldwide.
+            </Text>
+
+            <Text style={[styles.termsHeading, { color: colors.foreground, marginTop: 20 }]}>Legal Disclaimer</Text>
+            <Text style={[styles.termsText, { color: colors.mutedForeground, fontSize: 12, lineHeight: 18 }]}>
+              LawVise provides AI-assisted research and document drafting tools to assist legal practitioners. Outputs do not constitute formal legal representation or binding legal counsel. Attorneys remain fully responsible for final review, validation, and court filings.
             </Text>
           </ScrollView>
         </View>
