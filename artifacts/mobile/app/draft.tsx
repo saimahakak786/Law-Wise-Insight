@@ -339,13 +339,13 @@ COUNSEL / ADVOCATE ON RECORD`;
     if (!result) return;
     await Clipboard.setStringAsync(result);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied', 'Advocate-grade draft copied to clipboard.');
+    Alert.alert('Copied', 'Elite legal draft copied to clipboard.');
   };
 
   const handleShare = async () => {
     if (!result) return;
     try {
-      const filename = FileSystem.cacheDirectory + `advocate_chamber_draft.txt`;
+      const filename = FileSystem.cacheDirectory + `chamber_draft.txt`;
       await FileSystem.writeAsStringAsync(filename, result, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(filename);
     } catch {
@@ -378,9 +378,9 @@ COUNSEL / ADVOCATE ON RECORD`;
         <Text style={styles.paywallSubtitle}>You have used your {MAX_FREE_USES} free drafting credits. Upgrade to Pro for unlimited senior counsel-grade deeds and petitions.</Text>
 
         <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: '#FFFFFF' }}>/ month</Text></Text>
-          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: '#FFFFFF' }]}>Unlimited Chamber Deeds, Leases & Petitions</Text></View>
-          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: '#FFFFFF' }]}>Advanced Legal Research & Precedent Finder</Text></View>
+          <Text style={styles.priceText}>₹299 <Text style={{ fontSize: 14, color: colors.mutedForeground }}>/ month</Text></Text>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Unlimited Chamber Deeds, Leases & Petitions</Text></View>
+          <View style={styles.featureBullet}><Feather name="check" size={16} color="#C9A84C" /><Text style={[styles.featureText, { color: colors.foreground }]}>Advanced Legal Research & Precedent Finder</Text></View>
         </View>
 
         <Pressable style={styles.upgradeBtn} onPress={handleUpgrade}>
@@ -388,7 +388,7 @@ COUNSEL / ADVOCATE ON RECORD`;
         </Pressable>
 
         <Pressable onPress={() => setShowPaywall(false)} style={{ marginTop: 16, padding: 8 }}>
-          <Text style={{ color: '#C9A84C', fontFamily: 'Inter_600SemiBold' }}>Back to drafting</Text>
+          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>Back to drafting</Text>
         </Pressable>
       </View>
     );
@@ -406,10 +406,10 @@ COUNSEL / ADVOCATE ON RECORD`;
         {/* Header Section */}
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
-            <Feather name="file-text" size={24} color="#C9A84C" />
+            <Feather name="file-text" size={22} color="#C9A84C" />
             <Text style={styles.screenTitle}>Chamber Draft Engine</Text>
           </View>
-          <Text style={styles.screenSub}>
+          <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
             Senior counsel-grade drafting for deeds, contracts, and court petitions. ({freeUsesLeft} free trial uses remaining)
           </Text>
         </View>
@@ -426,12 +426,12 @@ COUNSEL / ADVOCATE ON RECORD`;
             <Feather name="briefcase" size={16} color="#C9A84C" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.matterLabel}>FIRM MATTER WORKSPACE</Text>
-            <Text style={styles.matterName} numberOfLines={1}>
+            <Text style={[styles.matterLabel, { color: colors.mutedForeground }]}>FIRM MATTER WORKSPACE</Text>
+            <Text style={[styles.matterName, { color: colors.foreground }]} numberOfLines={1}>
               {activeMatter ? activeMatter.title : 'General Practice (Tap to assign matter)'}
             </Text>
           </View>
-          <Feather name="chevron-down" size={16} color="#C9A84C" />
+          <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
         </Pressable>
 
         {/* Step 1: Draft Instructions Input */}
@@ -453,7 +453,7 @@ COUNSEL / ADVOCATE ON RECORD`;
           {/* Clause Library Drawer */}
           {showClauseDrawer && (
             <View style={[styles.clauseDrawer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={styles.clauseDrawerTitle}>Tap clause to insert into prompt:</Text>
+              <Text style={[styles.clauseDrawerTitle, { color: colors.foreground }]}>Tap clause to insert into prompt:</Text>
               {CLAUSE_LIBRARY.map((item, idx) => (
                 <Pressable 
                   key={idx} 
@@ -461,20 +461,20 @@ COUNSEL / ADVOCATE ON RECORD`;
                   onPress={() => handleInsertClause(item.text)}
                 >
                   <Text style={styles.clauseItemName}>{item.name}</Text>
-                  <Text style={styles.clauseItemSnippet} numberOfLines={1}>{item.text}</Text>
+                  <Text style={[styles.clauseItemSnippet, { color: colors.mutedForeground }]} numberOfLines={1}>{item.text}</Text>
                 </Pressable>
               ))}
             </View>
           )}
 
           <View style={[styles.queryWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="edit-3" size={18} color="#C9A84C" style={styles.queryIcon} />
+            <Feather name="edit-3" size={18} color={colors.mutedForeground} style={styles.queryIcon} />
             <TextInput
-              style={[styles.queryInput, { color: '#FFFFFF' }]}
+              style={[styles.queryInput, { color: colors.foreground }]}
               value={prompt}
               onChangeText={setPrompt}
               placeholder="Provide names, amounts, grievance details, or specific clauses..."
-              placeholderTextColor="#8B9CC5"
+              placeholderTextColor={colors.mutedForeground}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -497,7 +497,7 @@ COUNSEL / ADVOCATE ON RECORD`;
                   ]}
                   onPress={() => setSelectedType(type)}
                 >
-                  <Text style={[styles.chipText, { color: isSelected ? '#070D24' : '#FFFFFF', fontFamily: isSelected ? 'Inter_700Bold' : 'Inter_500Medium' }]}>{type}</Text>
+                  <Text style={[styles.chipText, { color: isSelected ? '#070D24' : colors.foreground }]}>{type}</Text>
                 </Pressable>
               );
             })}
@@ -519,7 +519,7 @@ COUNSEL / ADVOCATE ON RECORD`;
                   ]}
                   onPress={() => setSelectedTone(tone)}
                 >
-                  <Text style={[styles.toneChipText, { color: isSelected ? '#C9A84C' : '#FFFFFF' }]}>{tone}</Text>
+                  <Text style={[styles.toneChipText, { color: isSelected ? '#C9A84C' : colors.mutedForeground }]}>{tone}</Text>
                 </Pressable>
               );
             })}
@@ -528,8 +528,8 @@ COUNSEL / ADVOCATE ON RECORD`;
 
         {/* Jurisdiction Details */}
         <View style={styles.jurisdictionRow}>
-          <Feather name="globe" size={14} color="#C9A84C" />
-          <Text style={styles.jurisdictionText}>Jurisdiction: {jurisdiction}</Text>
+          <Feather name="globe" size={13} color={colors.mutedForeground} />
+          <Text style={[styles.jurisdictionText, { color: colors.mutedForeground }]}>Jurisdiction: {jurisdiction}</Text>
         </View>
 
         {/* Generate Button */}
@@ -552,19 +552,19 @@ COUNSEL / ADVOCATE ON RECORD`;
 
         {/* Result Display Section & Action Bar */}
         {hasResult && (
-          <View style={[styles.resultContainer, { backgroundColor: colors.card, borderColor: '#C9A84C' }]}>
+          <View style={[styles.resultContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.resultHeader}>
-              <Feather name="file-text" size={18} color="#C9A84C" />
-              <Text style={styles.resultHeaderText}>{selectedType} Output</Text>
+              <Feather name="file-text" size={16} color="#C9A84C" />
+              <Text style={[styles.resultHeaderText, { color: colors.foreground }]}>{selectedType} Output</Text>
               {isDrafting && <ActivityIndicator color="#C9A84C" size="small" />}
             </View>
             {isDrafting && !result ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color="#C9A84C" />
-                <Text style={styles.loadingText}>Crafting advocate-grade chamber document...</Text>
+                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Crafting professional chamber document...</Text>
               </View>
             ) : null}
-            <Text style={styles.resultText}>{result}</Text>
+            <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
 
             {/* Draft Action Bar */}
             {!isDrafting && result ? (
@@ -603,36 +603,36 @@ COUNSEL / ADVOCATE ON RECORD`;
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centerContainer: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  headerContainer: { marginBottom: 16 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, color: '#FFFFFF' },
-  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#FFFFFF', opacity: 0.85 },
+  headerContainer: { marginBottom: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22 },
+  screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
 
   matterBanner: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: 12,
-    borderWidth: 1, padding: 14, marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center', borderRadius: 10,
+    borderWidth: 1, padding: 12, marginBottom: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
   matterIconBox: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: 'rgba(201, 168, 76, 0.2)',
-    justifyContent: 'center', alignItems: 'center', marginRight: 12,
+    width: 32, height: 32, borderRadius: 8,
+    backgroundColor: 'rgba(201, 168, 76, 0.15)',
+    justifyContent: 'center', alignItems: 'center', marginRight: 10,
   },
-  matterLabel: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1, color: '#C9A84C' },
-  matterName: { fontSize: 14, fontFamily: 'Inter_700Bold', marginTop: 2, color: '#FFFFFF' },
+  matterLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.5 },
+  matterName: { fontSize: 13, fontFamily: 'Inter_700Bold', marginTop: 1 },
 
   sectionBlock: { marginBottom: 20 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sectionHeaderLabel: { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#C9A84C', letterSpacing: 1.2 },
-  clauseToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, backgroundColor: 'rgba(201, 168, 76, 0.15)' },
-  clauseToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#C9A84C' },
+  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2 },
+  clauseToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 6, backgroundColor: 'rgba(201, 168, 76, 0.1)' },
+  clauseToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C' },
 
-  clauseDrawer: { borderRadius: 12, borderWidth: 1, padding: 14, marginBottom: 12 },
-  clauseDrawerTitle: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#FFFFFF', marginBottom: 8 },
-  clauseItem: { paddingVertical: 10, borderBottomWidth: 1 },
-  clauseItemName: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#C9A84C' },
-  clauseItemSnippet: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#FFFFFF', opacity: 0.8, marginTop: 3 },
+  clauseDrawer: { borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 12 },
+  clauseDrawerTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginBottom: 8 },
+  clauseItem: { paddingVertical: 8, borderBottomWidth: 1 },
+  clauseItemName: { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#C9A84C' },
+  clauseItemSnippet: { fontFamily: 'Inter_400Regular', fontSize: 11, marginTop: 2 },
 
   queryWrapper: {
     flexDirection: 'row', borderRadius: 12, borderWidth: 1,
@@ -640,43 +640,43 @@ const styles = StyleSheet.create({
   },
   queryIcon: { marginRight: 10, marginTop: 2 },
   queryInput: {
-    flex: 1, fontFamily: 'Inter_400Regular', fontSize: 15,
-    lineHeight: 22, minHeight: 100, color: '#FFFFFF',
+    flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14,
+    lineHeight: 22, minHeight: 90,
   },
   horizontalChipsContainer: { gap: 8 },
-  chip: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 20, borderWidth: 1 },
-  chipText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  chip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1 },
+  chipText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
 
   toneRow: { flexDirection: 'row', gap: 8 },
-  toneChip: { flex: 1, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
-  toneChipText: { fontFamily: 'Inter_700Bold', fontSize: 12, textAlign: 'center', color: '#FFFFFF' },
+  toneChip: { flex: 1, paddingVertical: 8, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
+  toneChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, textAlign: 'center' },
 
-  jurisdictionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
-  jurisdictionText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#FFFFFF' },
+  jurisdictionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
+  jurisdictionText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   researchBtn: {
-    backgroundColor: '#C9A84C', borderRadius: 12, height: 54,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 24,
+    backgroundColor: '#C9A84C', borderRadius: 12, height: 52,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24,
   },
   researchBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
-  resultContainer: { borderRadius: 14, borderWidth: 1.5, padding: 18 },
+  resultContainer: { borderRadius: 12, borderWidth: 1, padding: 16 },
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  resultHeaderText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#FFFFFF', flex: 1 },
+  resultHeaderText: { fontFamily: 'Inter_700Bold', fontSize: 15, flex: 1 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  loadingText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#FFFFFF' },
-  resultText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 24, color: '#FFFFFF', marginBottom: 20 },
+  loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
+  resultText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 22, marginBottom: 16 },
 
-  actionBarContainer: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)', paddingTop: 14, gap: 10 },
-  actionRow: { flexDirection: 'row', gap: 10 },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#C9A84C', backgroundColor: 'rgba(201, 168, 76, 0.05)' },
+  actionBarContainer: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 14, gap: 10 },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C' },
   primaryActionBtn: { backgroundColor: '#C9A84C', width: '100%', borderWidth: 0 },
-  actionBtnText: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#C9A84C' },
+  actionBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#C9A84C' },
 
   paywallTitle: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#FFFFFF', textAlign: 'center', marginBottom: 10 },
-  paywallSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#FFFFFF', opacity: 0.85, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  paywallSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   priceCard: { width: '100%', borderRadius: 16, borderWidth: 1, padding: 20, marginBottom: 24 },
   priceText: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#C9A84C', marginBottom: 16, textAlign: 'center' },
   featureBullet: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  featureText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#FFFFFF' },
+  featureText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
   upgradeBtn: { width: '100%', height: 52, backgroundColor: '#C9A84C', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   upgradeBtnText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#070D24' },
 });
