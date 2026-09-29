@@ -18,7 +18,7 @@ const QUICK_ACTIONS = [
   { id: 'vault', label: 'Firm\nVault', icon: 'folder' as const, route: '/vault' },
   { id: 'analyze', label: 'Analyze\nDocument', icon: 'file-text' as const, route: '/(tabs)/analyze' },
   { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat' },
-  { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/clientintake' },
+  { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/client-intake' },
   { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/causelist' },
   { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft' },
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
@@ -218,7 +218,7 @@ export default function HomeScreen() {
             style={styles.factMatcherBtn}
             onPress={() => { 
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); 
-              router.push('/(tabs)/factmatcher' as any); 
+              router.push('/(tabs)/fact-matcher' as any); 
             }}
           >
             <Feather name="git-merge" size={15} color="#070D24" />
