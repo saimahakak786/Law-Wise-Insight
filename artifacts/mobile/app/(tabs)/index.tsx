@@ -12,6 +12,7 @@ import { useGetDocuments, useGetCases } from '@workspace/api-client-react';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Audio } from 'expo-av';
 import JurisdictionSelector from '@/components/JurisdictionSelector';
 
 const QUICK_ACTIONS = [
@@ -58,6 +59,7 @@ export default function HomeScreen() {
   const activeCases = cases?.filter((c: any) => c.status === 'active') ?? [];
 
   const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isFormatting, setIsFormatting] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [transcript, setTranscript] = useState('');
@@ -94,37 +96,74 @@ export default function HomeScreen() {
 • Next Hearing: Listed for further consideration next month.`;
   };
 
-  const handleAutoStopRecording = () => {
-    setIsRecording(false);
-    setIsFormatting(true);
-    
-    setTimeout(() => {
-      const structuredBrief = formatRawTranscriptToLegalBrief("Max free duration reached. Client instructions noted regarding property dispute.");
-      setTranscript(structuredBrief);
-      setIsFormatting(false);
-    }, 800);
-
-    if (!isProUser) {
-      setFreeDictationsLeft((prev) => Math.max(0, prev - 1));
-    }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  const handleAutoStopRecording = async () => {
+    await stopAndProcessRecording();
     Alert.alert('Time Limit Reached', 'Free dictations are capped at 2 minutes. Upgrade to Pro for unlimited length.');
   };
 
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remSecs = secs % 60;
-    return `${mins}:${remSecs < 10 ? '0' : ''}${remSecs}`;
+  const startRealRecording = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Denied', 'Microphone permission is required for voice dictation.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(newRecording);
+      setIsRecording(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+      Alert.alert('Error', 'Could not start microphone recording.');
+    }
   };
 
-  const handleToggleRecording = () => {
+  const stopAndProcessRecording = async () => {
+    setIsRecording(false);
+    setIsFormatting(true);
+
+    try {
+      if (recording) {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setRecording(null);
+        console.log('Recorded audio file stored at:', uri);
+
+        // TODO: Send `uri` to your backend API or OpenAI Whisper for speech-to-text transcription.
+        // For now, we simulate transcription processing of your recorded audio session:
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      }
+
+      const transcribedText = "Recorded audio successfully captured from microphone and processed.";
+      const structuredBrief = formatRawTranscriptToLegalBrief(transcribedText);
+      setTranscript((prev) => (prev ? prev + '\n\n' + structuredBrief : structuredBrief));
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+    } finally {
+      setIsFormatting(false);
+      if (!isProUser) {
+        setFreeDictationsLeft((prev) => Math.max(0, prev - 1));
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  const handleToggleRecording = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     if (!isProUser && freeDictationsLeft <= 0 && !isRecording) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert(
         'Pro Feature Required',
-        'You have used your 3 free trial dictations. Upgrade to LawVise Pro for unlimited secure voice dictations and automatic legal brief structuring.',
+        'You have used your 3 free trial dictations. Upgrade to LawVise Pro for unlimited secure voice dictations.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Unlock Unlimited Pro', onPress: () => setIsProUser(true) }
@@ -134,25 +173,16 @@ export default function HomeScreen() {
     }
 
     if (!isRecording) {
-      setIsRecording(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await startRealRecording();
     } else {
-      setIsRecording(false);
-      setIsFormatting(true);
-
-      setTimeout(() => {
-        const rawSpeech = "Counsel appeared for the petitioner regarding interim relief application. Matter argued at length. Bench granted protection and listed next Wednesday.";
-        const structuredBrief = formatRawTranscriptToLegalBrief(rawSpeech);
-        setTranscript((prev) => (prev ? prev + '\n\n' + structuredBrief : structuredBrief));
-        setIsFormatting(false);
-      }, 1000);
-
-      if (!isProUser) {
-        setFreeDictationsLeft((prev) => Math.max(0, prev - 1));
-      }
-
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await stopAndProcessRecording();
     }
+  };
+
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remSecs = secs % 60;
+    return `${mins}:${remSecs < 10 ? '0' : ''}${remSecs}`;
   };
 
   const handleSaveMemo = () => {
@@ -202,7 +232,7 @@ export default function HomeScreen() {
       {/* Jurisdiction Selector */}
       <JurisdictionSelector />
 
-      {/* 🌟 FACT MATCHER FEATURE HERO CARD (MAIN FEATURE) */}
+      {/* 🌟 FACT MATCHER FEATURE HERO CARD */}
       <LinearGradient
         colors={['#241B0F', '#120D07', '#1F170A']}
         style={styles.factMatcherHeroCard}
@@ -324,7 +354,7 @@ export default function HomeScreen() {
           {isRecording ? `Recording Audio... (${formatTime(recordingSeconds)} / 2:00)` : 'Tap to Dictate Courtroom Notes'}
         </Text>
         <Text style={[styles.dictationStatusSub, { color: colors.mutedForeground }]}>
-          {isRecording ? 'Listening...' : 'Spoken words are automatically structured into professional court summaries.'}
+          {isRecording ? 'Microphone active...' : 'Spoken words are automatically structured into professional court summaries.'}
         </Text>
 
         <Pressable 
@@ -349,12 +379,12 @@ export default function HomeScreen() {
           {isFormatting ? (
             <View style={[styles.formattingBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
               <ActivityIndicator color="#C9A84C" size="small" />
-              <Text style={[styles.formattingText, { color: colors.mutedForeground }]}>AI structuring notes into legal format...</Text>
+              <Text style={[styles.formattingText, { color: colors.mutedForeground }]}>Processing microphone audio & structuring brief...</Text>
             </View>
           ) : (
             <TextInput
               style={[styles.transcriptInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="Structured legal brief will appear here automatically..."
+              placeholder="Structured legal brief will appear here after recording..."
               placeholderTextColor={colors.mutedForeground}
               value={transcript}
               onChangeText={setTranscript}
@@ -485,7 +515,6 @@ const styles = StyleSheet.create({
   avatarBadge: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#070D24' },
   
-  // Fact Matcher Hero Card Styles
   factMatcherHeroCard: {
     marginHorizontal: 20, borderRadius: 16, padding: 20,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
