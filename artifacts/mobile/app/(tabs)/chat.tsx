@@ -51,7 +51,7 @@ const renderFormattedContent = (content: string, textColor: string) => {
         style={[
           isHeader ? styles.mdHeader : isBullet ? styles.mdBullet : styles.mdLine,
           { color: textColor },
-          isHeader && { color: '#C9A84C' }, // Give headers a nice accent tint or keep primary color
+          isHeader && { color: '#C9A84C' },
         ]}
       >
         {parts.map((part, partIndex) => {
@@ -135,9 +135,16 @@ export default function ChatScreen() {
           } catch { /* skip */ }
         }
       }
+
+      // Successful stream completion cleanup
+      const id = streamingIdRef.current;
+      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, isStreaming: false } : m)));
+      setIsStreaming(false);
+      streamingIdRef.current = null;
+
     } catch {
       // Offline fallback chat simulation for live presentation reliability
-      const id = streamingIdRef.current;
+      const id = assistantId;
       const lowerQuery = text.toLowerCase();
       let mockReply = `Under ${jurisdiction} jurisdiction, your query regarding "${text}" involves established statutory guidelines and judicial principles.\n\n` +
         `## 1. PRIMARY LEGAL POSITION\nStatutory frameworks protect individual rights while balancing compliance standards, documentation, and formal procedures.\n\n` +
@@ -159,25 +166,17 @@ export default function ChatScreen() {
 
       let index = 0;
       const interval = setInterval(() => {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, content: mockReply.slice(0, index) } : m))
-        );
         index += 20;
-        if (index > mockReply.length) {
-          setMessages((prev) =>
-            prev.map((m) => (m.id === id ? { ...m, content: mockReply, isStreaming: false } : m))
-          );
+        if (index >= mockReply.length) {
+          index = mockReply.length;
           clearInterval(interval);
           setIsStreaming(false);
           streamingIdRef.current = null;
         }
+        setMessages((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, content: mockReply.slice(0, index), isStreaming: index < mockReply.length } : m))
+        );
       }, 20);
-      return;
-    } finally {
-      const id = streamingIdRef.current;
-      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, isStreaming: false } : m)));
-      setIsStreaming(false);
-      streamingIdRef.current = null;
     }
   }, [messages, isStreaming, getToken, jurisdiction, language]);
 
