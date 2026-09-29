@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "lawwise",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -27,7 +27,7 @@
       [
         "@clerk/expo",
         {
-          "scheme": "mobile"
+          "scheme": "lawwise"
         }
       ],
       [
