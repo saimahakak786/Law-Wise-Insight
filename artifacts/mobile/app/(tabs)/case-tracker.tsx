@@ -8,14 +8,10 @@ import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { Audio } from 'expo-av';
 
 // Import custom components
 import Card from '../../components/Card';
 import Button from '../../components/Button';
-
-// Import your custom local court alarm sound asset
-const courtAlarmAsset = require('../../attached_assets/court_alarm.mp3');
 
 const STORAGE_KEY = '@lawwise_cause_list_matters';
 
@@ -48,46 +44,16 @@ export default function CauseListScreen() {
   const [selectedEventType, setSelectedEventType] = useState('Hearing');
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
-  // Function to play local court alarm sound effect on demand
-  const playCourtAlarmSound = async () => {
-    try {
-      if (sound) {
-        await sound.unloadAsync();
-      }
-      const { sound: playbackObject } = await Audio.Sound.createAsync(
-        courtAlarmAsset,
-        { shouldPlay: true, volume: 1.0 }
-      );
-      setSound(playbackObject);
-    } catch (error) {
-      console.log('Error playing local court alarm sound:', error);
-    }
-  };
-
-  // Clean up sound on unmount
-  useEffect(() => {
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
-  }, [sound]);
-
-  // Load saved matters, setup notification channels, and handle notification taps on mount
+  // Load saved matters, setup notification permissions, and handle notification taps on mount
   useEffect(() => {
     requestNotificationPermissions();
     loadStoredMatters();
-    setupAndroidNotificationChannel();
 
     // Listen for notification taps to bring user into the app and navigate via router
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
       console.log('Notification tapped with data:', data);
-      
-      // Play local court alarm sound when notification is tapped
-      playCourtAlarmSound();
 
       // Navigate to the app screen when tapped
       try {
@@ -101,19 +67,6 @@ export default function CauseListScreen() {
       subscription.remove();
     };
   }, [router]);
-
-  const setupAndroidNotificationChannel = async () => {
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('cause-list-reminders', {
-        name: 'Cause List & Deadline Reminders',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#C9A84C',
-        sound: 'default',
-        enableVibrate: true,
-      });
-    }
-  };
 
   const requestNotificationPermissions = async () => {
     try {
@@ -178,10 +131,6 @@ export default function CauseListScreen() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    // Play the local court alarm sound effect when saving a deadline
-    playCourtAlarmSound();
-
     setLoading(true);
 
     try {
@@ -204,14 +153,14 @@ export default function CauseListScreen() {
               content: {
                 title: `⚖️ ${selectedEventType} Reminder`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — Due: ${hearingDate}`,
-                sound: 'default',
-                priority: Notifications.AndroidNotificationPriority.HIGH,
+                sound: 'court_alarm.mp3', // Matches custom sound asset filename
+                priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate },
               },
               trigger: {
                 type: Notifications.SchedulableTriggerInputTypes.DATE,
                 date: reminderTime,
-                channelId: 'cause-list-reminders',
+                channelId: 'court-alerts', // MATCHED to root layout channel ID!
               },
             });
           }
@@ -241,7 +190,7 @@ export default function CauseListScreen() {
       setSelectedEventType('Hearing');
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', `${selectedEventType} deadline tracked! Court alarm played and notification scheduled.`);
+      Alert.alert('Success', `${selectedEventType} deadline tracked and reminder scheduled successfully!`);
     } catch (error) {
       console.error('Error adding matter:', error);
       Alert.alert('Error', 'Could not save compliance entry.');
