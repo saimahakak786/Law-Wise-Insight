@@ -5,7 +5,7 @@ import { db, userSettingsTable } from "@workspace/db";
 
 const router = Router();
 
-router.post("/lawvise/notifications/register", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/notifications/register", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const parsed = RegisterPushTokenBody.safeParse(req.body);
   if (!parsed.success) {
@@ -15,15 +15,20 @@ router.post("/lawvise/notifications/register", requireAuth, async (req, res): Pr
 
   const { token } = parsed.data;
 
-  await db
-    .insert(userSettingsTable)
-    .values({ userId, pushToken: token, notificationsEnabled: true })
-    .onConflictDoUpdate({
-      target: userSettingsTable.userId,
-      set: { pushToken: token, notificationsEnabled: true, updatedAt: new Date() },
-    });
+  try {
+    await db
+      .insert(userSettingsTable)
+      .values({ userId, pushToken: token, notificationsEnabled: true })
+      .onConflictDoUpdate({
+        target: userSettingsTable.userId,
+        set: { pushToken: token, notificationsEnabled: true, updatedAt: new Date() },
+      });
 
-  res.json({ success: true });
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err, userId }, "Failed to register push notification token");
+    res.status(500).json({ error: "Failed to register notification token. Please try again." });
+  }
 });
 
 export default router;
