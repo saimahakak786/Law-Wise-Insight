@@ -78,7 +78,7 @@ export default function AnalyzeScreen() {
   const [isProUser, setIsProUser] = useState(false);
   const [freeUsageCount, setFreeUsageCount] = useState(0);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const FREE_LIMIT = 7; // Updated to 7 free limits
+  const FREE_LIMIT = 7;
 
   const handleUploadDocument = async () => {
     try {
@@ -99,29 +99,23 @@ export default function AnalyzeScreen() {
       setIsExtracting(true);
       setUploadMode('upload');
 
-      // Safely read file string as base64 using expo-file-system
-      let fileBase64 = '';
-      try {
-        fileBase64 = await FileSystem.readAsStringAsync(asset.uri, { 
-          encoding: FileSystem.EncodingType.Base64 
-        });
-      } catch (fsErr) {
-        fileBase64 = await FileSystem.readAsStringAsync(asset.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-      }
-
       const token = await getToken();
       const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
       
+      // Use FormData to stream files properly to avoid JSON body size limits
+      const formData = new FormData();
+      formData.append('file', {
+        uri: asset.uri,
+        name: asset.name ?? 'uploaded_document.pdf',
+        type: asset.mimeType ?? 'application/pdf',
+      } as any);
+
       const response = await fetch(`https://${domain}/api/lawwise/upload`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ 
-          fileBase64, 
-          mimeType: asset.mimeType ?? 'application/octet-stream', 
-          fileName: asset.name ?? 'uploaded_document' 
-        }),
+        headers: { 
+          Authorization: `Bearer ${token}` 
+        },
+        body: formData,
       });
 
       if (!response.ok) {
@@ -146,7 +140,7 @@ export default function AnalyzeScreen() {
         'Extraction Notice',
         'Could not automatically parse the document file stream. You can paste your document text directly below to run analysis.',
         [
-          { text: 'Paste Manually', onPress: () => setDocText(' ') },
+          { text: 'Paste Manually', onPress: () => { setUploadMode('paste'); setDocText(''); } },
           { text: 'Cancel', style: 'cancel' }
         ]
       );
@@ -349,7 +343,7 @@ export default function AnalyzeScreen() {
         <View style={styles.sectionBlock}>
           <Text style={[styles.sectionHeaderLabel, { color: colors.primary }]}>1. SOURCE INPUT</Text>
           
-          {!docText.trim() ? (
+          {uploadMode !== 'paste' && !docText.trim() && !uploadedFileName ? (
             <View style={styles.inputOptionsGrid}>
               <Pressable
                 style={[styles.primaryUploadCard, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -382,7 +376,7 @@ export default function AnalyzeScreen() {
                 </Pressable>
                 <Pressable
                   style={[styles.actionTile, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => setDocText(' ')}
+                  onPress={() => { setUploadMode('paste'); setDocText(''); }}
                 >
                   <Feather name="edit-3" size={18} color={colors.primary} />
                   <Text style={[styles.actionTileText, { color: colors.foreground }]}>Paste Text</Text>
@@ -392,9 +386,9 @@ export default function AnalyzeScreen() {
           ) : (
             <View style={styles.loadedContainer}>
               <View style={[styles.loadedBadgeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Feather name="check-circle" size={16} color={colors.success} />
+                <Feather name={uploadMode === 'paste' ? 'edit-3' : 'check-circle'} size={16} color={colors.success} />
                 <Text style={[styles.loadedBadgeText, { color: colors.success }]} numberOfLines={1}>
-                  {uploadedFileName ? `Loaded: ${uploadedFileName}` : 'Manual text input loaded'}
+                  {uploadMode === 'paste' ? 'Manual Text Input Mode' : (uploadedFileName ? `Loaded: ${uploadedFileName}` : 'Document Loaded')}
                 </Text>
                 <Pressable onPress={resetUpload} style={styles.clearInputBtn}>
                   <Feather name="x" size={16} color={colors.foreground} />
@@ -405,7 +399,7 @@ export default function AnalyzeScreen() {
                 style={[styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
                 value={docText}
                 onChangeText={setDocText}
-                placeholder="Review or edit ingested text here..."
+                placeholder="Type or paste your legal document text here..."
                 placeholderTextColor={colors.mutedForeground}
                 multiline
                 numberOfLines={6}
