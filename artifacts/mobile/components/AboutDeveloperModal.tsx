@@ -28,10 +28,10 @@ export default function DeveloperModal({ visible, onClose }: DeveloperModalProps
 
           <Text style={[styles.modalTitle, { color: colors.title }]}>About Developer</Text>
 
-          {/* High-Standard Compact Name Formatting (Standard Text Color) */}
+          {/* Developer Name in normal grey text */}
           <View style={styles.developerInfoBox}>
-            <Text style={[styles.developerName, { color: colors.foreground }]}>
-              Developed by <Text style={[styles.highlightName, { color: colors.foreground }]}>Adv. Saima Hakak</Text>
+            <Text style={[styles.developerName, { color: colors.mutedForeground }]}>
+              Developed by Adv. Saima Hakak
             </Text>
             <Text style={[styles.firmSubText, { color: colors.mutedForeground }]}>Saima Hakak & Associates</Text>
           </View>
@@ -98,15 +98,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   developerName: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_400Regular', // Normal text weight
     fontSize: 13,
     textAlign: 'center',
   },
-  highlightName: {
-    fontFamily: 'Inter_700Bold',
-  },
   firmSubText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Inter_400Regular', // Changed from SemiBold to normal text weight in grey
     fontSize: 11,
     marginTop: 2,
     letterSpacing: 0.3,
