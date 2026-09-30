@@ -165,18 +165,18 @@ export default function CauseListScreen() {
 
           if (hearingDateTime.getTime() > Date.now()) {
             await Notifications.scheduleNotificationAsync({
-              identifier: `reminder_${matterId}`, // Unique identifier prevents overwriting!
+              identifier: `reminder_${matterId}`,
               content: {
                 title: `⚖️ ${selectedEventType} Reminder`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — Due: ${hearingDate}`,
-                sound: 'court_alarm.mp3', // Matches custom sound asset filename
+                sound: 'court_alarm', // WITHOUT .mp3 extension
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate, matterId },
               },
               trigger: {
                 type: Notifications.SchedulableTriggerInputTypes.DATE,
                 date: reminderTime,
-                channelId: 'court-alerts', // MATCHED to root layout channel ID!
+                channelId: 'court-alerts-v2', // MATCHED to v2 channel ID
               },
             });
           }
@@ -186,7 +186,7 @@ export default function CauseListScreen() {
       }
 
       const newMatter = {
-        id: matterId, // Use the unique ID here
+        id: matterId,
         judgeName: judgeName.trim() || 'N/A',
         caseTitle,
         itemNumber: itemNumber || 'N/A',
