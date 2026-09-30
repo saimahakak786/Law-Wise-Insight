@@ -61,10 +61,10 @@ const tokenCache = {
   },
 };
 
-// Configure Android Notification Channel with custom gavel sound and persistent visibility
+// Configure Android Notification Channel with custom gavel sound and persistent visibility (v2 to bypass cache)
 async function setupNotificationChannel() {
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('court-alerts', {
+    await Notifications.setNotificationChannelAsync('court-alerts-v2', {
       name: 'Court Hearing Alerts',
       importance: Notifications.AndroidImportance.MAX,
       sound: 'court_alarm', // Matches your sound filename without extension
