@@ -21,7 +21,8 @@ const QUICK_ACTIONS = [
   { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat' },
   { id: 'fact-matcher', label: 'Fact\nMatcher', icon: 'git-merge' as const, route: '/(tabs)/fact-matcher' },
   { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/client-intake' },
-  { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/causelist' },
+  { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/causelist' },
+
   { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft' },
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
   { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research' },
