@@ -56,7 +56,7 @@ export default function CauseListScreen() {
       console.log('Notification tapped with data:', data);
 
       try {
-        router.push('/(tabs)');
+        router.push('/(tabs)/case-tracker');
       } catch (err) {
         console.log('Navigation routing error:', err);
       }
@@ -68,7 +68,7 @@ export default function CauseListScreen() {
         const data = response.notification.request.content.data;
         console.log('App opened from closed state via notification:', data);
         try {
-          router.push('/(tabs)');
+          router.push('/(tabs)/case-tracker');
         } catch (err) {
           console.log('Cold start navigation error:', err);
         }
@@ -353,7 +353,7 @@ export default function CauseListScreen() {
             urgencyLabel = '⚠️ Due Today!';
           } else if (daysLeft <= 7) {
             urgencyColor = '#EF4444'; // Critical
-            urgencyLabel = `⚠️️ ${daysLeft} days left (Critical)`;
+            urgencyLabel = `⚠ ${daysLeft} days left (Critical)`;
           } else if (daysLeft <= 14) {
             urgencyColor = '#FB8C00'; // Warning
             urgencyLabel = `⚡ ${daysLeft} days left`;
