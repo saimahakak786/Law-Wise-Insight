@@ -40,17 +40,16 @@ export default function CauseListScreen() {
   const [judgeName, setJudgeName] = useState('');
   const [caseTitle, setCaseTitle] = useState('');
   const [itemNumber, setItemNumber] = useState('');
-  const [hearingDate, setHearingDate] = useState(''); // Format: DD-MM-YYYY
+  const [hearingDate, setHearingDate] = useState(''); // Format: DD-MM-YYYY or YYYY-MM-DD
   const [selectedEventType, setSelectedEventType] = useState('Hearing');
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
 
-  // Load saved matters, setup notification permissions, and handle notification taps (Active & Cold Start)
   useEffect(() => {
     requestNotificationPermissions();
     loadStoredMatters();
+    setupAndroidNotificationChannel();
 
-    // 1. Listen for notification taps when app is in foreground or background
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
       console.log('Notification tapped with data:', data);
@@ -62,7 +61,6 @@ export default function CauseListScreen() {
       }
     });
 
-    // 2. Handle notification taps when the app was completely closed (Cold Start)
     Notifications.getLastNotificationResponseAsync().then(response => {
       if (response) {
         const data = response.notification.request.content.data;
@@ -79,6 +77,18 @@ export default function CauseListScreen() {
       subscription.remove();
     };
   }, [router]);
+
+  const setupAndroidNotificationChannel = async () => {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('court-alerts-v2', {
+        name: 'Court & Hearing Alerts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#C9A84C',
+        sound: 'default',
+      });
+    }
+  };
 
   const requestNotificationPermissions = async () => {
     try {
@@ -120,8 +130,10 @@ export default function CauseListScreen() {
     const parts = cleanStr.split(/[-/]/);
     
     if (parts.length === 3) {
-      const [day, month, year] = parts;
-      if (year.length === 4) {
+      if (parts[0].length === 4) {
+        return new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`);
+      } else {
+        const [day, month, year] = parts;
         return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
       }
     }
@@ -153,30 +165,39 @@ export default function CauseListScreen() {
         return;
       }
 
-      // Generate a unique ID for this matter
       const matterId = Date.now().toString();
 
       if (Platform.OS !== 'web') {
         try {
-          const idealReminderTime = new Date(hearingDateTime.getTime() - 24 * 60 * 60 * 1000);
-          const reminderTime = idealReminderTime.getTime() > Date.now()
-            ? idealReminderTime
-            : new Date(Date.now() + 5000 + Math.random() * 1000); // Slight stagger to prevent collision
+          const timeUntilHearingMs = hearingDateTime.getTime() - Date.now();
 
-          if (hearingDateTime.getTime() > Date.now()) {
+          if (timeUntilHearingMs > 0) {
+            let reminderTime: Date;
+            let subTitle = `Due: ${hearingDate}`;
+
+            // If added within 24 hours (e.g. 1 hour before), trigger an immediate urgent notification
+            if (timeUntilHearingMs <= 24 * 60 * 60 * 1000) {
+              reminderTime = new Date(Date.now() + 3000); // Fires almost instantly (3s buffer)
+              const hoursLeft = Math.max(1, Math.round(timeUntilHearingMs / (1000 * 60 * 60)));
+              subTitle = `🚨 URGENT: Hearing is in ~${hoursLeft} hour(s)!`;
+            } else {
+              // Standard 24-hour advance reminder
+              reminderTime = new Date(hearingDateTime.getTime() - 24 * 60 * 60 * 1000);
+            }
+
             await Notifications.scheduleNotificationAsync({
               identifier: `reminder_${matterId}`,
               content: {
-                title: `⚖️ ${selectedEventType} Reminder`,
-                body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — Due: ${hearingDate}`,
-                sound: 'court_alarm', // WITHOUT .mp3 extension
+                title: `⚖️ URGENT: ${selectedEventType}`,
+                body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — ${subTitle}`,
+                sound: true,
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate, matterId },
               },
               trigger: {
                 type: Notifications.SchedulableTriggerInputTypes.DATE,
                 date: reminderTime,
-                channelId: 'court-alerts-v2', // MATCHED to v2 channel ID
+                channelId: 'court-alerts-v2',
               },
             });
           }
@@ -188,9 +209,9 @@ export default function CauseListScreen() {
       const newMatter = {
         id: matterId,
         judgeName: judgeName.trim() || 'N/A',
-        caseTitle,
-        itemNumber: itemNumber || 'N/A',
-        hearingDate,
+        caseTitle: caseTitle.trim(),
+        itemNumber: itemNumber.trim() || 'N/A',
+        hearingDate: hearingDate.trim(),
         eventType: selectedEventType,
         status: 'Pending Call',
       };
@@ -206,13 +227,40 @@ export default function CauseListScreen() {
       setSelectedEventType('Hearing');
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', `${selectedEventType} deadline tracked and reminder scheduled successfully!`);
+      Alert.alert('Success', `${selectedEventType} deadline tracked and urgent reminder activated!`);
     } catch (error) {
       console.error('Error adding matter:', error);
       Alert.alert('Error', 'Could not save compliance entry.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteMatter = async (id: string, title: string) => {
+    Alert.alert(
+      'Remove Deadline',
+      `Are you sure you want to remove "${title}" from your active cause list?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            try {
+              if (Platform.OS !== 'web') {
+                await Notifications.cancelScheduledNotificationAsync(`reminder_${id}`);
+              }
+              const filtered = matters.filter(m => m.id !== id);
+              setMatters(filtered);
+              await saveMattersToStorage(filtered);
+            } catch (e) {
+              console.log('Error deleting matter:', e);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getEventTypeColor = (type: string) => {
@@ -365,8 +413,13 @@ export default function CauseListScreen() {
                 <View style={[styles.badge, { backgroundColor: `${typeColor}20`, borderColor: `${typeColor}40` }]}>
                   <Text style={[styles.badgeText, { color: typeColor }]}>{item.eventType || 'Hearing'}</Text>
                 </View>
-                <View style={[styles.urgencyBadge, { backgroundColor: `${urgencyColor}18`, borderColor: `${urgencyColor}40` }]}>
-                  <Text style={[styles.urgencyText, { color: urgencyColor }]}>{urgencyLabel}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={[styles.urgencyBadge, { backgroundColor: `${urgencyColor}18`, borderColor: `${urgencyColor}40` }]}>
+                    <Text style={[styles.urgencyText, { color: urgencyColor }]}>{urgencyLabel}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => handleDeleteMatter(item.id, item.caseTitle)} style={styles.deleteBtn}>
+                    <Feather name="trash-2" size5={14} color="#EF4444" />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -421,6 +474,7 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   urgencyBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
   urgencyText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  deleteBtn: { padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: 6 },
   caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 6 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   metaText: { fontFamily: 'Inter_400Regular', fontSize: 12 },
