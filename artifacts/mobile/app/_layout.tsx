@@ -9,7 +9,7 @@ import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
 import { AppProvider } from '@/context/AppContext';
-import Purchases from 'react-native-purchases'; // <-- 1. ADDED IMPORT HERE
+import Purchases from 'react-native-purchases';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -89,10 +89,53 @@ function RootLayoutNav() {
       <Stack.Screen name="index" options={{ animation: 'none' }} />
       <Stack.Screen name="(auth)" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-      <Stack.Screen name="draft" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="calculator" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="research" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="vault" options={{ presentation: 'card' }} />
+      
+      {/* Feature screens with clean headers and precise title color */}
+      <Stack.Screen 
+        name="draft" 
+        options={{ 
+          headerShown: true, 
+          title: 'Drafting Engine', 
+          headerStyle: { backgroundColor: APP_BACKGROUND },
+          headerTintColor: TEXT_PRIMARY,
+          headerTitleStyle: { color: TEXT_PRIMARY, fontWeight: '700' },
+          presentation: 'modal' 
+        }} 
+      />
+      <Stack.Screen 
+        name="calculator" 
+        options={{ 
+          headerShown: true, 
+          title: 'Legal Calculator', 
+          headerStyle: { backgroundColor: APP_BACKGROUND },
+          headerTintColor: TEXT_PRIMARY,
+          headerTitleStyle: { color: TEXT_PRIMARY, fontWeight: '700' },
+          presentation: 'modal' 
+        }} 
+      />
+      <Stack.Screen 
+        name="research" 
+        options={{ 
+          headerShown: true, 
+          title: 'Case Research', 
+          headerStyle: { backgroundColor: APP_BACKGROUND },
+          headerTintColor: TEXT_PRIMARY,
+          headerTitleStyle: { color: TEXT_PRIMARY, fontWeight: '700' },
+          presentation: 'modal' 
+        }} 
+      />
+      <Stack.Screen 
+        name="vault" 
+        options={{ 
+          headerShown: true, 
+          title: 'Secure Vault', 
+          headerStyle: { backgroundColor: APP_BACKGROUND },
+          headerTintColor: TEXT_PRIMARY,
+          headerTitleStyle: { color: TEXT_PRIMARY, fontWeight: '700' },
+          presentation: 'card' 
+        }} 
+      />
+
       <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
     </Stack>
   );
@@ -124,7 +167,6 @@ function InitializingGate() {
   useEffect(() => {
     setupNotificationChannel();
 
-    // <-- 2. ADDED CONFIGURE BLOCK HERE
     try {
       Purchases.configure({ apiKey:"goog_IVymTFIszZNpmPfSIZHqXBInlhR"  });
     } catch (e) {
