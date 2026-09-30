@@ -6,15 +6,14 @@ import {
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import { fetch } from 'expo/fetch';
 import * as Haptics from 'expo-haptics';
+import { Feather } from '@expo/vector-icons';
 
 import Card from '@/components/Card';
-import Button from '@/components/Button';
 
 const LIMITATION_CASE_TYPES = [
   'Money suit / debt recovery', 'Cheque bounce (Section 138 NI Act)',
@@ -86,33 +85,42 @@ export default function CalculatorScreen() {
       const result = await response.json();
       setLimResult(result);
     } catch (e: any) {
-      console.log("Limitation API Error (using smart offline fallback):", e);
+      console.log("Limitation API Error (using multi-jurisdictional offline fallback):", e);
 
-      // Smart offline fallback based on case type instead of rigid 3 years
+      const jurLower = jurisdiction?.toLowerCase() || '';
       let fallbackYears = 3;
-      let fallbackDesc = `Standard limitation period for ${limCaseType} under ${jurisdiction} governance.`;
-      let fallbackDeadline = limEventDate ? 'Check statutory timeline' : 'Within 3 years from cause of action';
+      let fallbackDesc = `Standard limitation period for ${limCaseType} under ${jurisdiction} framework.`;
+      let fallbackDeadline = limEventDate ? 'Check statutory timeline' : 'Within statutory period from cause of action';
 
       const lower = limCaseType.toLowerCase();
-      if (lower.includes('consumer')) {
-        fallbackYears = 2;
-        fallbackDesc = `Standard limitation period under Section 69 of the Consumer Protection Act, 2019.`;
-        fallbackDeadline = limEventDate ? 'Check 2-year statutory limit' : 'Within 2 years from cause of action';
-      } else if (lower.includes('cheque bounce')) {
-        fallbackYears = 0.1; // ~30-45 days
-        fallbackDesc = `Statutory timeline under Section 138 NI Act (Notice within 30 days, complaint within 30 days post-expiry).`;
-        fallbackDeadline = limEventDate ? 'Within 30 days post notice expiry' : 'Immediate upon notice period completion';
-      } else if (lower.includes('property')) {
-        fallbackYears = 12;
-        fallbackDesc = `Suit for possession of immovable property based on title under the Limitation Act.`;
-        fallbackDeadline = limEventDate ? 'Check 12-year statutory limit' : 'Within 12 years from cause of action';
+
+      if (jurLower.includes('usa') || jurLower.includes('united states')) {
+        fallbackYears = lower.includes('property') ? 10 : (lower.includes('contract') || lower.includes('debt') ? 6 : 3);
+        fallbackDesc = `U.S. federal/state statutory limitation guideline for ${limCaseType} under U.S. jurisprudence.`;
+      } else if (jurLower.includes('uk') || jurLower.includes('kingdom')) {
+        fallbackYears = lower.includes('property') ? 12 : (lower.includes('contract') || lower.includes('debt') ? 6 : 3);
+        fallbackDesc = `Limitation Act 1980 framework for England, Wales & Northern Ireland regarding ${limCaseType}.`;
+      } else if (jurLower.includes('uae') || jurLower.includes('emirates')) {
+        fallbackYears = lower.includes('commercial') ? 10 : (lower.includes('cheque') ? 2 : 3);
+        fallbackDesc = `UAE Civil Code & Commercial Transactions Law framework for ${limCaseType}.`;
+      } else {
+        if (lower.includes('consumer')) {
+          fallbackYears = 2;
+          fallbackDesc = `Section 69 of the Consumer Protection Act, 2019.`;
+        } else if (lower.includes('cheque bounce')) {
+          fallbackYears = 0.1;
+          fallbackDesc = `Section 138 Negotiable Instruments Act timeline.`;
+        } else if (lower.includes('property')) {
+          fallbackYears = 12;
+          fallbackDesc = `Limitation Act provisions for immovable property recovery.`;
+        }
       }
 
       setLimResult({
         periodYears: fallbackYears,
         deadline: fallbackDeadline,
         description: fallbackDesc,
-        notes: 'Calculated successfully via LawVise offline fallback engine.'
+        notes: `Calculated successfully via Lawwise multi-jurisdictional fallback (${jurisdiction}).`
       });
     } finally {
       setLimitationPending(false);
@@ -149,13 +157,38 @@ export default function CalculatorScreen() {
       const result = await response.json();
       setFeeResult(result);
     } catch (e: any) {
-      const numericAmount = feeAmount ? parseFloat(feeAmount) : 100000;
-      const base = Math.round(numericAmount * 0.02);
+      console.log("Court Fee API Error (using multi-jurisdictional offline fallback):", e);
+      
+      const numericAmount = feeAmount ? parseFloat(feeAmount) : 0;
+      const jurLower = jurisdiction?.toLowerCase() || '';
+      
+      let base = 0;
+      let registryFee = 0;
+      let desc = '';
+
+      if (jurLower.includes('usa') || jurLower.includes('united states')) {
+        base = feeCourtType.includes('Supreme') ? 300 : 350; 
+        registryFee = 55; 
+        desc = `U.S. Federal Court statutory flat fee structure for ${feeCourtType} (${jurisdiction}).`;
+      } else if (jurLower.includes('uk') || jurLower.includes('kingdom')) {
+        base = numericAmount > 10000 ? 500 : 205; 
+        registryFee = 50;
+        desc = `UK Civil Court fixed/tiered fee structure for ${feeCourtType} (${jurisdiction}).`;
+      } else if (jurLower.includes('uae') || jurLower.includes('emirates')) {
+        base = Math.min(numericAmount * 0.03, 40000); 
+        registryFee = 500;
+        desc = `UAE Judicial Department fee caps for ${feeCourtType} (${jurisdiction}).`;
+      } else {
+        base = Math.round(numericAmount * 0.015);
+        registryFee = 1500;
+        desc = `Estimated court fee calculation for ${feeCourtType} (India jurisdiction).`;
+      }
+
       setFeeResult({
-        totalFee: base + 500,
+        totalFee: base + registryFee,
         baseFee: base,
-        additionalFees: [{ name: 'Process & Registry Fee', amount: 500 }],
-        description: `Estimated court fee calculation for ${feeCourtType} (${jurisdiction} jurisdiction).`
+        additionalFees: [{ name: 'Process & Registry Fee', amount: registryFee }],
+        description: desc
       });
     } finally {
       setCourtFeePending(false);
@@ -190,7 +223,7 @@ export default function CalculatorScreen() {
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
             <Feather name="cpu" size={22} color="#C9A84C" />
-            <Text style={styles.screenTitle}>Legal Calculators</Text>
+            <Text style={[styles.screenTitle, { color: colors.title || '#FFFFFF' }]}>Legal Calculators</Text>
           </View>
           <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
             Compute accurate limitation timelines and statutory court fees.
@@ -396,7 +429,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   headerContainer: { marginBottom: 20 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22 },
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   tabRow: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 4, marginBottom: 24, gap: 4 },
   tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
