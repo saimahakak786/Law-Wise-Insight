@@ -45,21 +45,33 @@ export default function CauseListScreen() {
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
 
-  // Load saved matters, setup notification permissions, and handle notification taps on mount
+  // Load saved matters, setup notification permissions, and handle notification taps (Active & Cold Start)
   useEffect(() => {
     requestNotificationPermissions();
     loadStoredMatters();
 
-    // Listen for notification taps to bring user into the app and navigate via router
+    // 1. Listen for notification taps when app is in foreground or background
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
       console.log('Notification tapped with data:', data);
 
-      // Navigate to the app screen when tapped
       try {
         router.push('/(tabs)');
       } catch (err) {
         console.log('Navigation routing error:', err);
+      }
+    });
+
+    // 2. Handle notification taps when the app was completely closed (Cold Start)
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        const data = response.notification.request.content.data;
+        console.log('App opened from closed state via notification:', data);
+        try {
+          router.push('/(tabs)');
+        } catch (err) {
+          console.log('Cold start navigation error:', err);
+        }
       }
     });
 
@@ -141,21 +153,25 @@ export default function CauseListScreen() {
         return;
       }
 
+      // Generate a unique ID for this matter
+      const matterId = Date.now().toString();
+
       if (Platform.OS !== 'web') {
         try {
           const idealReminderTime = new Date(hearingDateTime.getTime() - 24 * 60 * 60 * 1000);
           const reminderTime = idealReminderTime.getTime() > Date.now()
             ? idealReminderTime
-            : new Date(Date.now() + 5000);
+            : new Date(Date.now() + 5000 + Math.random() * 1000); // Slight stagger to prevent collision
 
           if (hearingDateTime.getTime() > Date.now()) {
             await Notifications.scheduleNotificationAsync({
+              identifier: `reminder_${matterId}`, // Unique identifier prevents overwriting!
               content: {
                 title: `⚖️ ${selectedEventType} Reminder`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — Due: ${hearingDate}`,
                 sound: 'court_alarm.mp3', // Matches custom sound asset filename
                 priority: Notifications.AndroidNotificationPriority.MAX,
-                data: { caseTitle, hearingDate },
+                data: { caseTitle, hearingDate, matterId },
               },
               trigger: {
                 type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -170,7 +186,7 @@ export default function CauseListScreen() {
       }
 
       const newMatter = {
-        id: Date.now().toString(),
+        id: matterId, // Use the unique ID here
         judgeName: judgeName.trim() || 'N/A',
         caseTitle,
         itemNumber: itemNumber || 'N/A',
@@ -337,7 +353,7 @@ export default function CauseListScreen() {
             urgencyLabel = '⚠️ Due Today!';
           } else if (daysLeft <= 7) {
             urgencyColor = '#EF4444'; // Critical
-            urgencyLabel = `⚠️ ${daysLeft} days left (Critical)`;
+            urgencyLabel = `⚠️️ ${daysLeft} days left (Critical)`;
           } else if (daysLeft <= 14) {
             urgencyColor = '#FB8C00'; // Warning
             urgencyLabel = `⚡ ${daysLeft} days left`;
