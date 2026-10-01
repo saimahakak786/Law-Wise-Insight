@@ -135,7 +135,7 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
 
       const token = await getToken();
 
-      // Send the audio file to your Render backend API endpoint
+      // Send the audio file to your Render backend API endpoint (updated with /lawvise/)
       const formData = new FormData();
       formData.append('audio', {
         uri,
@@ -143,7 +143,7 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
         name: 'dictation.m4a',
       } as any);
 
-      const response = await fetch('https://law-wise-insight.onrender.com/api/dictate', {
+      const response = await fetch('https://law-wise-insight.onrender.com/api/lawvise/dictate', {
         method: 'POST',
         body: formData,
         headers: { 
