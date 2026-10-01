@@ -176,7 +176,6 @@ export default function SignInPage() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      // Correct Clerk password-reset method call
       const result = await signIn.attemptFirstFactor({
         strategy: 'reset_password_email_code',
         code: resetCode.trim(),
@@ -211,15 +210,12 @@ export default function SignInPage() {
 
     return (
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
-        <Feather name="shield" size={48} color="#C9A84C" style={{ marginBottom: 24 }} />
+        <Feather name="shield" size={48} color="#C5A059" style={{ marginBottom: 24 }} />
         <Text style={styles.title}>Verify Identity</Text>
         <Text style={styles.subtitle}>Enter the verification code sent to your email</Text>
 
-        <Pressable 
-          onPress={() => handlePasteOTP(false)} 
-          style={styles.pasteBtn}
-        >
-          <Feather name="clipboard" size={14} color="#C9A84C" />
+        <Pressable onPress={() => handlePasteOTP(false)} style={styles.pasteBtn}>
+          <Feather name="clipboard" size={14} color="#C5A059" />
           <Text style={styles.pasteText}>Paste Code from Clipboard</Text>
         </Pressable>
 
@@ -295,20 +291,20 @@ export default function SignInPage() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoRow}>
-            <Feather name="shield" size={32} color="#C9A84C" />
+            <Feather name="shield" size={32} color="#C5A059" />
             <Text style={styles.logoText}>LawVise</Text>
           </View>
           <Text style={styles.title}>Reset Password</Text>
           <Text style={styles.subtitle}>Enter your email to get a code</Text>
 
           <View style={styles.inputWrapper}>
-            <Feather name="mail" size={18} color="#8B9CC5" style={styles.inputIcon} />
+            <Feather name="mail" size={18} color="#6B7280" style={styles.inputIcon} />
             <TextInput
               style={[styles.inputField, { flex: 1 }]}
               value={forgotIdentifier}
               onChangeText={setForgotIdentifier}
               placeholder="Email address"
-              placeholderTextColor="#8B9CC5"
+              placeholderTextColor="#9CA3AF"
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
@@ -343,29 +339,25 @@ export default function SignInPage() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoRow}>
-            <Feather name="shield" size={32} color="#C9A84C" />
+            <Feather name="shield" size={32} color="#C5A059" />
             <Text style={styles.logoText}>LawVise</Text>
           </View>
           <Text style={styles.title}>Enter New Password</Text>
           <Text style={styles.subtitle}>Check your email for the reset code</Text>
 
-          <Pressable 
-            onPress={() => handlePasteOTP(true)} 
-            style={styles.pasteBtn}
-          >
-            <Feather name="clipboard" size={14} color="#C9A84C" />
+          <Pressable onPress={() => handlePasteOTP(true)} style={styles.pasteBtn}>
+            <Feather name="clipboard" size={14} color="#C5A059" />
             <Text style={styles.pasteText}>Paste Code from Clipboard</Text>
           </Pressable>
 
           <View style={styles.inputWrapper}>
-            <Feather name="hash" size={18} color="#8B9CC5" style={styles.inputIcon} />
+            <Feather name="hash" size={18} color="#6B7280" style={styles.inputIcon} />
             <TextInput
               style={[styles.inputField, { flex: 1 }]}
               value={resetCode}
               onChangeText={setResetCode}
               placeholder="Reset code (6 digits)"
-              placeholderTextColor="#8B9CC5"
-              keyboardPosition="below-text"
+              placeholderTextColor="#9CA3AF"
               keyboardType="numeric"
               maxLength={6}
               autoFocus
@@ -373,17 +365,17 @@ export default function SignInPage() {
           </View>
 
           <View style={styles.inputWrapper}>
-            <Feather name="lock" size={18} color="#8B9CC5" style={styles.inputIcon} />
+            <Feather name="lock" size={18} color="#6B7280" style={styles.inputIcon} />
             <TextInput
               style={[styles.inputField, { flex: 1 }]}
               value={newPassword}
               onChangeText={setNewPassword}
               placeholder="New password (min 6 chars)"
-              placeholderTextColor="#8B9CC5"
+              placeholderTextColor="#9CA3AF"
               secureTextEntry={!showNewPassword}
             />
             <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowNewPassword((v) => !v); }} style={styles.eyeBtn}>
-              <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={18} color="#8B9CC5" />
+              <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={18} color="#6B7280" />
             </Pressable>
           </View>
 
@@ -406,17 +398,14 @@ export default function SignInPage() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.logoRow}>
-          <Feather name="shield" size={32} color="#C9A84C" />
+          <Feather name="shield" size={32} color="#C5A059" />
           <Text style={styles.logoText}>LawVise</Text>
         </View>
 
@@ -424,13 +413,13 @@ export default function SignInPage() {
         <Text style={styles.subtitle}>Sign in to your legal workspace</Text>
 
         <View style={styles.inputWrapper}>
-          <Feather name="mail" size={18} color="#8B9CC5" style={styles.inputIcon} />
+          <Feather name="mail" size={18} color="#6B7280" style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             value={identifier}
             onChangeText={setIdentifier}
             placeholder="Email address"
-            placeholderTextColor="#8B9CC5"
+            placeholderTextColor="#9CA3AF"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -438,17 +427,17 @@ export default function SignInPage() {
         </View>
 
         <View style={styles.inputWrapper}>
-          <Feather name="lock" size={18} color="#8B9CC5" style={styles.inputIcon} />
+          <Feather name="lock" size={18} color="#6B7280" style={styles.inputIcon} />
           <TextInput
             style={[styles.inputField, { flex: 1 }]}
             value={password}
             onChangeText={setPassword}
             placeholder="Password"
-            placeholderTextColor="#8B9CC5"
+            placeholderTextColor="#9CA3AF"
             secureTextEntry={!showPassword}
           />
           <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowPassword((v) => !v); }} style={styles.eyeBtn}>
-            <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#8B9CC5" />
+            <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#6B7280" />
           </Pressable>
         </View>
 
@@ -477,10 +466,10 @@ export default function SignInPage() {
 
         <Pressable style={styles.socialBtn} onPress={handleGoogle} disabled={googleLoading}>
           {googleLoading
-            ? <ActivityIndicator color="#FFFFFF" size="small" />
+            ? <ActivityIndicator color="#1F2937" size="small" />
             : (
               <>
-                <Feather name="globe" size={20} color="#FFFFFF" />
+                <Feather name="globe" size={20} color="#1F2937" />
                 <Text style={styles.socialBtnText}>Continue with Google</Text>
               </>
             )}
@@ -498,47 +487,51 @@ export default function SignInPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#070D24' },
+  container: { flex: 1, backgroundColor: '#EAEFEE' }, // Eye-soothing soft sage background
   centerContent: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   content: { paddingHorizontal: 24 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 40 },
-  logoText: { fontFamily: 'Inter_700Bold', fontSize: 24, color: '#C9A84C', letterSpacing: 1 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#FFFFFF', marginBottom: 8 },
-  subtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, color: '#8B9CC5', marginBottom: 24 },
+  logoText: { fontSize: 24, fontWeight: '700', color: '#0F172A', letterSpacing: 1 },
+  title: { fontSize: 28, fontWeight: '700', color: '#0F172A', marginBottom: 8 },
+  subtitle: { fontSize: 15, color: '#6B7280', marginBottom: 24 },
   
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#131D3D',
+    backgroundColor: '#FFFFFF', // Pure white cards/inputs
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1B2448',
+    borderColor: '#D8E2E0', // Soft low-glare borders
     marginBottom: 12,
     paddingHorizontal: 16,
     height: 52,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   inputIcon: { marginRight: 10 },
   inputField: {
     flex: 1,
-    fontFamily: 'Inter_400Regular',
     fontSize: 15,
-    color: '#FFFFFF',
+    color: '#1F2937', // Sharp readable text
   },
   
   pasteBtn: {
     marginBottom: 16,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#131D3D',
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#1B2448',
+    borderColor: '#D8E2E0',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     alignSelf: 'center',
   },
-  pasteText: { color: '#C9A84C', fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  pasteText: { color: '#C5A059', fontWeight: '600', fontSize: 13 },
 
   otpContainer: {
     width: '100%',
@@ -562,48 +555,53 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#1B2448',
-    backgroundColor: '#131D3D',
+    borderColor: '#D8E2E0',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   otpBoxActive: {
-    borderColor: '#C9A84C',
+    borderColor: '#C5A059',
   },
   otpBoxFilled: {
-    borderColor: '#C9A84C',
-    backgroundColor: '#19244D',
+    borderColor: '#C5A059',
+    backgroundColor: '#FAF8F5',
   },
   otpBoxText: {
-    fontFamily: 'Inter_700Bold',
     fontSize: 22,
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#1F2937',
   },
 
   eyeBtn: { padding: 4 },
-  error: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#EF4444', marginBottom: 8, marginTop: -4 },
+  error: { fontSize: 13, color: '#EF4444', marginBottom: 8, marginTop: -4 },
   disabledBtn: { opacity: 0.5 },
   forgotBtn: { alignSelf: 'flex-end', marginBottom: 16, marginTop: -4 },
-  forgotText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#C9A84C' },
+  forgotText: { fontSize: 13, color: '#C5A059', fontWeight: '600' },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24, gap: 12 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#1B2448' },
-  dividerText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#8B9CC5' },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#D8E2E0' },
+  dividerText: { fontSize: 13, color: '#6B7280' },
   socialBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: '#1B2448',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     height: 52,
     borderWidth: 1,
-    borderColor: '#2A3A60',
+    borderColor: '#D8E2E0',
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  socialBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#FFFFFF' },
+  socialBtnText: { fontSize: 15, fontWeight: '600', color: '#1F2937' },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
-  footerText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#8B9CC5' },
-  footerLink: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#C9A84C' },
+  footerText: { fontSize: 14, color: '#6B7280' },
+  footerLink: { fontSize: 14, fontWeight: '600', color: '#C5A059' },
   linkBtn: { alignSelf: 'center', marginTop: 16 },
-  linkText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#C9A84C' },
+  linkText: { fontSize: 14, color: '#C5A059', fontWeight: '600' },
 });
