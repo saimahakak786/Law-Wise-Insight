@@ -56,7 +56,6 @@ export default function SignInPage() {
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [forgotError, setForgotError] = useState('');
-  const resetOtpInputRef = useRef<TextInput>(null);
 
   const navigate = useCallback(
     ({ decorateUrl }: { session?: unknown; decorateUrl: (url: string) => string }) => {
@@ -81,9 +80,12 @@ export default function SignInPage() {
         await signIn.finalize({ navigate });
       }
     } catch (e: any) {
-      const errorMessage = e?.errors?.[0]?.message || e?.message || 'Invalid email or password. Please try again.';
-      setSignInError(errorMessage);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const errorMessage = e?.errors?.[0]?.message || e?.message;
+      // Filter out harmless route navigation or cancel noise to avoid false-alarm error boxes
+      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate') && !errorMessage.includes('Route')) {
+        setSignInError(errorMessage);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
     }
   };
 
@@ -99,9 +101,11 @@ export default function SignInPage() {
         await signIn.finalize({ navigate });
       }
     } catch (e: any) {
-      const errorMessage = e?.errors?.[0]?.message || 'Verification failed. Please check the code.';
-      setSignInError(errorMessage);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const errorMessage = e?.errors?.[0]?.message || e?.message;
+      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate')) {
+        setSignInError(errorMessage);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
     }
   };
 
@@ -132,7 +136,7 @@ export default function SignInPage() {
     try {
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: 'oauth_google',
-        redirectUrl: AuthSession.makeRedirectUri(),
+        redirectUrl: AuthSession.makeRedirectUri({ scheme: 'lawwise' }),
       });
 
       if (createdSessionId && setActive) {
@@ -146,7 +150,7 @@ export default function SignInPage() {
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
-      if (errorMessage && !errorMessage.includes('cancel')) {
+      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate')) {
         setSignInError('Google sign-in was interrupted. Please try again.');
       }
     } finally {
@@ -163,7 +167,8 @@ export default function SignInPage() {
       await signIn.create({ strategy: 'reset_password_email_code', identifier: forgotIdentifier.trim() });
       setForgotStep('reset_password');
     } catch (e: any) {
-      setForgotError(e?.errors?.[0]?.message ?? 'Failed to send reset code. Please try again.');
+      const errorMessage = e?.errors?.[0]?.message || e?.message;
+      setForgotError(errorMessage || 'Failed to send reset code. Please try again.');
       setForgotStep('send_code');
     }
   };
@@ -190,8 +195,10 @@ export default function SignInPage() {
         setForgotStep('reset_password');
       }
     } catch (e: any) {
-      const errorMessage = e?.errors?.[0]?.message || e?.message || 'Failed to reset password. Please check your code.';
-      setForgotError(errorMessage);
+      const errorMessage = e?.errors?.[0]?.message || e?.message;
+      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate')) {
+        setForgotError(errorMessage);
+      }
       setForgotStep('reset_password');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
@@ -487,7 +494,7 @@ export default function SignInPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EAEFEE' }, // Eye-soothing soft sage background
+  container: { flex: 1, backgroundColor: '#EAEFEE' },
   centerContent: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   content: { paddingHorizontal: 24 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 40 },
@@ -498,10 +505,10 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF', // Pure white cards/inputs
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D8E2E0', // Soft low-glare borders
+    borderColor: '#D8E2E0',
     marginBottom: 12,
     paddingHorizontal: 16,
     height: 52,
@@ -515,7 +522,7 @@ const styles = StyleSheet.create({
   inputField: {
     flex: 1,
     fontSize: 15,
-    color: '#1F2937', // Sharp readable text
+    color: '#1F2937',
   },
   
   pasteBtn: {
