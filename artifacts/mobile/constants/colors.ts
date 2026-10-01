@@ -1,18 +1,18 @@
 /**
- * LawVise Design Tokens - Clean Neutral White & Warm Cream Legal Theme.
- * Completely neutral background and crisp white cards with legal gold accents.
+ * LawVise Design Tokens - Eye-Soothing Soft Pastel Sage Legal Theme.
+ * Restores the exact comfortable, low-glare background and pure white cards from your preferred screenshots.
  */
 
 const colors = {
   light: {
-    // Clean neutral light background (Zero green/teal tint)
-    background: '#F4F5F7',
+    // The exact soft, eye-soothing pale gray-sage background from your preferred screenshots
+    background: '#EAEFEE',
     foreground: '#1F2937',
     
-    // Sharp slate-black for high-contrast headers
+    // Deep sharp slate-black for high-contrast headers
     title: '#0F172A',
 
-    // Crisp pure white cards for professional contrast
+    // Crisp pure white cards for clean professional contrast
     card: '#FFFFFF',
     cardForeground: '#1F2937',
 
@@ -20,7 +20,7 @@ const colors = {
     primary: '#C5A059',
     primaryForeground: '#FFFFFF',
 
-    secondary: '#EFECE6', // Warm cream secondary tone
+    secondary: '#F3F4F6',
     secondaryForeground: '#1F2937',
 
     muted: '#E5E7EB',
@@ -35,7 +35,7 @@ const colors = {
     warning: '#F59E0B',
     info: '#3B82F6',
 
-    border: '#E2E8F0', // Clean neutral border
+    border: '#D8E2E0', // Soft low-glare borders matching the background
     input: '#FFFFFF',
     text: '#1F2937',
     tint: '#C5A059',
