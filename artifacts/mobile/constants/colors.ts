@@ -1,18 +1,18 @@
 /**
- * LawVise Design Tokens - Clean Off-White / Parchment Legal Theme.
- * Replaces the sea-green tint with a professional, high-contrast off-white aesthetic.
+ * LawVise Design Tokens - Clean Neutral White & Warm Cream Legal Theme.
+ * Completely neutral background and crisp white cards with legal gold accents.
  */
 
 const colors = {
   light: {
-    // Clean, professional off-white parchment background
-    background: '#F8F9FA',
+    // Clean neutral light background (Zero green/teal tint)
+    background: '#F4F5F7',
     foreground: '#1F2937',
     
-    // Dedicated bright title color for clean high-contrast headers
-    title: '#0F172A', // Deep, sharp slate-black for maximum readability on light backgrounds
+    // Sharp slate-black for high-contrast headers
+    title: '#0F172A',
 
-    // Crisp white cards for professional contrast
+    // Crisp pure white cards for professional contrast
     card: '#FFFFFF',
     cardForeground: '#1F2937',
 
@@ -20,7 +20,7 @@ const colors = {
     primary: '#C5A059',
     primaryForeground: '#FFFFFF',
 
-    secondary: '#F3F4F6',
+    secondary: '#EFECE6', // Warm cream secondary tone
     secondaryForeground: '#1F2937',
 
     muted: '#E5E7EB',
@@ -35,7 +35,7 @@ const colors = {
     warning: '#F59E0B',
     info: '#3B82F6',
 
-    border: '#E5E7EB',
+    border: '#E2E8F0', // Clean neutral border
     input: '#FFFFFF',
     text: '#1F2937',
     tint: '#C5A059',
@@ -44,10 +44,7 @@ const colors = {
   dark: {
     background: '#1A1D20',
     foreground: '#E5E0D3',
-    
-    // Dedicated bright title color for dark mode headers
-    title: '#F8FAFC', // Crisp, bright white/silver for standout visibility on dark backgrounds
-
+    title: '#F8FAFC',
     card: '#222620',
     cardForeground: '#E5E0D3',
     primary: '#C9A84C',
