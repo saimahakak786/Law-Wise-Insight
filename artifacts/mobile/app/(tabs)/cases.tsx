@@ -226,33 +226,41 @@ export default function CasesScreen() {
 
     try {
       if (editingId) {
+        // 1. Update locally FIRST for instant 1st-click response
+        const updated = localCases.map(c => c.id === editingId ? { ...c, ...payload } : c);
+        await persistLocalCases(updated);
+        setUseLocalFallback(true);
+
+        // 2. Optional background sync with remote API
         try {
           await updateCase.mutateAsync({ id: String(editingId), data: payload });
           invalidate();
-        } catch {
-          // Fallback to updating local storage state
-          const updated = localCases.map(c => c.id === editingId ? { ...c, ...payload } : c);
-          await persistLocalCases(updated);
-          setUseLocalFallback(true);
+        } catch (apiErr) {
+          console.log('Background sync update skipped/failed:', apiErr);
         }
       } else {
+        // 1. Save locally FIRST for instant 1st-click response
+        const newCase: CaseItem = {
+          id: Date.now(),
+          ...payload,
+        };
+        const updated = [newCase, ...localCases];
+        await persistLocalCases(updated);
+        setUseLocalFallback(true);
+
+        // 2. Optional background sync with remote API
         try {
           await createCase.mutateAsync({ data: payload });
           invalidate();
-        } catch {
-          // Fallback to saving new item in local storage state
-          const newCase: CaseItem = {
-            id: Date.now(),
-            ...payload,
-          };
-          const updated = [newCase, ...localCases];
-          await persistLocalCases(updated);
-          setUseLocalFallback(true);
+        } catch (apiErr) {
+          console.log('Background sync create skipped/failed:', apiErr);
         }
       }
+
       setShowModal(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
+    } catch (e) {
+      console.log('Save error:', e);
       Alert.alert('Error', 'Failed to save case. Please try again.');
     }
   };
