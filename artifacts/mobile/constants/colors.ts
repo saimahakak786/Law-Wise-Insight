@@ -1,44 +1,44 @@
 /**
- * LawVise Design Tokens - Uniform Soft Single-Tone Aesthetics.
- * Features a single calming, solid background color with zero eye strain.
+ * LawVise Design Tokens - Clean Off-White / Parchment Legal Theme.
+ * Replaces the sea-green tint with a professional, high-contrast off-white aesthetic.
  */
 
 const colors = {
   light: {
-    // Single uniform calming solid background color
-    background: '#E4EDEC',
-    foreground: '#2A3038',
+    // Clean, professional off-white parchment background
+    background: '#F8F9FA',
+    foreground: '#1F2937',
     
     // Dedicated bright title color for clean high-contrast headers
     title: '#0F172A', // Deep, sharp slate-black for maximum readability on light backgrounds
 
-    // Cards match seamlessly with subtle contrast
-    card: '#EDF1F0',
-    cardForeground: '#2A3038',
+    // Crisp white cards for professional contrast
+    card: '#FFFFFF',
+    cardForeground: '#1F2937',
 
-    // Soothing natural accent tone
-    primary: '#C9A84C',
+    // Professional legal gold/bronze accent tone
+    primary: '#C5A059',
     primaryForeground: '#FFFFFF',
 
-    secondary: '#D3DBDE',
-    secondaryForeground: '#2A3038',
+    secondary: '#F3F4F6',
+    secondaryForeground: '#1F2937',
 
-    muted: '#D2D8DC',
-    mutedForeground: '#617A81',
+    muted: '#E5E7EB',
+    mutedForeground: '#6B7280',
 
-    accent: '#C9A84C',
+    accent: '#C5A059',
     accentForeground: '#FFFFFF',
 
-    destructive: '#A83A3A',
+    destructive: '#EF4444',
     destructiveForeground: '#FFFFFF',
-    success: '#2E6D40',
-    warning: '#996312',
-    info: '#0B588C',
+    success: '#10B981',
+    warning: '#F59E0B',
+    info: '#3B82F6',
 
-    border: '#CBD0D3',
+    border: '#E5E7EB',
     input: '#FFFFFF',
-    text: '#2A3038',
-    tint: '#C9A84C',
+    text: '#1F2937',
+    tint: '#C5A059',
   },
 
   dark: {
@@ -50,23 +50,23 @@ const colors = {
 
     card: '#222620',
     cardForeground: '#E5E0D3',
-    primary: '#V6A0A6',
+    primary: '#C9A84C',
     primaryForeground: '#1A1D20',
     secondary: '#2C3138',
     secondaryForeground: '#E5E0D3',
-    muted: '#2C3158',
-    mutedForeground: '#817A81',
-    accent: '#8A0A95',
+    muted: '#2C3138',
+    mutedForeground: '#9CA3AF',
+    accent: '#C9A84C',
     accentForeground: '#1A1D20',
     destructive: '#D15858',
     destructiveForeground: '#FFFFFF',
     success: '#3D8C55',
     warning: '#D8622B',
     info: '#6ABEC2',
-    border: '#313261',
+    border: '#374151',
     input: '#222620',
     text: '#E5E0D2',
-    tint: '#8A99A6',
+    tint: '#C9A84C',
   },
 
   radius: 12,
