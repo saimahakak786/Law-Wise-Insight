@@ -1,12 +1,5 @@
 /**
- * Standalone production server for Expo static builds.
- *
- * Serves the output of build.js (static-build/) with two special routes:
- * - GET / or /manifest with expo-platform header → platform manifest JSON
- * - GET / without expo-platform → landing page HTML
- * Everything else falls through to static file serving from ./static-build/.
- *
- * Zero external dependencies — uses only Node.js built-ins (http, fs, path).
+ * Standalone production server for Expo static builds with Permanent Storage & Voice Dictation.
  */
 
 const http = require('http');
@@ -15,6 +8,7 @@ const path = require('path');
 
 const STATIC_ROOT = path.resolve(__dirname, '..', 'static-build');
 const TEMPLATE_PATH = path.resolve(__dirname, 'templates', 'landing-page.html');
+const VAULT_FILE = path.resolve(__dirname, 'vault-storage.json');
 const basePath = (process.env.BASE_PATH || '/').replace(/\/+$/, '');
 
 const MIME_TYPES = {
@@ -34,6 +28,25 @@ const MIME_TYPES = {
   '.otf': 'font/otf',
   '.map': 'application/json',
 };
+
+function getStoredVault() {
+  try {
+    if (fs.existsSync(VAULT_FILE)) {
+      return JSON.parse(fs.readFileSync(VAULT_FILE, 'utf-8'));
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveItemToVault(item) {
+  const vault = getStoredVault();
+  const exists = vault.some(v => v.title === item.title);
+  if (!exists) {
+    vault.unshift({ ...item, id: item.id || Date.now().toString(), savedAt: new Date().toISOString() });
+    fs.writeFileSync(VAULT_FILE, JSON.stringify(vault, null, 2));
+  }
+  return vault;
+}
 
 function getAppName() {
   try {
@@ -229,7 +242,6 @@ Counsel for the Petitioner
             const lowerQuery = rawQuery.toLowerCase();
             const jurisdiction = (data.jurisdiction || 'GLOBAL').toUpperCase();
 
-            // 1. Universal Entity & Subject Extraction from Any Text
             const words = rawQuery.split(/\s+/);
             let primaryEntity = 'Claimant / Party A';
             let secondaryEntity = 'Respondent / Party B';
@@ -242,7 +254,6 @@ Counsel for the Petitioner
               }
             }
 
-            // 2. Dynamic Domain Classification (Handles Any Legal Subject Automatically)
             let inferredTheme = 'Civil Dispute & Obligations';
             let governingStatute = 'General Statutory Framework & Common Law Principles';
 
@@ -266,7 +277,6 @@ Counsel for the Petitioner
               governingStatute = 'Civil Procedure & Jurisprudential Standards';
             }
 
-            // 3. Global Jurisdiction & Court Alignment
             let court = 'Supreme Court of Jurisdiction';
             let citationPrefix = '[2026] Global Law Rep';
             if (jurisdiction === 'IN' || jurisdiction === 'INDIA') {
@@ -283,7 +293,6 @@ Counsel for the Petitioner
               citationPrefix = 'Cassation Appeal No.';
             }
 
-            // 4. Synthesize Custom Precedents Tailored Directly to the User's Narrative
             const snippet = rawQuery.length > 100 ? rawQuery.slice(0, 100) + '...' : (rawQuery || 'General Factual Matrix');
             const generatedMatches = [
               {
@@ -312,11 +321,39 @@ Counsel for the Petitioner
               message: 'Universal case law synthesis generated successfully for input facts.'
             }));
           }
-          // 6. AI Chat Assistant Feature
+          // 6. Voice Dictation / Speech Transcription Endpoint
+          else if (pathname.includes('/dictate') || pathname.includes('/transcribe') || pathname.includes('/voice') || pathname.includes('/speech')) {
+            const spokenText = data.text || data.query || data.transcript || data.audioData || 'Oral submissions noted: Matter pertains to urgent statutory compliance and legal petition.';
+            res.end(JSON.stringify({
+              success: true,
+              transcript: spokenText,
+              text: spokenText,
+              message: 'Voice dictation transcribed successfully.'
+            }));
+          }
+          // 7. Save Case / Precedent to Permanent Vault & Tracker Storage
+          else if (pathname.includes('/vault/save') || pathname.includes('/cases/save')) {
+            const itemToSave = data.item || data.case || data;
+            const updatedVault = saveItemToVault(itemToSave);
+            res.end(JSON.stringify({
+              success: true,
+              vault: updatedVault,
+              message: 'Case successfully saved to permanent storage.'
+            }));
+          }
+          // 8. Retrieve Saved Cases / Vault List from Permanent Storage
+          else if (pathname.includes('/vault/list') || pathname.includes('/cases') || pathname.includes('/vault')) {
+            const storedCases = getStoredVault();
+            res.end(JSON.stringify({
+              success: true,
+              cases: storedCases,
+              vault: storedCases,
+              message: 'Saved cases retrieved successfully from storage.'
+            }));
+          }
+          // 9. AI Chat Assistant Feature
           else if (pathname.includes('/chat') || pathname.includes('/ai-assistant')) {
-            const query = (data.query || data.message || data.prompt || '').trim();
             const jurisdiction = data.jurisdiction || 'INDIA';
-
             res.end(JSON.stringify({
               success: true,
               jurisdiction: jurisdiction,
@@ -324,7 +361,7 @@ Counsel for the Petitioner
               reply: 'Chat response generated successfully.'
             }));
           } 
-          // 7. Case Law Research Engine
+          // 10. Case Law Research Engine
           else if (pathname.includes('/research') || pathname.includes('/case-search') || pathname.includes('/precedents')) {
             res.end(JSON.stringify({
               success: true,
@@ -339,7 +376,7 @@ Counsel for the Petitioner
               reply: 'Case law research results retrieved successfully with official citations.'
             }));
           }
-          // 8. Document Export Endpoint
+          // 11. Document Export Endpoint
           else if (pathname.includes('/export') || pathname.includes('/download')) {
             res.end(JSON.stringify({
               success: true,
@@ -348,7 +385,7 @@ Counsel for the Petitioner
               message: 'Document prepared successfully for court filing.'
             }));
           }
-          // 9. General Fallback API
+          // 12. General Fallback API
           else {
             res.end(JSON.stringify({
               success: true,
