@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'rea
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
+import { useAuth } from '@clerk/expo';
 import { checkProStatus } from '../services/purchases';
 import { checkDictationLimit, incrementDictationCount } from '../services/usageLimits';
 
@@ -14,6 +15,7 @@ interface VoiceDictationProps {
 const MAX_RECORDING_DURATION_MS = 5 * 60 * 1000; // 5 Minutes max limit
 
 export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress }: VoiceDictationProps) {
+  const { getToken } = useAuth();
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProUser, setIsProUser] = useState(false);
@@ -131,6 +133,8 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
         setCanUse(allowed);
       }
 
+      const token = await getToken();
+
       // Send the audio file to your Render backend API endpoint
       const formData = new FormData();
       formData.append('audio', {
@@ -143,7 +147,9 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
         method: 'POST',
         body: formData,
         headers: { 
-          'Content-Type': 'multipart/form-data',
+          // NOTE: Do NOT set Content-Type here! React Native automatically assigns 
+          // the correct multipart boundary when passing FormData without a manual header.
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -193,7 +199,7 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       {isProcessing ? (
         <View style={styles.processingRow}>
           <ActivityIndicator color="#C9A84C" size="small" />
-          <Text style={styles.processingText}>Transcribing courtroom audio (Max 5m)...</Text>
+          <Text style={styles.processingText}>Transcribing & Translating Audio...</Text>
         </View>
       ) : (
         <View style={styles.wrapperRow}>
