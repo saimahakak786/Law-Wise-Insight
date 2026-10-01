@@ -26,8 +26,9 @@ const SUGGESTIONS = [
   'What is the limitation period for a cheque bounce case?',
 ];
 
-// Helper parser to format markdown (## headings, bold text, lists) cleanly in React Native text
+// Helper parser to format markdown cleanly with guaranteed visible text color
 const renderFormattedContent = (content: string, textColor: string) => {
+  const resolvedColor = textColor || '#111827';
   const lines = content.split('\n');
   return lines.map((line, lineIndex) => {
     let trimmed = line.trim();
@@ -50,14 +51,14 @@ const renderFormattedContent = (content: string, textColor: string) => {
         key={lineIndex}
         style={[
           isHeader ? styles.mdHeader : isBullet ? styles.mdBullet : styles.mdLine,
-          { color: textColor },
+          { color: resolvedColor },
           isHeader && { color: '#C9A84C' },
         ]}
       >
         {parts.map((part, partIndex) => {
           if (part.startsWith('**') && part.endsWith('**')) {
             return (
-              <Text key={partIndex} style={{ fontFamily: 'Inter_700Bold', color: textColor }}>
+              <Text key={partIndex} style={{ fontFamily: 'Inter_700Bold', color: resolvedColor }}>
                 {part.slice(2, -2)}
               </Text>
             );
@@ -136,7 +137,6 @@ export default function ChatScreen() {
         }
       }
 
-      // Successful stream completion cleanup
       const id = streamingIdRef.current;
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, isStreaming: false } : m)));
       setIsStreaming(false);
@@ -201,7 +201,7 @@ export default function ChatScreen() {
           ) : isUser ? (
             <Text style={[styles.bubbleText, { color: '#070D24' }]}>{item.content}</Text>
           ) : (
-            renderFormattedContent(item.content, colors.foreground)
+            renderFormattedContent(item.content, colors.foreground || '#111827')
           )}
         </View>
       </View>
@@ -252,7 +252,7 @@ export default function ChatScreen() {
                   style={[styles.suggestionChip, { backgroundColor: colors.card, borderColor: colors.border }]}
                   onPress={() => sendMessage(s)}
                 >
-                  <Text style={[styles.suggestionText, { color: colors.foreground }]}>{s}</Text>
+                  <Text style={[styles.suggestionText, { color: colors.foreground || '#111827' }]}>{s}</Text>
                 </Pressable>
               ))}
             </View>
@@ -267,7 +267,7 @@ export default function ChatScreen() {
         style={[styles.inputBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 0) }]}
       >
         <TextInput
-          style={[styles.textInput, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, color: colors.foreground }]}
+          style={[styles.textInput, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, color: colors.foreground || '#111827' }]}
           value={input}
           onChangeText={setInput}
           placeholder="Ask a legal question..."
