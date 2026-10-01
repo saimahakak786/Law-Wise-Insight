@@ -74,9 +74,11 @@ export default function SignUpPage() {
         await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       }
     } catch (e: any) {
-      const errorMessage = e?.errors?.[0]?.message || e?.message || 'Failed to create account. Please try again.';
-      setSignUpError(errorMessage);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const errorMessage = e?.errors?.[0]?.message || e?.message;
+      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate') && !errorMessage.includes('Route')) {
+        setSignUpError(errorMessage);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
     }
   };
 
@@ -90,9 +92,11 @@ export default function SignUpPage() {
         await signUp.finalize({ navigate });
       }
     } catch (e: any) {
-      const errorMessage = e?.errors?.[0]?.message || 'Verification failed. Please check the code.';
-      setSignUpError(errorMessage);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const errorMessage = e?.errors?.[0]?.message || e?.message;
+      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate') && !errorMessage.includes('Route')) {
+        setSignUpError(errorMessage);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
     }
   };
 
@@ -119,7 +123,7 @@ export default function SignUpPage() {
     try {
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: 'oauth_google',
-        redirectUrl: AuthSession.makeRedirectUri(),
+        redirectUrl: AuthSession.makeRedirectUri({ scheme: 'lawwise' }),
       });
 
       if (createdSessionId && setActive) {
@@ -133,7 +137,7 @@ export default function SignUpPage() {
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
-      if (errorMessage && !errorMessage.includes('cancel')) {
+      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate')) {
         setSignUpError('Google sign-up was interrupted. Please try again.');
       }
     } finally {
