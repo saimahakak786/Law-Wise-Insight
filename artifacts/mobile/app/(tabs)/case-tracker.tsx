@@ -175,13 +175,11 @@ export default function CauseListScreen() {
             let reminderTime: Date;
             let subTitle = `Due: ${hearingDate}`;
 
-            // If added within 24 hours (e.g. 1 hour before), trigger an immediate urgent notification
             if (timeUntilHearingMs <= 24 * 60 * 60 * 1000) {
-              reminderTime = new Date(Date.now() + 3000); // Fires almost instantly (3s buffer)
+              reminderTime = new Date(Date.now() + 3000); 
               const hoursLeft = Math.max(1, Math.round(timeUntilHearingMs / (1000 * 60 * 60)));
               subTitle = `🚨 URGENT: Hearing is in ~${hoursLeft} hour(s)!`;
             } else {
-              // Standard 24-hour advance reminder
               reminderTime = new Date(hearingDateTime.getTime() - 24 * 60 * 60 * 1000);
             }
 
@@ -216,9 +214,12 @@ export default function CauseListScreen() {
         status: 'Pending Call',
       };
 
-      const updatedMatters = [newMatter, ...matters];
-      setMatters(updatedMatters);
-      await saveMattersToStorage(updatedMatters);
+      // FIXED: Using functional state updater to avoid stale state closures on 1st click
+      setMatters((prevMatters) => {
+        const updatedMatters = [newMatter, ...prevMatters];
+        saveMattersToStorage(updatedMatters);
+        return updatedMatters;
+      });
 
       setJudgeName('');
       setCaseTitle('');
@@ -251,9 +252,11 @@ export default function CauseListScreen() {
               if (Platform.OS !== 'web') {
                 await Notifications.cancelScheduledNotificationAsync(`reminder_${id}`);
               }
-              const filtered = matters.filter(m => m.id !== id);
-              setMatters(filtered);
-              await saveMattersToStorage(filtered);
+              setMatters((prevMatters) => {
+                const filtered = prevMatters.filter(m => m.id !== id);
+                saveMattersToStorage(filtered);
+                return filtered;
+              });
             } catch (e) {
               console.log('Error deleting matter:', e);
             }
@@ -418,7 +421,7 @@ export default function CauseListScreen() {
                     <Text style={[styles.urgencyText, { color: urgencyColor }]}>{urgencyLabel}</Text>
                   </View>
                   <TouchableOpacity onPress={() => handleDeleteMatter(item.id, item.caseTitle)} style={styles.deleteBtn}>
-                    <Feather name="trash-2" size5={14} color="#EF4444" />
+                    <Feather name="trash-2" size={14} color="#EF4444" />
                   </TouchableOpacity>
                 </View>
               </View>
