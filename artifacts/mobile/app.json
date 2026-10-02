@@ -6,7 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lawwise",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "jsEngine": "hermes",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -14,10 +15,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.saimahakak786.lawwise"
+      "bundleIdentifier": "com.saimahakak786.lawwise",
+      "jsEngine": "hermes",
+      "backgroundColor": "#070024"
     },
     "android": {
-      "package": "com.saimahakak786.lawwise"
+      "package": "com.saimahakak786.lawwise",
+      "jsEngine": "hermes",
+      "backgroundColor": "#070024"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
