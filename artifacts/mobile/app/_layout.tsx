@@ -29,12 +29,12 @@ const queryClient = new QueryClient({
 
 setBaseUrl('https://law-wise-insight.onrender.com');
 
-// Clean, eye-friendly light theme constants (like ink on paper)
-const APP_BACKGROUND = '#F8FAFC'; // Soft off-white / light paper tone
-const TEXT_PRIMARY = '#0F172A';    // Deep charcoal / near-black ink text (zero strain)
-const ACCENT_PRIMARY = '#1E3A8A';  // Professional deep legal blue
+// LawVise Dark Theme Constants
+const APP_BACKGROUND = '#070024'; // Deep dark theme matching app.json
+const TEXT_PRIMARY = '#FFFFFF';    // Crisp white text
+const ACCENT_PRIMARY = '#3B82F6';  // Vibrant blue accent for loaders/buttons
 
-// Apply default dark ink text styling globally across React Native Text components
+// Apply default text styling globally for dark mode
 if ((Text as any).defaultProps == null) {
   (Text as any).defaultProps = {};
 }
@@ -42,7 +42,7 @@ if ((Text as any).defaultProps == null) {
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk';
 
-// Robust custom token cache using expo-secure-store to prevent bundling/runtime resolution issues
+// Robust custom token cache using expo-secure-store
 const tokenCache = {
   async getToken(key: string) {
     try {
@@ -61,15 +61,15 @@ const tokenCache = {
   },
 };
 
-// Configure Android Notification Channel with custom gavel sound and persistent visibility (v2 to bypass cache)
+// Configure Android Notification Channel
 async function setupNotificationChannel() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('court-alerts-v2', {
       name: 'Court Hearing Alerts',
       importance: Notifications.AndroidImportance.MAX,
-      sound: 'court_alarm', // Matches your sound filename without extension
+      sound: 'court_alarm',
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#1E3A8A',
+      lightColor: '#3B82F6',
       enableLights: true,
       enableVibrate: true,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
@@ -90,7 +90,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
       
-      {/* Feature screens with clean headers and precise title color */}
+      {/* Feature screens with dark theme headers */}
       <Stack.Screen 
         name="draft" 
         options={{ 
@@ -141,7 +141,7 @@ function RootLayoutNav() {
   );
 }
 
-// Component to register the Clerk token getter with the API client
+// Component to register Clerk token getter
 function TokenSync() {
   const { getToken } = useAuth();
 
@@ -159,8 +159,8 @@ function TokenSync() {
   return null;
 }
 
-// Inner component with timeout fallback so users never get stuck indefinitely on boot
-function InitializingGate() {
+// Inner component holding splash screen until both fonts and auth are fully initialized
+function InitializingGate({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: Error | null }) {
   const { isLoaded } = useAuth();
   const [timedOut, setTimedOut] = useState(false);
 
@@ -168,32 +168,36 @@ function InitializingGate() {
     setupNotificationChannel();
 
     try {
-      Purchases.configure({ apiKey:"goog_IVymTFIszZNpmPfSIZHqXBInlhR"  });
+      Purchases.configure({ apiKey: "goog_IVymTFIszZNpmPfSIZHqXBInlhR" });
     } catch (e) {
       console.error('Failed to initialize RevenueCat:', e);
     }
 
     const timer = setTimeout(() => {
-      if (!isLoaded) {
-        setTimedOut(true);
-      }
+      setTimedOut(true);
     }, 6000);
 
     return () => clearTimeout(timer);
-  }, [isLoaded]);
+  }, []);
 
-  if (!isLoaded && !timedOut) {
+  // Hide splash screen ONLY when fonts are loaded AND Clerk auth is fully initialized
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && (isLoaded || timedOut)) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontError, isLoaded, timedOut]);
+
+  // While waiting, render a solid dark view (matches splash background - zero white flash / zero spinner)
+  if ((!fontsLoaded && !fontError) || (!isLoaded && !timedOut)) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color={ACCENT_PRIMARY} />
-      </View>
+      <View style={{ flex: 1, backgroundColor: APP_BACKGROUND }} />
     );
   }
 
   if (timedOut && !isLoaded) {
     return (
       <View style={styles.loaderContainer}>
-        <Text style={{ color: '#DC2626', fontSize: 16, textAlign: 'center', marginBottom: 12, paddingHorizontal: 24 }}>
+        <Text style={{ color: '#EF4444', fontSize: 16, textAlign: 'center', marginBottom: 12, paddingHorizontal: 24 }}>
           Connection or initialization timed out.
         </Text>
         <TouchableOpacity 
@@ -222,22 +226,14 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
-
-  if (!fontsLoaded && !fontError) return null;
-
   if (!publishableKey) {
     SplashScreen.hideAsync();
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: APP_BACKGROUND, padding: 24 }}>
-        <Text style={{ color: '#DC2626', fontSize: 16, textAlign: 'center', marginBottom: 12 }}>
+        <Text style={{ color: '#EF4444', fontSize: 16, textAlign: 'center', marginBottom: 12 }}>
           Missing Clerk publishable key
         </Text>
-        <Text style={{ color: '#64748B', fontSize: 13, textAlign: 'center' }}>
+        <Text style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>
           EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY was not set at build time.
         </Text>
       </View>
@@ -252,7 +248,7 @@ export default function RootLayout() {
             <AppProvider>
               <GestureHandlerRootView style={{ flex: 1 }}>
                 <KeyboardProvider>
-                  <InitializingGate />
+                  <InitializingGate fontsLoaded={fontsLoaded} fontError={fontError} />
                 </KeyboardProvider>
               </GestureHandlerRootView>
             </AppProvider>
