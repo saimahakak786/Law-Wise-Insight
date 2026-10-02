@@ -1,38 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
   TextInput, Platform, Alert,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import { useApp, StoredDocument } from '@/context/AppContext';
+import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
-import Purchases from 'react-native-purchases';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import UpgradeModal from '@/components/UpgradeModal';
 
-
 const FREE_VAULT_LIMIT = 5;
+const VAULT_STORAGE_KEY = '@lawwise_saved_documents';
 
 export default function VaultScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { savedDocuments, activeMatter } = useApp();
 
+  const [documents, setDocuments] = useState<StoredDocument[]>([]);
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedDoc, setSelectedDoc] = useState<StoredDocument | null>(null);
   
+  // Edit states
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+
   // Paywall state for vault storage limit
   const [isPro, setIsPro] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
+  useEffect(() => {
+    if (savedDocuments) {
+      setDocuments(savedDocuments);
+    }
+  }, [savedDocuments]);
+
   const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
 
-  const filteredDocs = savedDocuments.filter((doc) => {
+  const filteredDocs = documents.filter((doc) => {
     const matchesSearch = doc.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
                           doc.content.toLowerCase().includes(searchFilter.toLowerCase());
     return matchesSearch;
@@ -54,9 +66,66 @@ export default function VaultScreen() {
     }
   };
 
-  const handleUpgradeCheck = () => {
-    if (!isPro && savedDocuments.length >= FREE_VAULT_LIMIT) {
-      setShowUpgradeModal(true);
+  const handleDeleteDoc = (id: string, title: string) => {
+    Alert.alert(
+      'Delete Record',
+      `Are you sure you want to delete "${title}" from your vault?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            const updated = documents.filter(d => d.id !== id);
+            setDocuments(updated);
+            if (selectedDoc?.id === id) {
+              setSelectedDoc(null);
+              setIsEditing(false);
+            }
+            try {
+              await AsyncStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(updated));
+            } catch (e) {
+              console.log('Failed to save documents after deletion', e);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleStartEdit = (doc: StoredDocument) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedDoc(doc);
+    setEditTitle(doc.title);
+    setEditContent(doc.content);
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTitle.trim() || !editContent.trim()) {
+      Alert.alert('Missing Fields', 'Title and content cannot be empty.');
+      return;
+    }
+    if (!selectedDoc) return;
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const updatedDocs = documents.map(d => {
+      if (d.id === selectedDoc.id) {
+        return { ...d, title: editTitle.trim(), content: editContent.trim() };
+      }
+      return d;
+    });
+
+    setDocuments(updatedDocs);
+    const updatedSelected = { ...selectedDoc, title: editTitle.trim(), content: editContent.trim() };
+    setSelectedDoc(updatedSelected);
+    setIsEditing(false);
+
+    try {
+      await AsyncStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(updatedDocs));
+    } catch (e) {
+      console.log('Failed to save edited document', e);
     }
   };
 
@@ -82,16 +151,16 @@ export default function VaultScreen() {
           <Pressable 
             style={[styles.storageBanner, { backgroundColor: colors.card, borderColor: '#C9A84C40' }]}
             onPress={() => {
-              if (savedDocuments.length >= FREE_VAULT_LIMIT) setShowUpgradeModal(true);
+              if (documents.length >= FREE_VAULT_LIMIT) setShowUpgradeModal(true);
             }}
           >
             <Feather name="shield" size={16} color="#C9A84C" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.storageBannerTitle, { color: colors.foreground }]}>
-                Vault Storage: {savedDocuments.length} / {FREE_VAULT_LIMIT} Free Slots Used
+                Vault Storage: {documents.length} / {FREE_VAULT_LIMIT} Free Slots Used
               </Text>
               <Text style={[styles.storageBannerSub, { color: colors.mutedForeground }]}>
-                {savedDocuments.length >= FREE_VAULT_LIMIT 
+                {documents.length >= FREE_VAULT_LIMIT 
                   ? 'Free limit reached! Tap to upgrade for unlimited vault space.' 
                   : 'Upgrade to Pro for unlimited document archiving.'}
               </Text>
@@ -127,12 +196,15 @@ export default function VaultScreen() {
           ) : null}
         </View>
 
-        {/* Document Detail Viewer or List */}
+        {/* Document Detail Viewer or Edit Form or List */}
         {selectedDoc ? (
           <View style={[styles.detailContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.detailHeader}>
               <Pressable 
-                onPress={() => setSelectedDoc(null)} 
+                onPress={() => {
+                  setSelectedDoc(null);
+                  setIsEditing(false);
+                }} 
                 style={styles.backBtn}
               >
                 <Feather name="arrow-left" size={16} color="#C9A84C" />
@@ -141,25 +213,70 @@ export default function VaultScreen() {
               <Text style={[styles.docTypeBadge, { color: '#C9A84C' }]}>{selectedDoc.documentType.toUpperCase()}</Text>
             </View>
 
-            <Text style={[styles.detailTitle, { color: colors.foreground }]}>{selectedDoc.title}</Text>
-            <Text style={[styles.detailDate, { color: colors.mutedForeground }]}>
-              Saved on: {new Date(selectedDoc.createdAt).toLocaleString()}
-            </Text>
+            {isEditing ? (
+              <View>
+                <Text style={[styles.inputLabel, { color: colors.foreground }]}>Document Title *</Text>
+                <TextInput
+                  style={[styles.editInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+                  value={editTitle}
+                  onChangeText={setEditTitle}
+                  placeholder="Enter title..."
+                  placeholderTextColor={colors.mutedForeground}
+                />
 
-            <ScrollView style={[styles.contentPreviewBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.contentText, { color: colors.foreground }]}>{selectedDoc.content}</Text>
-            </ScrollView>
+                <Text style={[styles.inputLabel, { color: colors.foreground, marginTop: 12 }]}>Document Content *</Text>
+                <TextInput
+                  style={[styles.editContentInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+                  value={editContent}
+                  onChangeText={setEditContent}
+                  multiline
+                  placeholder="Enter content..."
+                  placeholderTextColor={colors.mutedForeground}
+                />
 
-            <View style={styles.detailActionRow}>
-              <Pressable style={styles.actionBtn} onPress={() => handleCopy(selectedDoc.content)}>
-                <Feather name="copy" size={14} color="#C9A84C" />
-                <Text style={styles.actionBtnText}>Copy</Text>
-              </Pressable>
-              <Pressable style={styles.actionBtn} onPress={() => handleShare(selectedDoc)}>
-                <Feather name="share-2" size={14} color="#C9A84C" />
-                <Text style={styles.actionBtnText}>Share / Export</Text>
-              </Pressable>
-            </View>
+                <View style={styles.editActionRow}>
+                  <Pressable 
+                    style={[styles.cancelBtn, { borderColor: colors.border }]} 
+                    onPress={() => setIsEditing(false)}
+                  >
+                    <Text style={[styles.cancelBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
+                  </Pressable>
+                  <Pressable style={styles.saveBtn} onPress={handleSaveEdit}>
+                    <Text style={styles.saveBtnText}>Save Changes</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View>
+                <Text style={[styles.detailTitle, { color: colors.foreground }]}>{selectedDoc.title}</Text>
+                <Text style={[styles.detailDate, { color: colors.mutedForeground }]}>
+                  Saved on: {new Date(selectedDoc.createdAt).toLocaleString()}
+                </Text>
+
+                <ScrollView style={[styles.contentPreviewBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[styles.contentText, { color: colors.foreground }]}>{selectedDoc.content}</Text>
+                </ScrollView>
+
+                <View style={styles.detailActionRow}>
+                  <Pressable style={styles.actionBtn} onPress={() => handleStartEdit(selectedDoc)}>
+                    <Feather name="edit-2" size={14} color="#C9A84C" />
+                    <Text style={styles.actionBtnText}>Edit</Text>
+                  </Pressable>
+                  <Pressable style={styles.actionBtn} onPress={() => handleCopy(selectedDoc.content)}>
+                    <Feather name="copy" size={14} color="#C9A84C" />
+                    <Text style={styles.actionBtnText}>Copy</Text>
+                  </Pressable>
+                  <Pressable style={styles.actionBtn} onPress={() => handleShare(selectedDoc)}>
+                    <Feather name="share-2" size={14} color="#C9A84C" />
+                    <Text style={styles.actionBtnText}>Export</Text>
+                  </Pressable>
+                  <Pressable style={[styles.actionBtn, { borderColor: '#EF4444' }]} onPress={() => handleDeleteDoc(selectedDoc.id, selectedDoc.title)}>
+                    <Feather name="trash-2" size={14} color="#EF4444" />
+                    <Text style={[styles.actionBtnText, { color: '#EF4444' }]}>Delete</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
           </View>
         ) : (
           <View>
@@ -194,9 +311,45 @@ export default function VaultScreen() {
                       />
                     </View>
                     <Text style={[styles.docTypeTag, { color: '#C9A84C' }]}>{item.documentType.toUpperCase()}</Text>
-                    <Text style={[styles.docDate, { color: colors.mutedForeground }]}>
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </Text>
+                    
+                    <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
+                      <Pressable 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleCopy(item.content);
+                        }} 
+                        style={styles.cardActionBtn}
+                      >
+                        <Feather name="copy" size={13} color="#C9A84C" />
+                      </Pressable>
+                      <Pressable 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleShare(item);
+                        }} 
+                        style={styles.cardActionBtn}
+                      >
+                        <Feather name="share-2" size={13} color="#C9A84C" />
+                      </Pressable>
+                      <Pressable 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleStartEdit(item);
+                        }} 
+                        style={styles.cardActionBtn}
+                      >
+                        <Feather name="edit-2" size={13} color="#C9A84C" />
+                      </Pressable>
+                      <Pressable 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDoc(item.id, item.title);
+                        }} 
+                        style={[styles.cardActionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}
+                      >
+                        <Feather name="trash-2" size={13} color="#EF4444" />
+                      </Pressable>
+                    </View>
                   </View>
 
                   <Text style={[styles.docTitle, { color: colors.foreground }]} numberOfLines={2}>
@@ -205,6 +358,10 @@ export default function VaultScreen() {
                   
                   <Text style={[styles.docSnippet, { color: colors.mutedForeground }]} numberOfLines={2}>
                     {item.content}
+                  </Text>
+
+                  <Text style={[styles.docDate, { color: colors.mutedForeground, marginTop: 6 }]}>
+                    Saved on: {new Date(item.createdAt).toLocaleDateString()}
                   </Text>
                 </Pressable>
               ))
@@ -220,7 +377,7 @@ export default function VaultScreen() {
         onSubscribe={() => {
           setIsPro(true);
           setShowUpgradeModal(false);
-          Alert.alert('Unlocked!', 'Your LawVise Pro session is active. Enjoy unlimited Vault storage.');
+          Alert.alert('Unlocked!', 'Your LawWise Pro session is active. Enjoy unlimited Vault storage.');
         }}
       />
     </View>
@@ -257,6 +414,7 @@ const styles = StyleSheet.create({
   docDate: { fontFamily: 'Inter_400Regular', fontSize: 11 },
   docTitle: { fontFamily: 'Inter_700Bold', fontSize: 14, marginBottom: 4 },
   docSnippet: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 18 },
+  cardActionBtn: { padding: 6, backgroundColor: 'rgba(201, 168, 76, 0.15)', borderRadius: 6 },
 
   detailContainer: { borderRadius: 12, borderWidth: 1, padding: 16 },
   detailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
@@ -267,7 +425,16 @@ const styles = StyleSheet.create({
   detailDate: { fontFamily: 'Inter_400Regular', fontSize: 11, marginBottom: 16 },
   contentPreviewBox: { borderRadius: 8, borderWidth: 1, padding: 14, maxHeight: 350, marginBottom: 16 },
   contentText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 22 },
-  detailActionRow: { flexDirection: 'row', gap: 10 },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C' },
-  actionBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#C9A84C' },
+  detailActionRow: { flexDirection: 'row', gap: 8 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C' },
+  actionBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C' },
+
+  inputLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, marginBottom: 6 },
+  editInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 14, fontFamily: 'Inter_400Regular' },
+  editContentInput: { borderWidth: 1, borderRadius: 10, padding: 12, height: 220, fontSize: 13, fontFamily: 'Inter_400Regular', textAlignVertical: 'top' },
+  editActionRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  cancelBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  saveBtn: { flex: 2, backgroundColor: '#C9A84C', paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  saveBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#000000' },
 });
