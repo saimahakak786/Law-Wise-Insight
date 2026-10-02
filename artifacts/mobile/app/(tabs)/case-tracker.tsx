@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView, Alert, Platform, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { StyleSheet, Text, View, TextInput, ScrollView, Alert, Platform, TouchableOpacity, Modal, Pressable, Linking } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
@@ -45,6 +45,7 @@ export default function CauseListScreen() {
   const [selectedEventType, setSelectedEventType] = useState('Hearing');
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
+  const [editingMatterId, setEditingMatterId] = useState<string | null>(null);
   
   // Case Portfolio Integration States
   const [portfolioCases, setPortfolioCases] = useState<any[]>([]);
@@ -175,7 +176,33 @@ export default function CauseListScreen() {
     setShowCasePickerModal(false);
   };
 
-  const handleAddHearing = async () => {
+  const handleEditMatter = (item: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setEditingMatterId(item.id);
+    setCaseTitle(item.caseTitle);
+    setJudgeName(item.judgeName === 'N/A' ? '' : item.judgeName);
+    setItemNumber(item.itemNumber === 'N/A' ? '' : item.itemNumber);
+    setHearingDate(item.hearingDate);
+    setSelectedEventType(item.eventType || 'Hearing');
+  };
+
+  const handleWhatsAppShare = (item: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const message = `⚖️ *Court Hearing & Compliance Update*\n\n*Case:* ${item.caseTitle}\n*Type:* ${item.eventType || 'Hearing'}\n*Date:* ${item.hearingDate}\n*Item No:* ${item.itemNumber}\n*Forum:* ${item.judgeName}\n\nPlease make a note of this schedule.\n\n*Sent via LawWise*`;
+    const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
+    
+    Linking.canOpenURL(url).then((supported) => {
+      if (supported) {
+        Linking.openURL(url);
+      } else {
+        Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
+      }
+    }).catch(() => {
+      Alert.alert('Error', 'Unable to open WhatsApp.');
+    });
+  };
+
+  const handleSaveOrUpdateHearing = async () => {
     if (!caseTitle.trim() || !hearingDate.trim()) {
       Alert.alert('Missing Fields', 'Please fill in the Case Title and Target Date.');
       return;
@@ -187,15 +214,19 @@ export default function CauseListScreen() {
     try {
       const hearingDateTime = parseDateInput(hearingDate);
       if (isNaN(hearingDateTime.getTime())) {
-        Alert.alert('Invalid Date', 'Please enter a valid date format (e.g., 15-10-2026 or 15 Oct 2026).');
+        Alert.alert('Invalid Date', 'Please enter a valid date format (e.g., DD-MM-YYYY).');
         setLoading(false);
         return;
       }
 
-      const matterId = Date.now().toString();
+      const matterId = editingMatterId ? editingMatterId : Date.now().toString();
 
       if (Platform.OS !== 'web') {
         try {
+          if (editingMatterId) {
+            await Notifications.cancelScheduledNotificationAsync(`reminder_${editingMatterId}`);
+          }
+
           const timeUntilHearingMs = hearingDateTime.getTime() - Date.now();
 
           if (timeUntilHearingMs > 0) {
@@ -245,7 +276,7 @@ export default function CauseListScreen() {
         }
       }
 
-      const newMatter = {
+      const matterData = {
         id: matterId,
         judgeName: judgeName.trim() || 'N/A',
         caseTitle: caseTitle.trim(),
@@ -256,7 +287,12 @@ export default function CauseListScreen() {
       };
 
       setMatters((prevMatters) => {
-        const updatedMatters = [newMatter, ...prevMatters];
+        let updatedMatters;
+        if (editingMatterId) {
+          updatedMatters = prevMatters.map(m => m.id === editingMatterId ? matterData : m);
+        } else {
+          updatedMatters = [matterData, ...prevMatters];
+        }
         saveMattersToStorage(updatedMatters);
         return updatedMatters;
       });
@@ -266,11 +302,12 @@ export default function CauseListScreen() {
       setItemNumber('');
       setHearingDate('');
       setSelectedEventType('Hearing');
+      setEditingMatterId(null);
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', `${selectedEventType} deadline tracked and urgent reminder activated!`);
+      Alert.alert('Success', editingMatterId ? 'Deadline updated successfully!' : `${selectedEventType} deadline tracked and urgent reminder activated!`);
     } catch (error) {
-      console.error('Error adding matter:', error);
+      console.error('Error saving matter:', error);
       Alert.alert('Error', 'Could not save compliance entry.');
     } finally {
       setLoading(false);
@@ -297,6 +334,13 @@ export default function CauseListScreen() {
                 saveMattersToStorage(filtered);
                 return filtered;
               });
+              if (editingMatterId === id) {
+                setEditingMatterId(null);
+                setCaseTitle('');
+                setJudgeName('');
+                setItemNumber('');
+                setHearingDate('');
+              }
             } catch (e) {
               console.log('Error deleting matter:', e);
             }
@@ -331,9 +375,11 @@ export default function CauseListScreen() {
       </View>
 
       {/* Form Card */}
-      <Card style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Card style={[styles.formCard, { backgroundColor: colors.card, borderColor: editingMatterId ? '#C9A84C' : colors.border }]}>
         <View style={styles.formHeaderRow}>
-          <Text style={styles.sectionHeaderLabel}>TRACK FILING DEADLINE & HEARING</Text>
+          <Text style={styles.sectionHeaderLabel}>
+            {editingMatterId ? 'EDIT TRACKED DEADLINE' : 'TRACK FILING DEADLINE & HEARING'}
+          </Text>
           <Pressable 
             style={styles.portfolioPickBtn} 
             onPress={() => {
@@ -419,12 +465,29 @@ export default function CauseListScreen() {
           </View>
         </View>
 
-        <Button
-          title={loading ? "Saving Deadline..." : "Save Deadline & Set Reminder"}
-          variant="primary"
-          onPress={handleAddHearing}
-          style={[loading && { opacity: 0.5 }, { marginTop: 4, marginVertical: 0, backgroundColor: '#C9A84C' }]}
-        />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {editingMatterId && (
+            <Button
+              title="Cancel"
+              variant="outline"
+              onPress={() => {
+                setEditingMatterId(null);
+                setCaseTitle('');
+                setJudgeName('');
+                setItemNumber('');
+                setHearingDate('');
+                setSelectedEventType('Hearing');
+              }}
+              style={{ flex: 1, marginTop: 4, marginVertical: 0 }}
+            />
+          )}
+          <Button
+            title={loading ? "Saving..." : editingMatterId ? "Update Deadline" : "Save Deadline & Set Reminder"}
+            variant="primary"
+            onPress={handleSaveOrUpdateHearing}
+            style={[loading && { opacity: 0.5 }, { flex: editingMatterId ? 2 : 1, marginTop: 4, marginVertical: 0, backgroundColor: '#C9A84C' }]}
+          />
+        </View>
       </Card>
 
       {/* Tracked Matters Section */}
@@ -463,16 +526,22 @@ export default function CauseListScreen() {
           }
 
           return (
-            <Card key={item.id} style={[styles.trackedCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Card key={item.id} style={[styles.trackedCard, { backgroundColor: colors.card, borderColor: editingMatterId === item.id ? '#C9A84C' : colors.border }]}>
               <View style={styles.cardRow}>
                 <View style={[styles.badge, { backgroundColor: `${typeColor}20`, borderColor: `${typeColor}40` }]}>
                   <Text style={[styles.badgeText, { color: typeColor }]}>{item.eventType || 'Hearing'}</Text>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <View style={[styles.urgencyBadge, { backgroundColor: `${urgencyColor}18`, borderColor: `${urgencyColor}40` }]}>
                     <Text style={[styles.urgencyText, { color: urgencyColor }]}>{urgencyLabel}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => handleDeleteMatter(item.id, item.caseTitle)} style={styles.deleteBtn}>
+                  <TouchableOpacity onPress={() => handleWhatsAppShare(item)} style={styles.actionBtn}>
+                    <Feather name="share-2" size={14} color="#10B981" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleEditMatter(item)} style={styles.actionBtn}>
+                    <Feather name="edit-2" size={14} color="#C9A84C" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteMatter(item.id, item.caseTitle)} style={[styles.actionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
                     <Feather name="trash-2" size={14} color="#EF4444" />
                   </TouchableOpacity>
                 </View>
@@ -571,7 +640,7 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   urgencyBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
   urgencyText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
-  deleteBtn: { padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: 6 },
+  actionBtn: { padding: 6, backgroundColor: 'rgba(201, 168, 76, 0.15)', borderRadius: 6 },
   caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 6 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   metaText: { fontFamily: 'Inter_400Regular', fontSize: 12 },
