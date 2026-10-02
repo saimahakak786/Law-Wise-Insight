@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView, Alert, Platform, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TextInput, ScrollView, Alert, Platform, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
@@ -14,6 +14,7 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 
 const STORAGE_KEY = '@lawwise_cause_list_matters';
+const CASES_STORAGE_KEY = '@lawwise_cases_portfolio_v2';
 
 // Configure how notifications behave when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -44,10 +45,15 @@ export default function CauseListScreen() {
   const [selectedEventType, setSelectedEventType] = useState('Hearing');
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
+  
+  // Case Portfolio Integration States
+  const [portfolioCases, setPortfolioCases] = useState<any[]>([]);
+  const [showCasePickerModal, setShowCasePickerModal] = useState(false);
 
   useEffect(() => {
     requestNotificationPermissions();
     loadStoredMatters();
+    loadPortfolioCases();
     setupAndroidNotificationChannel();
 
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
@@ -117,6 +123,17 @@ export default function CauseListScreen() {
     }
   };
 
+  const loadPortfolioCases = async () => {
+    try {
+      const savedCases = await AsyncStorage.getItem(CASES_STORAGE_KEY);
+      if (savedCases) {
+        setPortfolioCases(JSON.parse(savedCases));
+      }
+    } catch (e) {
+      console.log('Failed to load portfolio cases', e);
+    }
+  };
+
   const saveMattersToStorage = async (updatedMatters: any[]) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMatters));
@@ -148,6 +165,16 @@ export default function CauseListScreen() {
     return diffDays;
   };
 
+  const handleSelectCaseFromPortfolio = (c: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setCaseTitle(c.title + (c.caseNumber ? ` (${c.caseNumber})` : ''));
+    setJudgeName(c.court || '');
+    if (c.hearingDate) {
+      setHearingDate(c.hearingDate);
+    }
+    setShowCasePickerModal(false);
+  };
+
   const handleAddHearing = async () => {
     if (!caseTitle.trim() || !hearingDate.trim()) {
       Alert.alert('Missing Fields', 'Please fill in the Case Title and Target Date.');
@@ -160,7 +187,7 @@ export default function CauseListScreen() {
     try {
       const hearingDateTime = parseDateInput(hearingDate);
       if (isNaN(hearingDateTime.getTime())) {
-        Alert.alert('Invalid Date', 'Please enter a valid date in DD-MM-YYYY format (e.g., 15-09-2026).');
+        Alert.alert('Invalid Date', 'Please enter a valid date format (e.g., 15-10-2026 or 15 Oct 2026).');
         setLoading(false);
         return;
       }
@@ -179,27 +206,20 @@ export default function CauseListScreen() {
             const TWO_HOURS = 2 * 60 * 60 * 1000;
 
             if (timeUntilHearingMs > TWENTY_FOUR_HOURS) {
-              // SCENARIO 1: Hearing is far away (> 24 hours)
-              // Remind them exactly 24 hours before the hearing
               reminderTime = new Date(hearingDateTime.getTime() - TWENTY_FOUR_HOURS);
               subTitle = `Reminder: Hearing is tomorrow (${hearingDate})`;
             } 
             else if (timeUntilHearingMs > TWO_HOURS) {
-              // SCENARIO 2: Same-day short notice (saved 3, 4, 5, up to 24 hours before)
-              // Remind them 2 hours before the hearing so they have time to prep/reach court
               reminderTime = new Date(hearingDateTime.getTime() - TWO_HOURS);
               const hoursLeft = Math.round(timeUntilHearingMs / (1000 * 60 * 60));
               subTitle = `🚨 URGENT: Hearing is in ~${hoursLeft} hour(s)!`;
             } 
             else {
-              // SCENARIO 3: Extremely close / Imminent (< 2 hours away)
-              // Trigger an immediate alert right now so they know instantly
-              reminderTime = new Date(Date.now() + 5000); // 5 seconds from now
+              reminderTime = new Date(Date.now() + 5000);
               const minutesLeft = Math.max(1, Math.round(timeUntilHearingMs / (1000 * 60)));
               subTitle = `🚨 CRITICAL: Hearing starting in ~${minutesLeft} minute(s)!`;
             }
 
-            // Safety check: Ensure reminder time is never in the past
             if (reminderTime.getTime() <= Date.now()) {
               reminderTime = new Date(Date.now() + 5000);
             }
@@ -235,7 +255,6 @@ export default function CauseListScreen() {
         status: 'Pending Call',
       };
 
-      // FIXED: Using functional state updater to avoid stale state closures on 1st click
       setMatters((prevMatters) => {
         const updatedMatters = [newMatter, ...prevMatters];
         saveMattersToStorage(updatedMatters);
@@ -313,7 +332,19 @@ export default function CauseListScreen() {
 
       {/* Form Card */}
       <Card style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={styles.sectionHeaderLabel}>TRACK FILING DEADLINE & HEARING</Text>
+        <View style={styles.formHeaderRow}>
+          <Text style={styles.sectionHeaderLabel}>TRACK FILING DEADLINE & HEARING</Text>
+          <Pressable 
+            style={styles.portfolioPickBtn} 
+            onPress={() => {
+              loadPortfolioCases();
+              setShowCasePickerModal(true);
+            }}
+          >
+            <Feather name="folder" size={13} color="#C9A84C" />
+            <Text style={styles.portfolioPickBtnText}>Select from Cases</Text>
+          </Pressable>
+        </View>
         
         {/* Event Type Selector */}
         <Text style={[styles.inputLabel, { color: colors.foreground }]}>Deadline Type</Text>
@@ -414,7 +445,7 @@ export default function CauseListScreen() {
           const typeColor = getEventTypeColor(item.eventType || 'Hearing');
           const daysLeft = getDaysRemaining(item.hearingDate);
           
-          let urgencyColor = '#10B981'; // Green (Safe)
+          let urgencyColor = '#10B981'; 
           let urgencyLabel = `${daysLeft} days left`;
 
           if (daysLeft < 0) {
@@ -424,10 +455,10 @@ export default function CauseListScreen() {
             urgencyColor = '#EF4444';
             urgencyLabel = '⚠️ Due Today!';
           } else if (daysLeft <= 7) {
-            urgencyColor = '#EF4444'; // Critical
+            urgencyColor = '#EF4444';
             urgencyLabel = `⚠ ${daysLeft} days left (Critical)`;
           } else if (daysLeft <= 14) {
-            urgencyColor = '#FB8C00'; // Warning
+            urgencyColor = '#FB8C00';
             urgencyLabel = `⚡ ${daysLeft} days left`;
           }
 
@@ -460,6 +491,45 @@ export default function CauseListScreen() {
           );
         })
       )}
+
+      {/* Case Portfolio Picker Modal */}
+      <Modal visible={showCasePickerModal} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setShowCasePickerModal(false)}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Pressable onPress={() => setShowCasePickerModal(false)}>
+              <Text style={[styles.modalCancel, { color: colors.mutedForeground }]}>Cancel</Text>
+            </Pressable>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Select Case from Portfolio</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          
+          <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+            {portfolioCases.length === 0 ? (
+              <View style={[styles.emptyCard, { borderColor: colors.border, marginTop: 40 }]}>
+                <Feather name="folder-minus" size={24} color={colors.mutedForeground} style={{ marginBottom: 8 }} />
+                <Text style={[styles.emptyText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>No stored cases found</Text>
+                <Text style={[styles.emptyText, { color: colors.mutedForeground, marginTop: 4 }]}>Add cases in your Case Portfolio first to quickly pick them here.</Text>
+              </View>
+            ) : (
+              portfolioCases.map((c) => (
+                <Pressable 
+                  key={c.id} 
+                  style={[styles.portfolioCaseItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => handleSelectCaseFromPortfolio(c)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.portfolioCaseTitle, { color: colors.foreground }]} numberOfLines={1}>{c.title}</Text>
+                    {c.caseNumber && <Text style={[styles.portfolioCaseSub, { color: '#C9A84C' }]}>#{c.caseNumber}</Text>}
+                    {c.court && <Text style={[styles.portfolioCaseSub, { color: colors.mutedForeground }]}>{c.court}</Text>}
+                    {c.hearingDate && <Text style={[styles.portfolioCaseSub, { color: colors.mutedForeground }]}>Hearing: {c.hearingDate}</Text>}
+                  </View>
+                  <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+                </Pressable>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -471,7 +541,10 @@ const styles = StyleSheet.create({
   screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   formCard: { marginVertical: 0, marginBottom: 24, padding: 16, borderRadius: 12, borderWidth: 1 },
-  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2, marginBottom: 14 },
+  formHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  sectionHeaderLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C', letterSpacing: 1.2 },
+  portfolioPickBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#C9A84C18', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#C9A84C40' },
+  portfolioPickBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#C9A84C' },
   typeSelectorScroll: { flexDirection: 'row', marginBottom: 14 },
   typeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, marginRight: 8 },
   typeChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
@@ -502,4 +575,12 @@ const styles = StyleSheet.create({
   caseTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, marginBottom: 6 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   metaText: { fontFamily: 'Inter_400Regular', fontSize: 12 },
+  modalContainer: { flex: 1 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 20, borderBottomWidth: 1 },
+  modalTitle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  modalCancel: { fontFamily: 'Inter_400Regular', fontSize: 15 },
+  modalContent: { padding: 20, gap: 10, paddingBottom: 60 },
+  portfolioCaseItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 12, borderWidth: 1 },
+  portfolioCaseTitle: { fontFamily: 'Inter_700Bold', fontSize: 14, marginBottom: 2 },
+  portfolioCaseSub: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 1 },
 });
