@@ -163,7 +163,8 @@ export default function CasesScreen() {
   };
 
   const cases = (remoteError || !remoteCases || useLocalFallback) ? localCases : remoteCases;
-  const isLoading = remoteLoading && !useLocalFallback && !remoteCases;
+  // FIXED: Do not block UI with infinite loader if local fallback records are available
+  const isLoading = remoteLoading && !remoteCases && localCases.length === 0;
 
   const [filter, setFilter] = useState<CaseStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -226,12 +227,10 @@ export default function CasesScreen() {
 
     try {
       if (editingId) {
-        // 1. Update locally FIRST for instant 1st-click response
         const updated = localCases.map(c => c.id === editingId ? { ...c, ...payload } : c);
         await persistLocalCases(updated);
         setUseLocalFallback(true);
 
-        // 2. Optional background sync with remote API
         try {
           await updateCase.mutateAsync({ id: String(editingId), data: payload });
           invalidate();
@@ -239,7 +238,6 @@ export default function CasesScreen() {
           console.log('Background sync update skipped/failed:', apiErr);
         }
       } else {
-        // 1. Save locally FIRST for instant 1st-click response
         const newCase: CaseItem = {
           id: Date.now(),
           ...payload,
@@ -248,7 +246,6 @@ export default function CasesScreen() {
         await persistLocalCases(updated);
         setUseLocalFallback(true);
 
-        // 2. Optional background sync with remote API
         try {
           await createCase.mutateAsync({ data: payload });
           invalidate();
@@ -286,7 +283,6 @@ export default function CasesScreen() {
     ]);
   };
 
-  // Export Portfolio Report via Native Share Sheet
   const handleExportPortfolio = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (!cases || cases.length === 0) {
@@ -352,7 +348,7 @@ export default function CasesScreen() {
         </View>
       </View>
 
-      {/* Filter Tabs */}
+      {/* Filter Tabs - FIXED with alignItems: 'center' */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
         {FILTER_OPTIONS.map((f) => {
           const isSelected = filter === f;
@@ -552,7 +548,7 @@ const styles = StyleSheet.create({
   clearSearchBtn: { padding: 4 },
   exportBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#C9A84C20', borderWidth: 1, borderColor: '#C9A84C40', alignItems: 'center', justifyContent: 'center' },
   addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center' },
-  filterRow: { paddingHorizontal: 20, gap: 8, paddingBottom: 16, flexDirection: 'row' },
+  filterRow: { paddingHorizontal: 20, gap: 8, paddingBottom: 16, flexDirection: 'row', alignItems: 'center' },
   filterTab: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1 },
   filterTabText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
   list: { paddingHorizontal: 20, paddingTop: 4, gap: 12 },
