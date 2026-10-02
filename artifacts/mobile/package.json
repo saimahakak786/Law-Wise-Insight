@@ -72,7 +72,7 @@
     "expo-print": "~14.0.3",
     "expo-sharing": "~14.0.8",
     "i18n-js": "^4.5.3",
-    "react-native-purchases": "~10.9.1"
-    "openai": "^4.71.0",
+    "react-native-purchases": "~10.9.1",
+    "openai": "^4.71.0"
   }
 }
