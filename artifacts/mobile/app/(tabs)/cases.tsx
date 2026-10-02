@@ -15,7 +15,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CASES_STORAGE_KEY = '@lawwise_cases_portfolio';
+const CASES_STORAGE_KEY = '@lawwise_cases_portfolio_v2';
 
 type CaseStatus = 'active' | 'pending' | 'closed' | 'won' | 'lost';
 
@@ -52,7 +52,7 @@ const PRIORITY_LABELS: Record<string, string> = {
 };
 
 interface CaseItem {
-  id: number;
+  id: number | string;
   title: string;
   caseNumber?: string | null;
   court?: string | null;
@@ -139,6 +139,14 @@ export default function CasesScreen() {
     loadStoredCases();
   }, []);
 
+  // When remote cases successfully fetch, sync them to local storage as well
+  useEffect(() => {
+    if (remoteCases && Array.isArray(remoteCases) && remoteCases.length > 0) {
+      setLocalCases(remoteCases);
+      AsyncStorage.setItem(CASES_STORAGE_KEY, JSON.stringify(remoteCases)).catch(() => {});
+    }
+  }, [remoteCases]);
+
   const loadStoredCases = async () => {
     try {
       const stored = await AsyncStorage.getItem(CASES_STORAGE_KEY);
@@ -147,6 +155,8 @@ export default function CasesScreen() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setLocalCases(parsed);
         }
+      } else {
+        await AsyncStorage.setItem(CASES_STORAGE_KEY, JSON.stringify(MOCK_FALLBACK_CASES));
       }
     } catch (e) {
       console.log('Failed to load local case records', e);
@@ -163,13 +173,12 @@ export default function CasesScreen() {
   };
 
   const cases = (remoteError || !remoteCases || useLocalFallback) ? localCases : remoteCases;
-  // FIXED: Do not block UI with infinite loader if local fallback records are available
   const isLoading = remoteLoading && !remoteCases && localCases.length === 0;
 
   const [filter, setFilter] = useState<CaseStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | string | null>(null);
   const [form, setForm] = useState<CaseFormData>(defaultForm);
 
   // Filter by status tab & search query text (title, caseNumber, or court)
@@ -215,19 +224,20 @@ export default function CasesScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const payload = {
-      title: form.title,
-      caseNumber: form.caseNumber || null,
-      court: form.court || null,
+      title: form.title.trim(),
+      caseNumber: form.caseNumber.trim() || null,
+      court: form.court.trim() || null,
       status: form.status,
-      description: form.description || null,
-      hearingDate: form.hearingDate || null,
+      description: form.description.trim() || null,
+      hearingDate: form.hearingDate.trim() || null,
       priority: form.priority || null,
-      nextAction: form.nextAction || null,
+      nextAction: form.nextAction.trim() || null,
     };
 
     try {
-      if (editingId) {
-        const updated = localCases.map(c => c.id === editingId ? { ...c, ...payload } : c);
+      if (editingId !== null && editingId !== undefined) {
+        // Update existing case locally first for instant feedback
+        const updated = localCases.map(c => String(c.id) === String(editingId) ? { ...c, ...payload } : c);
         await persistLocalCases(updated);
         setUseLocalFallback(true);
 
@@ -238,6 +248,7 @@ export default function CasesScreen() {
           console.log('Background sync update skipped/failed:', apiErr);
         }
       } else {
+        // Create new case locally first
         const newCase: CaseItem = {
           id: Date.now(),
           ...payload,
@@ -262,20 +273,23 @@ export default function CasesScreen() {
     }
   };
 
-  const handleDelete = (id: number, title: string) => {
+  const handleDelete = (id: number | string, title: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert('Delete Case', `Delete "${title}"? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
+          // Immediately update local state & storage for snappy response
+          const updated = localCases.filter(c => String(c.id) !== String(id));
+          await persistLocalCases(updated);
+          setUseLocalFallback(true);
+
           try {
             await deleteCase.mutateAsync({ id: String(id) });
             invalidate();
-          } catch {
-            const updated = localCases.filter(c => c.id !== id);
-            await persistLocalCases(updated);
-            setUseLocalFallback(true);
+          } catch (apiErr) {
+            console.log('Background sync delete skipped/failed:', apiErr);
           }
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         },
@@ -348,7 +362,7 @@ export default function CasesScreen() {
         </View>
       </View>
 
-      {/* Filter Tabs - FIXED with alignItems: 'center' */}
+      {/* Filter Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
         {FILTER_OPTIONS.map((f) => {
           const isSelected = filter === f;
