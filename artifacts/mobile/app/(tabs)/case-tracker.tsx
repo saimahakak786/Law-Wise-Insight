@@ -175,12 +175,33 @@ export default function CauseListScreen() {
             let reminderTime: Date;
             let subTitle = `Due: ${hearingDate}`;
 
-            if (timeUntilHearingMs <= 24 * 60 * 60 * 1000) {
-              reminderTime = new Date(Date.now() + 3000); 
-              const hoursLeft = Math.max(1, Math.round(timeUntilHearingMs / (1000 * 60 * 60)));
+            const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+            const TWO_HOURS = 2 * 60 * 60 * 1000;
+
+            if (timeUntilHearingMs > TWENTY_FOUR_HOURS) {
+              // SCENARIO 1: Hearing is far away (> 24 hours)
+              // Remind them exactly 24 hours before the hearing
+              reminderTime = new Date(hearingDateTime.getTime() - TWENTY_FOUR_HOURS);
+              subTitle = `Reminder: Hearing is tomorrow (${hearingDate})`;
+            } 
+            else if (timeUntilHearingMs > TWO_HOURS) {
+              // SCENARIO 2: Same-day short notice (saved 3, 4, 5, up to 24 hours before)
+              // Remind them 2 hours before the hearing so they have time to prep/reach court
+              reminderTime = new Date(hearingDateTime.getTime() - TWO_HOURS);
+              const hoursLeft = Math.round(timeUntilHearingMs / (1000 * 60 * 60));
               subTitle = `🚨 URGENT: Hearing is in ~${hoursLeft} hour(s)!`;
-            } else {
-              reminderTime = new Date(hearingDateTime.getTime() - 24 * 60 * 60 * 1000);
+            } 
+            else {
+              // SCENARIO 3: Extremely close / Imminent (< 2 hours away)
+              // Trigger an immediate alert right now so they know instantly
+              reminderTime = new Date(Date.now() + 5000); // 5 seconds from now
+              const minutesLeft = Math.max(1, Math.round(timeUntilHearingMs / (1000 * 60)));
+              subTitle = `🚨 CRITICAL: Hearing starting in ~${minutesLeft} minute(s)!`;
+            }
+
+            // Safety check: Ensure reminder time is never in the past
+            if (reminderTime.getTime() <= Date.now()) {
+              reminderTime = new Date(Date.now() + 5000);
             }
 
             await Notifications.scheduleNotificationAsync({
