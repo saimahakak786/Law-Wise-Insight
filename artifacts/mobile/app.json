@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Law-Wise",
+    "name": "LawVise",
     "slug": "law-wise-insight",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,7 +22,8 @@
     "android": {
       "package": "com.saimahakak786.lawwise",
       "jsEngine": "hermes",
-      "backgroundColor": "#070024"
+      "backgroundColor": "#070024",
+      "displayName": "LawVise"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
