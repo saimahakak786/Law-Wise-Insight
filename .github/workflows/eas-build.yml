@@ -29,6 +29,10 @@ jobs:
       - name: Install pnpm globally
         run: npm install -g pnpm
 
+      - name: Update pnpm lockfile
+        working-directory: artifacts/mobile
+        run: pnpm install --no-frozen-lockfile
+
       - name: Build Android app locally
         working-directory: artifacts/mobile
         run: eas build --platform android --profile production --non-interactive --local --output ./app-release.apk
