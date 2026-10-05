@@ -29,11 +29,12 @@ jobs:
       - name: Install pnpm globally
         run: npm install -g pnpm
 
+      - name: Allow pnpm builds
+        run: echo "dangerouslyAllowAllBuilds: true" > artifacts/mobile/pnpm-workspace.yaml
+
       - name: Update pnpm lockfile
         working-directory: artifacts/mobile
         run: pnpm install --no-frozen-lockfile
-        env:
-          PNPM_CONFIG_STRICT_DEP_BUILDS: false
 
       - name: Build Android app locally
         working-directory: artifacts/mobile
