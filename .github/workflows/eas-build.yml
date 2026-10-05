@@ -14,6 +14,12 @@ jobs:
         with:
           node-version: 20
 
+      - name: Purge pnpm files to force npm
+        working-directory: artifacts/mobile
+        run: |
+          rm -f pnpm-lock.yaml
+          rm -f pnpm-workspace.yaml
+
       - name: Install dependencies with npm
         working-directory: artifacts/mobile
         run: npm install
