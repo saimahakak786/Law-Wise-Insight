@@ -32,6 +32,8 @@ jobs:
       - name: Update pnpm lockfile
         working-directory: artifacts/mobile
         run: pnpm install --no-frozen-lockfile
+        env:
+          PNPM_CONFIG_STRICT_DEP_BUILDS: false
 
       - name: Build Android app locally
         working-directory: artifacts/mobile
