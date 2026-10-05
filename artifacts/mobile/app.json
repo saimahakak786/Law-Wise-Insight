@@ -45,7 +45,7 @@
       "expo-font",
       "expo-web-browser",
       [
-        "expo-microphone",
+        "expo-audio",
         {
           "microphonePermission": "Allow LawVise to access your microphone for voice dictation."
         }
