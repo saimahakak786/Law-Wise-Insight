@@ -1,6 +1,7 @@
 name: EAS Build
 
-on: [workflow_dispatch, push]
+on:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,24 +15,13 @@ jobs:
         with:
           node-version: 20
 
-      - name: Purge pnpm files if any
-        working-directory: artifacts/mobile
-        run: |
-          rm -f pnpm-lock.yaml
-          rm -f pnpm-workspace.yaml
-
-      - name: Install dependencies with npm
-        working-directory: artifacts/mobile
-        run: npm install
-
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-          packager: npm
 
-      - name: Build Android App on EAS Cloud
+      - name: Build Android app on EAS Cloud
         working-directory: artifacts/mobile
         run: eas build --platform android --profile production --non-interactive
         env:
