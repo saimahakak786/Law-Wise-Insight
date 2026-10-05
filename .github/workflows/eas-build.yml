@@ -14,29 +14,25 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install pnpm globally
+        run: npm install -g pnpm
+
+      - name: Configure pnpm for Metro Bundler (Flat node_modules)
+        run: |
+          echo "node-linker=hoisted" > artifacts/mobile/.npmrc
+          echo "shamefully-hoist=true" >> artifacts/mobile/.npmrc
+          echo "strictDepBuilds=false" >> artifacts/mobile/.npmrc
+
+      - name: Install dependencies with pnpm
         working-directory: artifacts/mobile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-          packager: npm
-
-      - name: Install pnpm globally
-        run: npm install -g pnpm
-
-      - name: Configure pnpm workspace for builds
-        run: |
-          echo "packages:" > artifacts/mobile/pnpm-workspace.yaml
-          echo "  - '.'" >> artifacts/mobile/pnpm-workspace.yaml
-          echo "strictDepBuilds: false" >> artifacts/mobile/pnpm-workspace.yaml
-
-      - name: Update pnpm lockfile
-        working-directory: artifacts/mobile
-        run: pnpm install --no-frozen-lockfile
+          packager: pnpm
 
       - name: Build Android app locally
         working-directory: artifacts/mobile
