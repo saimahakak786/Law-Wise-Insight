@@ -18,6 +18,10 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
+      - name: Install project dependencies
+        working-directory: artifacts/mobile
+        run: npm install
+
       - name: Build Android app on EAS Cloud
         working-directory: artifacts/mobile
         run: eas build --platform android --profile production --non-interactive
