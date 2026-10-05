@@ -17,8 +17,12 @@ jobs:
       - name: Install pnpm globally
         run: npm install -g pnpm
 
-      - name: Configure pnpm for Metro Bundler (Flat node_modules)
+      - name: Configure pnpm workspace and settings
         run: |
+          echo "packages:" > artifacts/mobile/pnpm-workspace.yaml
+          echo "  - '.'" >> artifacts/mobile/pnpm-workspace.yaml
+          echo "dangerouslyAllowAllBuilds: true" >> artifacts/mobile/pnpm-workspace.yaml
+          
           echo "node-linker=hoisted" > artifacts/mobile/.npmrc
           echo "shamefully-hoist=true" >> artifacts/mobile/.npmrc
           echo "strictDepBuilds=false" >> artifacts/mobile/.npmrc
