@@ -9,7 +9,7 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "resourceClass": "large"
+        
       },
       "env": {
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk",
@@ -20,7 +20,7 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "resourceClass": "large"
+        
       },
       "env": {
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk",
@@ -31,7 +31,7 @@
       "autoIncrement": true,
       "android": {
         "buildType": "apk",
-        "resourceClass": "large"
+        
       },
       "env": {
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk",
