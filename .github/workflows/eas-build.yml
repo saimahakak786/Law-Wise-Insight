@@ -26,6 +26,9 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
           packager: npm
 
+      - name: Install pnpm globally
+        run: npm install -g pnpm
+
       - name: Build Android app locally
         working-directory: artifacts/mobile
         run: eas build --platform android --profile production --non-interactive --local --output ./app-release.apk
