@@ -10,35 +10,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: 'npm'
 
       - name: Install dependencies
-        run: pnpm --dir artifacts/mobile install --no-frozen-lockfile
+        run: npm install
+        working-directory: artifacts/mobile
 
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-          packager: pnpm
           install: false
 
-      - name: Build Android app locally on GitHub runner
+      - name: Build Android app locally
         working-directory: artifacts/mobile
-        run: eas build --platform android --profile production --non-interactive --local --output ./app-release.apk
+        run: npx eas build --platform android --profile production --non-interactive --local --output ./app-release.apk
         env:
-          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
+          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           EXPO_PUBLIC_DOMAIN: law-wise-insight.onrender.com
-          GRADLE_OPTS: -Xmx5120m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=false
+          GRADLE_OPTS: -Xmx512m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=false
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
