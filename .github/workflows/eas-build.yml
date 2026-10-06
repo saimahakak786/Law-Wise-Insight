@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Dependencies with pnpm
         working-directory: artifacts/mobile
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Commit pnpm Lock File
         working-directory: artifacts/mobile
