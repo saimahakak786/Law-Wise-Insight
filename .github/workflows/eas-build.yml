@@ -17,20 +17,26 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
       - name: Install EAS CLI Globally
         run: npm install -g eas-cli
 
-      - name: Install Dependencies in Mobile Directory
+      - name: Install Dependencies with pnpm
         working-directory: artifacts/mobile
-        run: npm install
+        run: pnpm install
 
-      - name: Commit Package Lock File
+      - name: Commit pnpm Lock File
         working-directory: artifacts/mobile
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git diff --staged --quiet || git commit -m "chore: auto-generate package-lock.json"
+          git add pnpm-lock.yaml
+          git diff --staged --quiet || git commit -m "chore: auto-generate pnpm-lock.yaml"
           git push || echo "No changes to push"
 
       - name: Build Android App on EAS Cloud
