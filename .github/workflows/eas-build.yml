@@ -2,30 +2,30 @@ name: Build Android App
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   eas-build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 18.x
 
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Install EAS CLI Globally
+        run: npm install -g eas-cli
 
-      - name: Build Android app on EAS Cloud
+      - name: Install Dependencies in Mobile Directory
         working-directory: artifacts/mobile
+        run: npm install
+
+      - name: Build Android App on EAS Cloud
+        working-directory: artifacts/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: eas build --platform android --profile production --non-interactive
