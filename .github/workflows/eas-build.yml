@@ -31,7 +31,6 @@ jobs:
         run: pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
 
       - name: Commit pnpm Lock File
-        working-directory: artifacts/mobile
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
