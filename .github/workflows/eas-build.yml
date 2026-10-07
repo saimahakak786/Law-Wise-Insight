@@ -42,8 +42,8 @@ jobs:
           git diff --staged --quiet || git commit -m "chore: auto-generate pnpm-lock.yaml"
           git push || echo "No changes to push"
 
-      - name: Build Android App on EAS Cloud
+      - name: Build Android App Locally
         working-directory: artifacts/mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas build --platform android --profile preview --non-interactive
+        run: eas build --platform android --local --profile preview --non-interactive
