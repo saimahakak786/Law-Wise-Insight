@@ -16,4 +16,7 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
+// 3. Enable package exports support for modern workspace dependencies
+config.resolver.unstable_enablePackageExports = true;
+
 module.exports = config;
