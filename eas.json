@@ -5,7 +5,7 @@
   },
   "build": {
     "development": {
-      "projectDir": "artifacts/mobile",
+      "projectDir": ".",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -17,7 +17,7 @@
       }
     },
     "preview": {
-      "projectDir": "artifacts/mobile",
+      "projectDir": ".",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
@@ -28,7 +28,7 @@
       }
     },
     "production": {
-      "projectDir": "artifacts/mobile",
+      "projectDir": ".",
       "autoIncrement": true,
       "android": {
         "buildType": "apk"
