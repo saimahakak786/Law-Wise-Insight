@@ -26,9 +26,13 @@ jobs:
       - name: Install EAS CLI Globally
         run: npm install -g eas-cli
 
-      - name: Install Dependencies with pnpm
-        working-directory: artifacts/mobile
+      - name: Install Workspace Dependencies
         run: pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
+
+      - name: Prepare Mobile Workspace Bundle
+        run: |
+          cd artifacts/mobile
+          pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
 
       - name: Commit pnpm Lock File
         run: |
