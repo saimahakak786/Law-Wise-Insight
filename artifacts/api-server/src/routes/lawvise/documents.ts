@@ -11,7 +11,7 @@ function parseId(raw: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-router.get("/lawvise/documents", requireAuth, async (req, res): Promise<void> => {
+router.get("/lawwise/documents", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const { folderId, search } = req.query;
 
@@ -28,15 +28,20 @@ router.get("/lawvise/documents", requireAuth, async (req, res): Promise<void> =>
     conditions.push(ilike(legalDocumentsTable.title, `%${search.trim()}%`));
   }
 
-  const docs = await db
-    .select()
-    .from(legalDocumentsTable)
-    .where(and(...conditions))
-    .orderBy(desc(legalDocumentsTable.createdAt));
-  res.json(docs);
+  try {
+    const docs = await db
+      .select()
+      .from(legalDocumentsTable)
+      .where(and(...conditions))
+      .orderBy(desc(legalDocumentsTable.createdAt));
+    res.json(docs);
+  } catch (err) {
+    req.log.error({ err, userId }, "Failed to fetch legal documents");
+    res.status(500).json({ error: "Failed to retrieve documents. Please try again." });
+  }
 });
 
-router.post("/lawvise/documents", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/documents", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const parsed = SaveDocumentBody.safeParse(req.body);
   if (!parsed.success) {
@@ -44,14 +49,19 @@ router.post("/lawvise/documents", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
-  const [doc] = await db
-    .insert(legalDocumentsTable)
-    .values({ ...parsed.data, userId })
-    .returning();
-  res.status(201).json(doc);
+  try {
+    const [doc] = await db
+      .insert(legalDocumentsTable)
+      .values({ ...parsed.data, userId })
+      .returning();
+    res.status(201).json(doc);
+  } catch (err) {
+    req.log.error({ err, userId }, "Failed to create legal document");
+    res.status(500).json({ error: "Failed to create document. Please try again." });
+  }
 });
 
-router.patch("/lawvise/documents/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/lawwise/documents/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
@@ -65,20 +75,25 @@ router.patch("/lawvise/documents/:id", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  const [updated] = await db
-    .update(legalDocumentsTable)
-    .set({ ...parsed.data, updatedAt: new Date() })
-    .where(and(eq(legalDocumentsTable.id, id), eq(legalDocumentsTable.userId, userId)))
-    .returning();
+  try {
+    const [updated] = await db
+      .update(legalDocumentsTable)
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(and(eq(legalDocumentsTable.id, id), eq(legalDocumentsTable.userId, userId)))
+      .returning();
 
-  if (!updated) {
-    res.status(404).json({ error: "Document not found" });
-    return;
+    if (!updated) {
+      res.status(404).json({ error: "Document not found" });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err, documentId: id }, "Failed to update legal document");
+    res.status(500).json({ error: "Failed to update document. Please try again." });
   }
-  res.json(updated);
 });
 
-router.delete("/lawvise/documents/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/lawwise/documents/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
@@ -86,16 +101,21 @@ router.delete("/lawvise/documents/:id", requireAuth, async (req, res): Promise<v
     return;
   }
 
-  const [deleted] = await db
-    .delete(legalDocumentsTable)
-    .where(and(eq(legalDocumentsTable.id, id), eq(legalDocumentsTable.userId, userId)))
-    .returning();
+  try {
+    const [deleted] = await db
+      .delete(legalDocumentsTable)
+      .where(and(eq(legalDocumentsTable.id, id), eq(legalDocumentsTable.userId, userId)))
+      .returning();
 
-  if (!deleted) {
-    res.status(404).json({ error: "Document not found" });
-    return;
+    if (!deleted) {
+      res.status(404).json({ error: "Document not found" });
+      return;
+    }
+    res.sendStatus(204);
+  } catch (err) {
+    req.log.error({ err, documentId: id }, "Failed to delete legal document");
+    res.status(500).json({ error: "Failed to delete document. Please try again." });
   }
-  res.sendStatus(204);
 });
 
 export default router;

@@ -12,33 +12,49 @@ function buildAnalysisSystemPrompt(
   language: string | null | undefined
 ): string {
   const lang = language ?? "English";
-  const juris = jurisdiction ? `The document is governed by ${jurisdiction} law.` : "";
-  const base = `You are LawVise, an expert AI legal analyst. ${juris} Always respond in ${lang}. Use clear headings and structured formatting.`;
+  const juris = jurisdiction ?? "India";
+  
+  // 🏛️ GLOBAL SENIOR COUNSEL AUDIT ENGINE BASE PROMPT
+  const base = `You are an elite Senior Litigation Counsel and Cross-Border Legal Auditor. 
+ACTIVE JURISDICTION: ${juris}. 
+
+CRITICAL RULES:
+1. Never include conversational filler, pleasantries, or introductory/concluding remarks. Start directly with the formal analysis.
+2. Dynamically adapt your statutory frameworks, liability standards, and legal interpretations strictly based on the active jurisdiction (${juris}). For example, apply UAE Federal Law if UAE is selected, US Federal/State codes if USA, English common law/statutes if UK, and Indian statutes if India.
+3. Respond strictly in ${lang} using rigorous, authoritative, court-ready legal language with precise statutory provisions and structural formatting.`;
 
   switch (analysisType) {
     case "summarize":
-      return `${base} Summarize the provided ${documentType} in plain, simple language that any non-lawyer can understand. Structure: 1) Overview, 2) Key Parties, 3) Main Rights & Obligations, 4) Important Dates/Deadlines, 5) Key Takeaways.`;
+      return `${base} Provide an executive chamber briefing note of the provided ${documentType} under ${juris} law. Structure with formal headings: 1) Executive Overview & Core Purpose, 2) Key Stakeholders & Roles, 3) Core Rights, Duties & Obligations, 4) Critical Timelines, Deadlines & Vesting Dates, 5) Strategic Takeaways.`;
+    
     case "clause_analysis":
-      return `${base} Perform a detailed clause-by-clause analysis of the ${documentType}. For each clause: identify it by name/number, explain what it means in plain language, and flag important implications. Use clear section headings.`;
+      return `${base} Perform a rigorous clause-by-clause legal audit of the ${documentType} under the laws of ${juris}. For each clause: identify by exact heading/number, provide a strict legal interpretation of its implications, and flag latent ambiguities or enforcement vulnerabilities. Use clean formal section headings.`;
+    
     case "risk_analysis":
-      return `${base} Perform a comprehensive risk analysis of the ${documentType}. Categorize findings as: ⚠️ HIGH RISK, ⚡ MEDIUM RISK, ✅ LOW RISK. Include: 1) Risk summary, 2) Detailed risk findings, 3) Missing standard protections, 4) Recommended amendments.`;
+      return `${base} Perform a comprehensive legal risk and exposure analysis of the ${documentType} governed by ${juris} regulations. Categorize findings strictly as: ⚠️ HIGH EXPOSURE (Critical Breach Risk), ⚡ MEDIUM EXPOSURE (Compliance Vulnerability), ✅ SECURED CLAUSE (Low Risk). Include: 1) Executive Risk Summary, 2) Detailed Liability Findings, 3) Missing Statutory & Contractual Protections under ${juris} law, 4) Recommended Redlining & Amendments.`;
+    
     case "interpretation":
-      return `${base} Interpret this ${documentType} (which may be a court judgment, FIR, court order, bail application, or similar legal document). Provide: 1) Plain-language interpretation, 2) What it means for each party, 3) Key findings/orders/charges, 4) Legal implications and next steps.`;
+      return `${base} Provide a senior-counsel-level judicial interpretation of this ${documentType} (whether court judgment, FIR, order, or petition) within the legal framework of ${juris}. Provide: 1) Plain-Legal Interpretation, 2) Operative Impact on Respective Parties, 3) Key Findings, Ratios, or Charges, 4) Immediate Procedural Implications and Mandatory Next Steps under local court rules.`;
+    
     case "key_points":
-      return `${base} Extract and list the top 10-15 key points from the ${documentType}. Number each point clearly. Focus on the most important facts, obligations, rights, dates, and terms.`;
+      return `${base} Extract and itemize the top 10-15 crucial legal points, covenants, or factual assertions from the ${documentType} in accordance with ${juris} standards. Number each point clearly. Focus strictly on enforceable rights, monetary considerations, liability triggers, and restrictive covenants.`;
+    
     case "legal_issues":
-      return `${base} Identify all legal issues, problems, and areas of concern in the ${documentType}. For each issue: name it, explain the problem, cite applicable law, and suggest remedies or precautions.`;
+      return `${base} Identify all substantive and procedural legal issues, liabilities, and statutory infractions present in the ${documentType} under ${juris} jurisdiction. For each issue: designate the core legal question, explain the exact nature of default, cite applicable local statutory codes and sections, and recommend concrete remedial measures.`;
+    
     case "relevant_sections":
-      return `${base} Identify which sections of Indian/relevant law apply to this ${documentType}. Cite specific acts, sections, and rules (e.g., "Section 17 of the Indian Contract Act, 1872", "Order 7 Rule 1 CPC"). Explain how each cited provision is relevant.`;
+      return `${base} Identify all governing statutory provisions, codes, and procedural rules applicable to this ${documentType} specifically under ${juris} law (e.g., local civil codes, commercial companies laws, federal statutes, or procedural codes relevant to ${juris}). Cite exact acts, section numbers, and explain the legal test or application for each provision.`;
+    
     case "case_citations":
-      return `${base} Find and list all case citations, precedents, and relevant judgments that apply to this type of ${documentType}. Include: case name, court, year, citation, and a brief note on its relevance.`;
+      return `${base} Identify and list all binding judicial precedents, landmark court judgments, and ratio decidendi relevant to this ${documentType} within ${juris}. Format with: Case Title, Citation, Court, Year, and a concise statement of its binding legal principle and application.`;
+    
     case "full_analysis":
     default:
-      return `${base} Perform a comprehensive analysis of this ${documentType}. Provide: 1) Executive Summary, 2) Parties & Roles, 3) Clause-by-Clause Breakdown, 4) Risk Assessment (HIGH/MEDIUM/LOW), 5) Missing Protections, 6) Key Dates & Deadlines, 7) Recommendations. Be thorough and professional.`;
+      return `${base} Perform a comprehensive, chamber-grade legal audit of this ${documentType} governed by ${juris} law. Structure with precise formal headings: 1) Executive Summary & Legal Standing, 2) Parties, Competency & Roles, 3) Clause-by-Clause Legal Breakdown, 4) Comprehensive Risk & Exposure Assessment (High/Medium/Low), 5) Omissions & Missing Statutory Protections, 6) Critical Timelines & Obligations, 7) Strategic Counsel Recommendations. Be exhaustive, uncompromising, and professional.`;
   }
 }
 
-router.post("/lawvise/analyze", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/analyze", requireAuth, async (req, res): Promise<void> => {
   const parsed = AnalyzeDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -53,7 +69,7 @@ router.post("/lawvise/analyze", requireAuth, async (req, res): Promise<void> => 
   res.flushHeaders();
 
   const systemPrompt = buildAnalysisSystemPrompt(analysisType, documentType, jurisdiction, language);
-  const userPrompt = `Document Type: ${documentType}\n\n--- DOCUMENT CONTENT ---\n${content}\n--- END ---`;
+  const userPrompt = `Document Type: ${documentType}\nJurisdiction: ${jurisdiction ?? "India"}\n\n--- DOCUMENT CONTENT ---\n${content}\n--- END ---`;
 
   try {
     await streamAI(systemPrompt, userPrompt, (text) => {

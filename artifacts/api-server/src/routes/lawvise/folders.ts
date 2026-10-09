@@ -11,16 +11,21 @@ function parseId(raw: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-router.get("/lawvise/folders", requireAuth, async (req, res): Promise<void> => {
+router.get("/lawwise/folders", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
-  const folders = await db
-    .select()
-    .from(documentFoldersTable)
-    .where(eq(documentFoldersTable.userId, userId));
-  res.json(folders);
+  try {
+    const folders = await db
+      .select()
+      .from(documentFoldersTable)
+      .where(eq(documentFoldersTable.userId, userId));
+    res.json(folders);
+  } catch (err) {
+    req.log.error({ err, userId }, "Failed to fetch document folders");
+    res.status(500).json({ error: "Failed to retrieve folders. Please try again." });
+  }
 });
 
-router.post("/lawvise/folders", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/folders", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const parsed = CreateFolderBody.safeParse(req.body);
   if (!parsed.success) {
@@ -28,14 +33,19 @@ router.post("/lawvise/folders", requireAuth, async (req, res): Promise<void> => 
     return;
   }
 
-  const [folder] = await db
-    .insert(documentFoldersTable)
-    .values({ ...parsed.data, userId })
-    .returning();
-  res.status(201).json(folder);
+  try {
+    const [folder] = await db
+      .insert(documentFoldersTable)
+      .values({ ...parsed.data, userId })
+      .returning();
+    res.status(201).json(folder);
+  } catch (err) {
+    req.log.error({ err, userId }, "Failed to create document folder");
+    res.status(500).json({ error: "Failed to create folder. Please try again." });
+  }
 });
 
-router.patch("/lawvise/folders/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/lawwise/folders/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
@@ -49,20 +59,25 @@ router.patch("/lawvise/folders/:id", requireAuth, async (req, res): Promise<void
     return;
   }
 
-  const [updated] = await db
-    .update(documentFoldersTable)
-    .set(parsed.data)
-    .where(and(eq(documentFoldersTable.id, id), eq(documentFoldersTable.userId, userId)))
-    .returning();
+  try {
+    const [updated] = await db
+      .update(documentFoldersTable)
+      .set(parsed.data)
+      .where(and(eq(documentFoldersTable.id, id), eq(documentFoldersTable.userId, userId)))
+      .returning();
 
-  if (!updated) {
-    res.status(404).json({ error: "Folder not found" });
-    return;
+    if (!updated) {
+      res.status(404).json({ error: "Folder not found" });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err, folderId: id }, "Failed to update document folder");
+    res.status(500).json({ error: "Failed to update folder. Please try again." });
   }
-  res.json(updated);
 });
 
-router.delete("/lawvise/folders/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/lawwise/folders/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
@@ -70,22 +85,27 @@ router.delete("/lawvise/folders/:id", requireAuth, async (req, res): Promise<voi
     return;
   }
 
-  // Set folderId=null on documents in this folder first
-  await db
-    .update(legalDocumentsTable)
-    .set({ folderId: null })
-    .where(and(eq(legalDocumentsTable.folderId, id), eq(legalDocumentsTable.userId, userId)));
+  try {
+    // Set folderId=null on documents in this folder first
+    await db
+      .update(legalDocumentsTable)
+      .set({ folderId: null })
+      .where(and(eq(legalDocumentsTable.folderId, id), eq(legalDocumentsTable.userId, userId)));
 
-  const [deleted] = await db
-    .delete(documentFoldersTable)
-    .where(and(eq(documentFoldersTable.id, id), eq(documentFoldersTable.userId, userId)))
-    .returning();
+    const [deleted] = await db
+      .delete(documentFoldersTable)
+      .where(and(eq(documentFoldersTable.id, id), eq(documentFoldersTable.userId, userId)))
+      .returning();
 
-  if (!deleted) {
-    res.status(404).json({ error: "Folder not found" });
-    return;
+    if (!deleted) {
+      res.status(404).json({ error: "Folder not found" });
+      return;
+    }
+    res.sendStatus(204);
+  } catch (err) {
+    req.log.error({ err, folderId: id }, "Failed to delete document folder");
+    res.status(500).json({ error: "Failed to delete folder. Please try again." });
   }
-  res.sendStatus(204);
 });
 
 export default router;

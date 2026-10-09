@@ -1,37 +1,49 @@
-name: EAS Build
+name: Build Android App
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build:
+  eas-build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: latest
+          run_install: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
+      - name: Install EAS CLI Globally
+        run: npm install -g eas-cli
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+      - name: Install Workspace Dependencies
+        run: pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
 
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Prepare Mobile Workspace Bundle
+        run: |
+          cd artifacts/mobile
+          pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
 
-      - name: Build Android app
-        run: cd artifacts/mobile && eas build --platform android --profile production --non-interactive
+      - name: Commit pnpm Lock File
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git diff --staged --quiet || git commit -m "chore: auto-generate pnpm-lock.yaml"
+          git push || echo "No changes to push"
+
+      - name: Build Android App Locally
+        working-directory: artifacts/mobile
         env:
-          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
-          EXPO_PUBLIC_DOMAIN: law-wise-insight.onrender.com
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform android --local --profile preview --non-interactive

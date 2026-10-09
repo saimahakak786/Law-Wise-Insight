@@ -1,0 +1,93 @@
+{
+  "expo": {
+    "name": "LawVise",
+    "slug": "law-wise-insight",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "lawwise",
+    "userInterfaceStyle": "dark",
+    "jsEngine": "hermes",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#070024"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.saimahakak786.lawwise",
+      "jsEngine": "hermes",
+      "backgroundColor": "#070024"
+    },
+    "android": {
+      "package": "com.saimahakak786.lawwise",
+      "jsEngine": "hermes",
+      "backgroundColor": "#070024",
+      "displayName": "LawVise"
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "@clerk/expo",
+        {
+          "scheme": "lawwise"
+        }
+      ],
+      [
+        "expo-router",
+        {
+          "origin": "https://law-wise-insight.onrender.com"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow LawVise to access your microphone for voice dictation."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "packagingOptions": {
+              "pickFirst": [
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+              ]
+            },
+            "gradleProperties": {
+              "org.gradle.jvmargs": "-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError"
+            }
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./attached_assets/court_alarm.mp3"
+          ]
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#070024",
+      "barStyle": "light-content"
+    },
+    "backgroundColor": "#070024",
+    "extra": {
+      "EXPO_PUBLIC_API_URL": "https://law-wise-insight.onrender.com",
+      "eas": {
+        "projectId": "992c7d24-c74c-4481-98df-31c2575db0f5"
+      }
+    }
+  }
+}

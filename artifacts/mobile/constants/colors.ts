@@ -1,70 +1,69 @@
 /**
- * LawVise design tokens — deep navy + gold legal AI aesthetic.
- * Dark-first theme that conveys trust, authority, and premium quality.
+ * LawVise Design Tokens - Eye-Soothing Soft Pastel Sage Legal Theme.
+ * Restores the exact comfortable, low-glare background and pure white cards from your preferred screenshots.
  */
 
 const colors = {
   light: {
-    // Legacy aliases
-    text: '#FFFFFF',
-    tint: '#C9A84C',
+    // The exact soft, eye-soothing pale gray-sage background from your preferred screenshots
+    background: '#EAEFEE',
+    foreground: '#1F2937',
+    
+    // Deep sharp slate-black for high-contrast headers
+    title: '#0F172A',
 
-    // Surfaces
-    background: '#070D24',
-    foreground: '#FFFFFF',
-    card: '#0F1635',
-    cardForeground: '#FFFFFF',
+    // Crisp pure white cards for clean professional contrast
+    card: '#FFFFFF',
+    cardForeground: '#1F2937',
 
-    // Primary — LawVise gold
-    primary: '#C9A84C',
-    primaryForeground: '#070D24',
+    // Professional legal gold/bronze accent tone
+    primary: '#C5A059',
+    primaryForeground: '#FFFFFF',
 
-    // Secondary — deep navy card
-    secondary: '#1B2448',
-    secondaryForeground: '#E2E8F8',
+    secondary: '#F3F4F6',
+    secondaryForeground: '#1F2937',
 
-    // Muted
-    muted: '#1B2448',
-    mutedForeground: '#8B9CC5',
+    muted: '#E5E7EB',
+    mutedForeground: '#6B7280',
 
-    // Accent — gold
-    accent: '#C9A84C',
-    accentForeground: '#070D24',
+    accent: '#C5A059',
+    accentForeground: '#FFFFFF',
 
-    // Status
     destructive: '#EF4444',
     destructiveForeground: '#FFFFFF',
-    success: '#22C55E',
+    success: '#10B981',
     warning: '#F59E0B',
     info: '#3B82F6',
 
-    // Borders / inputs
-    border: '#1B2448',
-    input: '#131D3D',
+    border: '#D8E2E0', // Soft low-glare borders matching the background
+    input: '#FFFFFF',
+    text: '#1F2937',
+    tint: '#C5A059',
   },
 
   dark: {
-    text: '#FFFFFF',
-    tint: '#C9A84C',
-    background: '#040A1C',
-    foreground: '#FFFFFF',
-    card: '#091225',
-    cardForeground: '#FFFFFF',
+    background: '#1A1D20',
+    foreground: '#E5E0D3',
+    title: '#F8FAFC',
+    card: '#222620',
+    cardForeground: '#E5E0D3',
     primary: '#C9A84C',
-    primaryForeground: '#040A1C',
-    secondary: '#121B38',
-    secondaryForeground: '#D8E0F0',
-    muted: '#121B38',
-    mutedForeground: '#7A8BB8',
+    primaryForeground: '#1A1D20',
+    secondary: '#2C3138',
+    secondaryForeground: '#E5E0D3',
+    muted: '#2C3138',
+    mutedForeground: '#9CA3AF',
     accent: '#C9A84C',
-    accentForeground: '#040A1C',
-    destructive: '#EF4444',
+    accentForeground: '#1A1D20',
+    destructive: '#D15858',
     destructiveForeground: '#FFFFFF',
-    success: '#22C55E',
-    warning: '#F59E0B',
-    info: '#3B82F6',
-    border: '#121B38',
-    input: '#0D1530',
+    success: '#3D8C55',
+    warning: '#D8622B',
+    info: '#6ABEC2',
+    border: '#374151',
+    input: '#222620',
+    text: '#E5E0D2',
+    tint: '#C9A84C',
   },
 
   radius: 12,

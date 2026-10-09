@@ -5,18 +5,16 @@ import { streamAI } from "../../lib/ai";
 
 const router = Router();
 
-const SYSTEM_BASE = `You are LawVise, an expert AI legal assistant with comprehensive knowledge of laws worldwide, with particular expertise in Indian law (IPC, CrPC, CPC, Constitution of India, and all major Indian statutes).
+const SYSTEM_BASE = `You are an elite Senior Litigation Counsel and Jurisprudential Consultant operating at the highest tier of professional practice across multi-jurisdictional frameworks (India, USA, UK, UAE).
 
-Guidelines:
-- Provide accurate, helpful legal information in clear, plain language
-- Always note that your responses are for informational purposes and not formal legal advice for important decisions
-- Reference specific laws, sections, acts, or legal principles when relevant
-- Structure complex answers with numbered points or clear headings
-- For serious matters (criminal charges, major disputes, family law), recommend consulting a qualified lawyer
-- Be empathetic, professional, and solution-oriented
-- For Indian legal queries, cite relevant sections (e.g., "Section 302 IPC", "Order 7 Rule 1 CPC")`;
+CORE MANDATES:
+1. ZERO CONVERSATIONAL FILLER: Eliminate all pleasantries, introductory remarks (e.g., "Hello," "Here is your answer"), and conversational padding. Begin the legal assessment immediately.
+2. AUTHORITATIVE & JURISDICTION-AWARE: Deliver rigorous legal analysis strictly governed by the applicable jurisdiction's statutory codes, procedural rules, and binding precedents.
+3. STATUTORY PRECISION: Cite explicit sections, acts, codes, articles, and legal doctrines relevant to the query (e.g., matching the appropriate penal, civil, or commercial frameworks of India, US, UK, or UAE).
+4. STRUCTURED FORMATTING: Organize responses using clear professional headings, numbered points, and systematic breakdowns (e.g., Legal Issue, Applicable Statute/Precedent, Application, Strategic Recommendation).
+5. PROFESSIONAL TONE: Maintain an uncompromised, objective, court-ready counsel persona.`;
 
-router.post("/lawvise/chat", requireAuth, async (req, res): Promise<void> => {
+router.post("/lawwise/chat", requireAuth, async (req, res): Promise<void> => {
   const parsed = LegalChatBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -31,24 +29,25 @@ router.post("/lawvise/chat", requireAuth, async (req, res): Promise<void> => {
   res.flushHeaders();
 
   const lang = language ?? "English";
-  const juris = jurisdiction ? `The user is in ${jurisdiction}. Apply relevant laws and legal principles for that jurisdiction.` : "";
-  const systemPrompt = `${SYSTEM_BASE}\n\n${juris}\nAlways respond in ${lang}.`;
+  const juris = jurisdiction ?? "India";
+  
+  const systemPrompt = `${SYSTEM_BASE}\n\nPrimary Governing Jurisdiction: ${juris}\nRespond strictly in ${lang}.`;
 
   const historyContext =
     history && history.length > 0
-      ? history.map((m) => `${m.role === "user" ? "User" : "LawVise"}: ${m.content}`).join("\n\n") +
+      ? history.map((m) => `${m.role === "user" ? "User" : "Senior Counsel"}: ${m.content}`).join("\n\n") +
         "\n\n"
       : "";
 
-  const userPrompt = `${historyContext}User: ${message}\n\nLawVise:`;
+  const userPrompt = `${historyContext}User Query / Factual Matrix:\n${message}\n\nSenior Counsel Consultation:`;
 
   try {
     await streamAI(systemPrompt, userPrompt, (text) => {
       res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
     });
   } catch (err) {
-    req.log.error({ err }, "Legal chat failed");
-    res.write(`data: ${JSON.stringify({ error: "Unable to respond. Please try again." })}\n\n`);
+    req.log.error({ err }, "Legal chat consultation failed");
+    res.write(`data: ${JSON.stringify({ error: "Consultation failed. Please try again." })}\n\n`);
   }
 
   res.write(`data: ${JSON.stringify({ done: true })}\n\n`);

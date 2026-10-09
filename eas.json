@@ -5,6 +5,7 @@
   },
   "build": {
     "development": {
+      "projectDir": ".",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -16,6 +17,7 @@
       }
     },
     "preview": {
+      "projectDir": ".",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
@@ -26,6 +28,7 @@
       }
     },
     "production": {
+      "projectDir": ".",
       "autoIncrement": true,
       "android": {
         "buildType": "apk"

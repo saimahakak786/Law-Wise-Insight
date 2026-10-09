@@ -10,6 +10,8 @@ import researchRouter from "./research";
 import foldersRouter from "./folders";
 import settingsRouter from "./settings";
 import notificationsRouter from "./notifications";
+import matchRouter from "./match";
+import dictateRouter from "./dictate"; // Added dictate router import
 
 const router: Router = Router();
 
@@ -24,5 +26,7 @@ router.use(researchRouter);
 router.use(foldersRouter);
 router.use(settingsRouter);
 router.use(notificationsRouter);
+router.use(matchRouter);
+router.use(dictateRouter); // Added dictate router use
 
 export default router;
