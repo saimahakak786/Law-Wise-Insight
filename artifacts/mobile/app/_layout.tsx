@@ -158,13 +158,14 @@ function InitializingGate({ fontsLoaded, fontError }: { fontsLoaded: boolean; fo
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
-    setupNotificationChannel();
+    setupNotificationChannel().catch(() => {});
     try {
       Purchases.configure({ apiKey: "goog_IVymTFIszZNpmPfSIZHqXBInlhR" });
     } catch (e) {
       console.error('Failed to initialize RevenueCat:', e);
     }
-    const timer = setTimeout(() => setTimedOut(true), 6000);
+    // Optimized startup timer: reduced from 6000ms to 2500ms for instant opening
+    const timer = setTimeout(() => setTimedOut(true), 2500);
     return () => clearTimeout(timer);
   }, []);
 
