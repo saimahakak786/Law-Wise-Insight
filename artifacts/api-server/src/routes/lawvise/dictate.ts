@@ -28,7 +28,8 @@ router.post("/dictate", requireAuth, upload.single("audio"), async (req, res): P
     // Clean up temporary file
     fs.unlinkSync(req.file.path);
 
-    res.json({ transcription: transcription.text });
+  res.json({ text: transcription.text, transcription: transcription.text });
+
   } catch (err: any) {
     console.error("Dictation transcription error:", err);
     if (req.file && fs.existsSync(req.file.path)) {
