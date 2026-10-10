@@ -9,8 +9,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Use multer to handle incoming audio file uploads temporarily
 const upload = multer({ dest: "/tmp" });
+router.post("/dictate", requireAuth, upload.single("audio"), async (req, res): Promise<void> => {
 
-router.post("/lawwise/dictate", requireAuth, upload.single("audio"), async (req, res): Promise<void> => {
+
   try {
     if (!req.file) {
       res.status(400).json({ error: "No audio file provided." });
