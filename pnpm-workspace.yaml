@@ -46,15 +46,6 @@ catalog:
 
 autoInstallPeers: false
 
-onlyBuiltDependencies:
-  - '@sentry/cli'
-  - '@swc/core'
-  - browser-tabs-lock
-  - core-js
-  - esbuild
-  - msw
-  - unrs-resolver
-
 overrides:
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
