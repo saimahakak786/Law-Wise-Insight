@@ -92,7 +92,7 @@ export default function CauseListScreen() {
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#C9A84C',
-        sound: 'court_sound', // 👈 Custom court alarm sound for Android
+        sound: 'court_alarm', // 👈 Matches court_alarm.mp3 asset name without extension
       });
     }
   };
@@ -269,7 +269,7 @@ export default function CauseListScreen() {
               content: {
                 title: `⚖️ URGENT: ${selectedEventType}`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — ${subTitle}`,
-                sound: 'court_sound.wav', // 👈 Custom court alarm sound file for notifications
+                sound: 'court_alarm.mp3', // 👈 Custom court alarm sound filename
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate, matterId },
               },
