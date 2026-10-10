@@ -92,7 +92,7 @@ export default function CauseListScreen() {
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#C9A84C',
-        sound: 'default',
+        sound: 'court_sound', // 👈 Custom court alarm sound for Android
       });
     }
   };
@@ -143,17 +143,23 @@ export default function CauseListScreen() {
     }
   };
 
+  // 🛠️ Local timezone date parser to prevent UTC offset & negative millis issues
   const parseDateInput = (dateStr: string) => {
     const cleanStr = dateStr.trim();
     const parts = cleanStr.split(/[-/]/);
     
     if (parts.length === 3) {
+      let day, month, year;
       if (parts[0].length === 4) {
-        return new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`);
+        year = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10) - 1; // 0-indexed months
+        day = parseInt(parts[2], 10);
       } else {
-        const [day, month, year] = parts;
-        return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+        day = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10) - 1;
+        year = parseInt(parts[2], 10);
       }
+      return new Date(year, month, day, 9, 0, 0); // Local time 9:00 AM alarm
     }
     return new Date(dateStr);
   };
@@ -237,15 +243,18 @@ export default function CauseListScreen() {
             const TWO_HOURS = 2 * 60 * 60 * 1000;
 
             if (timeUntilHearingMs > TWENTY_FOUR_HOURS) {
+              // Case saved > 24 hours away -> Remind 24h prior
               reminderTime = new Date(hearingDateTime.getTime() - TWENTY_FOUR_HOURS);
               subTitle = `Reminder: Hearing is tomorrow (${hearingDate})`;
             } 
             else if (timeUntilHearingMs > TWO_HOURS) {
+              // Case saved between 2h and 24h away (12h, 8h, 6h, 4h) -> Remind 2 hours prior
               reminderTime = new Date(hearingDateTime.getTime() - TWO_HOURS);
               const hoursLeft = Math.round(timeUntilHearingMs / (1000 * 60 * 60));
               subTitle = `🚨 URGENT: Hearing is in ~${hoursLeft} hour(s)!`;
             } 
             else {
+              // Case saved with less than 2 hours left -> Alert immediately (~5 seconds)
               reminderTime = new Date(Date.now() + 5000);
               const minutesLeft = Math.max(1, Math.round(timeUntilHearingMs / (1000 * 60)));
               subTitle = `🚨 CRITICAL: Hearing starting in ~${minutesLeft} minute(s)!`;
@@ -260,7 +269,7 @@ export default function CauseListScreen() {
               content: {
                 title: `⚖️ URGENT: ${selectedEventType}`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — ${subTitle}`,
-                sound: true,
+                sound: 'court_sound.wav', // 👈 Custom court alarm sound file for notifications
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate, matterId },
               },
