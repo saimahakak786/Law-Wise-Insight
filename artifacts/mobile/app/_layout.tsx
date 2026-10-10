@@ -29,12 +29,12 @@ const queryClient = new QueryClient({
 
 setBaseUrl('https://law-wise-insight.onrender.com');
 
-// LawVise Dark Theme Constants
-const APP_BACKGROUND = '#070024'; // Deep dark theme matching app.json
-const TEXT_PRIMARY = '#FFFFFF';    // Crisp white text
-const ACCENT_PRIMARY = '#3B82F6';  // Vibrant blue accent for loaders/buttons
+// LawVise Eye-Soothing Light Theme Constants
+const APP_BACKGROUND = '#F0F4F5'; // Soft off-white / pale slate background
+const TEXT_PRIMARY = '#334155';    // Balanced dark slate (easy on the eyes, not harsh black)
+const ACCENT_PRIMARY = '#CA9C36';  // Golden-amber primary action color
 
-// Apply default text styling globally for dark mode
+// Apply default text styling globally
 if ((Text as any).defaultProps == null) {
   (Text as any).defaultProps = {};
 }
@@ -42,7 +42,6 @@ if ((Text as any).defaultProps == null) {
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk';
 
-// Robust custom token cache using expo-secure-store
 const tokenCache = {
   async getToken(key: string) {
     try {
@@ -61,7 +60,6 @@ const tokenCache = {
   },
 };
 
-// Configure Android Notification Channel
 async function setupNotificationChannel() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('court-alerts-v2', {
@@ -69,7 +67,7 @@ async function setupNotificationChannel() {
       importance: Notifications.AndroidImportance.MAX,
       sound: 'court_alarm',
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#3B82F6',
+      lightColor: '#CA9C36',
       enableLights: true,
       enableVibrate: true,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
@@ -90,7 +88,6 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
       
-      {/* Feature screens with dark theme headers */}
       <Stack.Screen 
         name="draft" 
         options={{ 
@@ -141,57 +138,44 @@ function RootLayoutNav() {
   );
 }
 
-// Component to register Clerk token getter
 function TokenSync() {
   const { getToken } = useAuth();
-
   useEffect(() => {
     setAuthTokenGetter(async () => {
       try {
         return await getToken();
       } catch (err) {
-        console.error('Failed to retrieve Clerk token for API request:', err);
+        console.error('Failed to retrieve Clerk token:', err);
         return null;
       }
     });
   }, [getToken]);
-
   return null;
 }
 
-// Inner component holding splash screen until both fonts and auth are fully initialized
 function InitializingGate({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: Error | null }) {
   const { isLoaded } = useAuth();
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
     setupNotificationChannel();
-
     try {
       Purchases.configure({ apiKey: "goog_IVymTFIszZNpmPfSIZHqXBInlhR" });
     } catch (e) {
       console.error('Failed to initialize RevenueCat:', e);
     }
-
-    const timer = setTimeout(() => {
-      setTimedOut(true);
-    }, 6000);
-
+    const timer = setTimeout(() => setTimedOut(true), 6000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Hide splash screen ONLY when fonts are loaded AND Clerk auth is fully initialized
   useEffect(() => {
     if ((fontsLoaded || fontError) && (isLoaded || timedOut)) {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, fontError, isLoaded, timedOut]);
 
-  // While waiting, render a solid dark view (matches splash background - zero white flash / zero spinner)
   if ((!fontsLoaded && !fontError) || (!isLoaded && !timedOut)) {
-    return (
-      <View style={{ flex: 1, backgroundColor: APP_BACKGROUND }} />
-    );
+    return <View style={{ flex: 1, backgroundColor: APP_BACKGROUND }} />;
   }
 
   if (timedOut && !isLoaded) {
@@ -233,7 +217,7 @@ export default function RootLayout() {
         <Text style={{ color: '#EF4444', fontSize: 16, textAlign: 'center', marginBottom: 12 }}>
           Missing Clerk publishable key
         </Text>
-        <Text style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>
+        <Text style={{ color: '#64748B', fontSize: 13, textAlign: 'center' }}>
           EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY was not set at build time.
         </Text>
       </View>
