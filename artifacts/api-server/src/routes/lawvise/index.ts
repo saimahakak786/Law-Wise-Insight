@@ -31,6 +31,7 @@ router.use(notificationsRouter);
 router.use(matchRouter);
 router.use(dictateRouter); // Added dictate router use
 
-import intakeRouter from "./intake";
+router.use(intakeRouter);
+
 
 export default router;
