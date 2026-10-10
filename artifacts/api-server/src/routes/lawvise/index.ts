@@ -12,6 +12,8 @@ import settingsRouter from "./settings";
 import notificationsRouter from "./notifications";
 import matchRouter from "./match";
 import dictateRouter from "./dictate"; // Added dictate router import
+import intakeRouter from "./intake";
+
 
 const router: Router = Router();
 
@@ -28,5 +30,7 @@ router.use(settingsRouter);
 router.use(notificationsRouter);
 router.use(matchRouter);
 router.use(dictateRouter); // Added dictate router use
+
+import intakeRouter from "./intake";
 
 export default router;
