@@ -34,8 +34,9 @@ Always format your output cleanly using the following professional structure:
 
 6. PRACTICAL & STRATEGIC IMPLICATIONS:
    - Application to ongoing litigation, cross-border compliance, or judicial adjudication.`;
+router.post("/research", requireAuth, async (req, res): Promise<void> => {
 
-router.post("/lawwise/research", requireAuth, async (req, res): Promise<void> => {
+
   const parsed = LegalResearchBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
