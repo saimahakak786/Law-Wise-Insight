@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  TextInput, ActivityIndicator, Platform, Alert, Modal, KeyboardAvoidingView,
+  TextInput, ActivityIndicator, Platform, Alert, Modal, KeyboardAvoidingView, Share,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -78,11 +78,11 @@ export default function ResearchScreen() {
   const cleanMarkdown = (text: string) => {
     if (!text) return '';
     return text
-      .replace(/#{1,6}\s*/g, '') // Remove headers (#, ##, ###)
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold (**text**)
-      .replace(/\*(.*?)\*/g, '$1') // Remove italic (*text*)
-      .replace(/__(.*?)__/g, '$1') // Remove underline (__text__)
-      .replace(/---/g, '') // Remove horizontal rules
+      .replace(/#{1,6}\s*/g, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/__(.*?)__/g, '$1')
+      .replace(/---/g, '')
       .trim();
   };
 
@@ -116,6 +116,7 @@ export default function ResearchScreen() {
       const token = await getToken();
       const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
       const researchType = selectedType.toLowerCase().replace(' ', '_');
+      
       const response = await fetch(`https://${domain}/api/lawvise/research`, {
         method: 'POST',
         headers: { 
@@ -130,69 +131,60 @@ export default function ResearchScreen() {
         }),
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error('Network response failed or body missing');
+      if (!response.ok) {
+        throw new Error(`Server returned status ${response.status}`);
       }
 
-      const reader = (response.body as any)?.getReader();
-      if (!reader) throw new Error('No stream');
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.content) setResult((p) => p + data.content);
-            if (data.done) break;
-          } catch { /* skip */ }
+      const contentType = response.headers.get('content-type');
+      
+      // Handle standard JSON response
+      if (contentType && contentType.includes('application/json')) {
+        const json = await response.json();
+        const textContent = json.content || json.result || json.text || json.memorandum || JSON.stringify(json, null, 2);
+        setResult(textContent);
+      } else if (response.body) {
+        // Handle stream response
+        const reader = (response.body as any)?.getReader();
+        if (reader) {
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+            for (const line of lines) {
+              const cleanLine = line.trim();
+              if (!cleanLine) continue;
+              if (cleanLine.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(cleanLine.slice(6));
+                  if (data.content) setResult((p) => p + data.content);
+                  if (data.done) break;
+                } catch { /* skip */ }
+              } else {
+                try {
+                  const data = JSON.parse(cleanLine);
+                  if (data.content) setResult((p) => p + data.content);
+                } catch {
+                  setResult((p) => p + cleanLine + '\n');
+                }
+              }
+            }
+          }
+        } else {
+          const text = await response.text();
+          setResult(text);
         }
-      }
-
-      // If stream finished but result is empty, trigger dynamic fallback generator
-      if (!result.trim()) {
-        throw new Error('Empty stream response');
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      // Dynamic Global Fallback Memorandum tailored to ANY case name or query entered
-      const fallbackText = `GLOBAL LEGAL RESEARCH MEMORANDUM & CITATION PAPER\n\n` +
-        `JURISDICTION: ${jurisdiction.toUpperCase()}\n` +
-        `RESEARCH SCOPE: ${selectedType.toUpperCase()}\n` +
-        `ACTIVE MATTER: ${activeMatter ? activeMatter.title : 'General Practice'}\n` +
-        `SUBJECT QUERY: "${trimmedQuery}"\n\n` +
-        `1. DOCTRINAL BACKGROUND & STATUTORY FRAMEWORK:\n` +
-        `Under the legal framework of ${jurisdiction}, inquiry into "${trimmedQuery}" requires a balanced examination of constitutional provisions, statutory enactments, and established judicial principles. The courts evaluate the core contentions through the lens of legislative intent, equity, and rule of law.\n\n` +
-        `2. KEY JUDICIAL PRECEDENTS & HOLDINGS:\n` +
-        `- Precedent Analysis: Landmark judicial pronouncements concerning "${trimmedQuery}" establish that executive or private actions must withstand strict judicial scrutiny.\n` +
-        `- Ratio Decidendi: The ratio emphasizes fundamental rights, statutory compliance, and equitable remedies, providing binding or persuasive authority for current appellate matters.\n\n` +
-        `3. COMPARATIVE & MULTI-REPORTER STANDARDS:\n` +
-        `- Evaluated multi-reporter citations, coram bench observations, and headnotes relevant to "${trimmedQuery}".\n` +
-        `- Assessed comparative jurisprudence across allied jurisdictions to substantiate legal arguments.\n\n` +
-        `4. STRATEGIC RECOMMENDATIONS FOR COUNSEL:\n` +
-        `- Counsel should integrate these judicial citations and statutory interpretations into primary pleadings and written submissions.\n` +
-        `- Ensure strict adherence to local procedural rules and limitation timelines when referencing "${trimmedQuery}".\n\n` +
-        `(Generated via LawVise Global Legal Research Intelligence Engine)`;
-
-      let index = 0;
-      const interval = setInterval(() => {
-        setResult(fallbackText.slice(0, index));
-        index += 30;
-        if (index > fallbackText.length) {
-          setResult(fallbackText);
-          clearInterval(interval);
-          setIsResearching(false);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-      }, 20);
-      return;
+    } catch (err) {
+      console.error('Research error:', err);
+      Alert.alert('Research Error', 'Could not retrieve legal research data from the server. Please check your connection or try again.');
+      setResult('');
+      setHasResult(false);
     } finally {
       setIsResearching(false);
     }
@@ -230,9 +222,11 @@ export default function ResearchScreen() {
   const handleShare = async () => {
     if (!result) return;
     try {
-      const filename = FileSystem.cacheDirectory + `research_memo.txt`;
-      await FileSystem.writeAsStringAsync(filename, cleanMarkdown(result), { encoding: FileSystem.EncodingType.UTF8 });
-      await Sharing.shareAsync(filename);
+      await Share.share({
+        message: cleanMarkdown(result),
+        title: 'LawVise Research Memorandum',
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
       Alert.alert('Share Failed', 'Could not share the research memorandum.');
     }
@@ -356,7 +350,7 @@ export default function ResearchScreen() {
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
             <Feather name="book-open" size={22} color="#C9A84C" />
-            <Text style={styles.screenTitle}>Legal Research Hub</Text>
+            <Text style={[styles.screenTitle, { color: colors.foreground }]}>Legal Research Hub</Text>
           </View>
           <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
             Analyze case laws, statutes, and judicial precedents instantly. ({freeUsesLeft} free trial uses remaining)
@@ -573,7 +567,7 @@ const styles = StyleSheet.create({
   centerContainer: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   headerContainer: { marginBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  screenTitle: { fontFamily: 'Inter_700Bold', fontSize: 22 },
   screenSub: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   complianceBadge: { backgroundColor: '#1E3A8A', borderColor: '#3B82F6', borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   complianceTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#BFDBFE' },
