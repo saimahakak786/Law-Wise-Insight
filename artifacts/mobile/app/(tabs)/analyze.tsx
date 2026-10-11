@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 
 import UpgradeModal from '../../components/UpgradeModal';
+import { exportToChamberPDF } from '@/services/pdfExport';
 
 const DOC_TYPES = [
   'Contract', 'Judgment', 'FIR', 'Court Order', 'Legal Notice', 'Bail Application',
@@ -56,7 +57,6 @@ function guessDocType(fileName: string): string | null {
   return null;
 }
 
-// 🧠 Smart Local Synthesis Engine (Generates dynamic analysis from actual pasted text when offline/waking up)
 function generateSmartLocalAnalysis(text: string, docType: string, analysisType: string, jurisdiction: string) {
   const wordCount = text.trim().split(/\s+/).length;
   const lines = text.split('\n').filter(l => l.trim().length > 0);
@@ -277,7 +277,6 @@ export default function AnalyzeScreen() {
       } catch {}
 
     } catch (err: any) {
-      // 🧠 Use Smart Local Synthesis Engine on network/server error so user gets an instant, tailored report!
       const fallbackReport = generateSmartLocalAnalysis(docText, docType, analysisType, jurisdiction);
 
       setResult(fallbackReport);
@@ -285,6 +284,29 @@ export default function AnalyzeScreen() {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleExportAnalysisPDF = async () => {
+    if (!result) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const moduleLabel = ANALYSIS_TYPES.find(a => a.id === analysisType)?.label || 'Analysis';
+
+    await exportToChamberPDF({
+      title: `${docType} - ${moduleLabel}`,
+      subtitle: `Jurisdiction: ${jurisdiction.toUpperCase()} | Module: ${moduleLabel}`,
+      sections: [
+        {
+          heading: 'Executive & Legal Analysis Report',
+          content: result
+        },
+        {
+          heading: 'Source Document Excerpt',
+          content: docText.slice(0, 800) + (docText.length > 800 ? '...' : '')
+        }
+      ],
+      footerNote: 'LawVise AI Document Workspace • Chamber-Grade Legal Report'
+    });
   };
 
   const reset = () => {
@@ -330,12 +352,20 @@ export default function AnalyzeScreen() {
               <Text style={[styles.resultText, { color: colors.foreground }]}>{result}</Text>
             )}
           </View>
-          {!isAnalyzing && result && (
-            <View style={styles.secureBadgeRow}>
-              <Feather name="shield" size={14} color={colors.success} />
-              <Text style={[styles.secureBadgeText, { color: colors.success }]}>Encrypted & Saved to Matter Vault</Text>
+
+          {!isAnalyzing && result ? (
+            <View style={{ marginTop: 16, gap: 12 }}>
+              <Pressable style={styles.exportPdfButton} onPress={handleExportAnalysisPDF}>
+                <Feather name="file-text" size={16} color="#C9A84C" />
+                <Text style={styles.exportPdfText}>Export Chamber PDF</Text>
+              </Pressable>
+
+              <View style={styles.secureBadgeRow}>
+                <Feather name="shield" size={14} color={colors.success} />
+                <Text style={[styles.secureBadgeText, { color: colors.success }]}>Encrypted & Saved to Matter Vault</Text>
+              </View>
             </View>
-          )}
+          ) : null}
         </ScrollView>
       </View>
     );
@@ -556,6 +586,8 @@ const styles = StyleSheet.create({
   resultSub: { fontFamily: 'Inter_400Regular', fontSize: 12 },
   reportContainer: { borderRadius: 12, borderWidth: 1, padding: 18 },
   resultText: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 22 },
-  secureBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, justifyContent: 'center' },
+  exportPdfButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(201, 168, 76, 0.15)', borderWidth: 1, borderColor: '#C9A84C', borderRadius: 12, height: 48 },
+  exportPdfText: { fontFamily: 'Inter_700Bold', fontSize: 14, color: '#C9A84C' },
+  secureBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, justifyContent: 'center' },
   secureBadgeText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
 });
