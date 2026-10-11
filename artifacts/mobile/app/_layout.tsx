@@ -7,7 +7,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
-import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
 import { AppProvider } from '@/context/AppContext';
 import Purchases from 'react-native-purchases';
 import {
@@ -26,8 +25,6 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 });
-
-setBaseUrl('https://law-wise-insight.onrender.com');
 
 // LawVise Eye-Soothing Light Theme Constants
 const APP_BACKGROUND = '#F0F4F5'; // Soft off-white / pale slate background
@@ -138,21 +135,6 @@ function RootLayoutNav() {
   );
 }
 
-function TokenSync() {
-  const { getToken } = useAuth();
-  useEffect(() => {
-    setAuthTokenGetter(async () => {
-      try {
-        return await getToken();
-      } catch (err) {
-        console.error('Failed to retrieve Clerk token:', err);
-        return null;
-      }
-    });
-  }, [getToken]);
-  return null;
-}
-
 function InitializingGate({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: Error | null }) {
   const { isLoaded } = useAuth();
   const [timedOut, setTimedOut] = useState(false);
@@ -164,7 +146,6 @@ function InitializingGate({ fontsLoaded, fontError }: { fontsLoaded: boolean; fo
     } catch (e) {
       console.error('Failed to initialize RevenueCat:', e);
     }
-    // Optimized startup timer: reduced from 6000ms to 2500ms for instant opening
     const timer = setTimeout(() => setTimedOut(true), 2500);
     return () => clearTimeout(timer);
   }, []);
@@ -195,12 +176,7 @@ function InitializingGate({ fontsLoaded, fontError }: { fontsLoaded: boolean; fo
     );
   }
 
-  return (
-    <>
-      <TokenSync />
-      <RootLayoutNav />
-    </>
-  );
+  return <RootLayoutNav />;
 }
 
 export default function RootLayout() {
