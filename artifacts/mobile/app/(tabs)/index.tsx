@@ -8,40 +8,40 @@ import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useUser } from '@clerk/expo';
-import { useGetDocuments, useGetCases } from '@workspace/api-client-react';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import JurisdictionSelector from '@/components/JurisdictionSelector';
 
-// Distinct professional icon accent colors matched for your off-white theme
 const QUICK_ACTIONS = [
-  { id: 'vault', label: 'Firm\nVault', icon: 'folder' as const, route: '/vault', color: '#B8860B' }, // Deep Gold
-  { id: 'analyze', label: 'Analyze\nDocument', icon: 'file-text' as const, route: '/(tabs)/analyze', color: '#2563EB' }, // Blue
-  { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat', color: '#0D9488' }, // Teal
-  { id: 'fact-matcher', label: 'Fact\nMatcher', icon: 'git-merge' as const, route: '/(tabs)/fact-matcher', color: '#7C3AED' }, // Purple
-  { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/client-intake', color: '#059669' }, // Emerald
-  { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/causelist', color: '#EA580C' }, // Orange
-  { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft', color: '#DB2777' }, // Pink
-  { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator', color: '#0891B2' }, // Cyan
-  { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research', color: '#4F46E5' }, // Indigo
-  { id: 'tracker', label: 'Case\nTracker', icon: 'briefcase' as const, route: '/(tabs)/cases', color: '#CA8A04' }, // Amber
+  { id: 'vault', label: 'Firm\nVault', icon: 'folder' as const, route: '/vault', color: '#B8860B' },
+  { id: 'analyze', label: 'Analyze\nDocument', icon: 'file-text' as const, route: '/(tabs)/analyze', color: '#2563EB' },
+  { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat', color: '#0D9488' },
+  { id: 'fact-matcher', label: 'Fact\nMatcher', icon: 'git-merge' as const, route: '/(tabs)/fact-matcher', color: '#7C3AED' },
+  { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/client-intake', color: '#059669' },
+  { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/causelist', color: '#EA580C' },
+  { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft', color: '#DB2777' },
+  { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator', color: '#0891B2' },
+  { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research', color: '#4F46E5' },
+  { id: 'tracker', label: 'Case\nTracker', icon: 'briefcase' as const, route: '/(tabs)/cases', color: '#CA8A04' },
 ];
 
 const MOCK_FALLBACK_DOCUMENTS = [
-  { id: 1, title: 'Commercial Lease Agreement Review.pdf', documentType: 'Agreement', analysisType: 'Risk Assessment' },
-  { id: 2, title: 'Employment Non-Disclosure Pact.docx', documentType: 'Contract', analysisType: 'Clause Check' },
-  { id: 3, title: 'Consumer Protection Notice.pdf', documentType: 'Legal Notice', analysisType: 'Summary' },
+  { id: '1', title: 'Commercial Lease Agreement Review.pdf', documentType: 'Agreement', analysisType: 'Risk Assessment' },
+  { id: '2', title: 'Employment Non-Disclosure Pact.docx', documentType: 'Contract', analysisType: 'Clause Check' },
+  { id: '3', title: 'Consumer Protection Notice.pdf', documentType: 'Legal Notice', analysisType: 'Summary' },
 ];
 
 const MOCK_FALLBACK_CASES = [
-  { id: 1, title: 'Sharma vs. Apex Properties', status: 'active', nextHearing: 'Tomorrow, 10:30 AM' },
-  { id: 2, title: 'TechCorp IP Infringement', status: 'pending', nextHearing: 'Sep 15, 2:00 PM' },
-  { id: 3, title: 'Verma Employment Arbitration', status: 'active', nextHearing: 'Sep 18, 11:00 AM' },
+  { id: '1', title: 'Sharma vs. Apex Properties', status: 'active', nextHearing: 'Tomorrow, 10:30 AM' },
+  { id: '2', title: 'TechCorp IP Infringement', status: 'pending', nextHearing: 'Sep 15, 2:00 PM' },
+  { id: '3', title: 'Verma Employment Arbitration', status: 'active', nextHearing: 'Sep 18, 11:00 AM' },
 ];
 
 const MAX_RECORDING_SECONDS = 300;
+const VAULT_STORAGE_KEY = '@lawwise_saved_documents';
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -49,11 +49,30 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useUser();
 
-  const { data: remoteDocs, isLoading: docsLoading, error: docsError } = useGetDocuments();
-  const { data: remoteCases, error: casesError } = useGetCases();
+  const [documents, setDocuments] = useState<any[]>(MOCK_FALLBACK_DOCUMENTS);
+  const [cases, setCases] = useState<any[]>(MOCK_FALLBACK_CASES);
+  const [docsLoading, setDocsLoading] = useState(false);
 
-  const documents = docsError || !remoteDocs ? MOCK_FALLBACK_DOCUMENTS : remoteDocs;
-  const cases = casesError || !remoteCases ? MOCK_FALLBACK_CASES : remoteCases;
+  useEffect(() => {
+    loadVaultDocuments();
+  }, []);
+
+  const loadVaultDocuments = async () => {
+    try {
+      setDocsLoading(true);
+      const saved = await AsyncStorage.getItem(VAULT_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.length > 0) {
+          setDocuments(parsed);
+        }
+      }
+    } catch (e) {
+      console.log('Error loading vault docs', e);
+    } finally {
+      setDocsLoading(false);
+    }
+  };
 
   const firstName = user?.firstName ?? user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] ?? 'Counselor';
   const recentDocs = documents?.slice(0, 3) ?? [];
@@ -206,7 +225,6 @@ export default function HomeScreen() {
       contentContainerStyle={{ paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 16), paddingBottom: insets.bottom + 100 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Good day,</Text>
@@ -228,10 +246,8 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {/* Jurisdiction Selector */}
       <JurisdictionSelector />
 
-      {/* 🌟 FACT MATCHER FEATURE HERO CARD */}
       <LinearGradient
         colors={['#241B0F', '#120D07', '#1F170A']}
         style={styles.factMatcherHeroCard}
@@ -260,7 +276,6 @@ export default function HomeScreen() {
         </View>
       </LinearGradient>
 
-      {/* Hero Banner */}
       <LinearGradient
         colors={['#1B2448', '#0F1635']}
         style={styles.heroBanner}
@@ -285,7 +300,6 @@ export default function HomeScreen() {
         </LinearGradient>
       </LinearGradient>
 
-      {/* Secure Document Vault Banner */}
       <Pressable
         style={({ pressed }) => [styles.vaultBanner, { backgroundColor: colors.card, borderColor: colors.border ?? '#C9A84C30', opacity: pressed ? 0.9 : 1 }]}
         onPress={() => {
@@ -303,7 +317,6 @@ export default function HomeScreen() {
         <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
       </Pressable>
 
-      {/* Quick Actions */}
       <View style={styles.sectionHeaderRow}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
       </View>
@@ -322,7 +335,6 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* AI VOICE DICTATION & COURTROOM BRIEF GENERATOR */}
       <View style={styles.sectionHeader}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Feather name="mic" size={16} color="#C9A84C" />
@@ -411,7 +423,6 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Active Case Reminders / Cause List Preview */}
       <View style={[styles.sectionHeader, { marginTop: 20 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Feather name="clock" size={16} color="#C9A84C" />
@@ -447,7 +458,6 @@ export default function HomeScreen() {
         ))
       )}
 
-      {/* Stats */}
       <View style={[styles.statsRow, { marginTop: 8 }]}>
         <View style={[styles.statCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.statNum, { color: colors.primary }]}>{documents?.length ?? 0}</Text>
@@ -463,7 +473,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Recent Documents */}
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitleText, { color: colors.foreground }]}>Recent Documents</Text>
         <Pressable onPress={() => router.push('/(tabs)/analyze')}>
@@ -471,7 +480,7 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {docsLoading && !remoteDocs ? (
+      {docsLoading ? (
         <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
       ) : recentDocs.length === 0 ? (
         <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
