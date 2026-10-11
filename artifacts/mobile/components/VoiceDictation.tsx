@@ -126,7 +126,6 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
         throw new Error('No recording URI found');
       }
 
-      // If free user, increment local usage counter
       if (!isProUser) {
         await incrementDictationCount();
         const allowed = await checkDictationLimit();
@@ -135,7 +134,6 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
 
       const token = await getToken();
 
-      // Send the audio file to your Render backend API endpoint (updated with /lawvise/)
       const formData = new FormData();
       formData.append('audio', {
         uri,
@@ -147,8 +145,6 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
         method: 'POST',
         body: formData,
         headers: { 
-          // NOTE: Do NOT set Content-Type here! React Native automatically assigns 
-          // the correct multipart boundary when passing FormData without a manual header.
           Authorization: `Bearer ${token}`,
         },
       });
