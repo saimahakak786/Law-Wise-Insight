@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  TextInput, Platform, Alert,
+  TextInput, Platform, Alert, Share,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,8 +9,6 @@ import { useApp, StoredDocument } from '@/context/AppContext';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import UpgradeModal from '@/components/UpgradeModal';
@@ -56,13 +54,22 @@ export default function VaultScreen() {
     Alert.alert('Copied', 'Document content copied to clipboard.');
   };
 
+  // 🚀 Robust Native Share implementation replacing expo-sharing errors
   const handleShare = async (doc: StoredDocument) => {
     try {
-      const filename = FileSystem.cacheDirectory + `${doc.documentType}_export.txt`;
-      await FileSystem.writeAsStringAsync(filename, doc.content, { encoding: FileSystem.EncodingType.UTF8 });
-      await Sharing.shareAsync(filename);
-    } catch {
-      Alert.alert('Share Failed', 'Could not share the document.');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const shareMessage = `📜 *${doc.title}*\n\nType: ${doc.documentType.toUpperCase()}\nSaved on: ${new Date(doc.createdAt).toLocaleString()}\n\n${doc.content}\n\n*Shared via LawVise Secure Vault*`;
+      
+      const result = await Share.share({
+        message: shareMessage,
+        title: doc.title,
+      });
+
+      if (result.action === Share.sharedAction) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error: any) {
+      Alert.alert('Share Failed', error?.message || 'Could not share the document.');
     }
   };
 
@@ -268,7 +275,7 @@ export default function VaultScreen() {
                   </Pressable>
                   <Pressable style={styles.actionBtn} onPress={() => handleShare(selectedDoc)}>
                     <Feather name="share-2" size={14} color="#C9A84C" />
-                    <Text style={styles.actionBtnText}>Export</Text>
+                    <Text style={styles.actionBtnText}>Share</Text>
                   </Pressable>
                   <Pressable style={[styles.actionBtn, { borderColor: '#EF4444' }]} onPress={() => handleDeleteDoc(selectedDoc.id, selectedDoc.title)}>
                     <Feather name="trash-2" size={14} color="#EF4444" />
