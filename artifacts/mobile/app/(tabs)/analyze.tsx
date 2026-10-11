@@ -10,14 +10,16 @@ import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { fetch } from 'expo/fetch';
-import { useSaveDocument } from '@workspace/api-client-react';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import UpgradeModal from '../../components/UpgradeModal';
 import { exportToChamberPDF } from '@/services/pdfExport';
+
+const VAULT_STORAGE_KEY = '@lawwise_saved_documents';
 
 const DOC_TYPES = [
   'Contract', 'Judgment', 'FIR', 'Court Order', 'Legal Notice', 'Bail Application',
@@ -83,7 +85,6 @@ export default function AnalyzeScreen() {
   const insets = useSafeAreaInsets();
   const { getToken } = useAuth();
   const { jurisdiction, language } = useApp();
-  const saveDocument = useSaveDocument();
 
   const [docType, setDocType] = useState('Contract');
   const [analysisType, setAnalysisType] = useState('full_analysis');
@@ -240,6 +241,8 @@ export default function AnalyzeScreen() {
       setFreeUsageCount(prev => prev + 1);
     }
 
+    let analysisOutput = '';
+
     try {
       const token = await getToken();
       const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
@@ -264,25 +267,33 @@ export default function AnalyzeScreen() {
       }
 
       const data = await response.json() as { analysis?: string; result?: string; text?: string };
-      const analysisOutput = data.analysis || data.result || data.text || 'Analysis completed, but no report content was returned.';
+      analysisOutput = data.analysis || data.result || data.text || 'Analysis completed, but no report content was returned.';
 
       setResult(analysisOutput);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      try {
-        const title = `${docType} Analysis — ${new Date().toLocaleDateString()}`;
-        saveDocument.mutate({
-          data: { title, documentType: docType, analysisType, content: docText.slice(0, 500), analysisResult: analysisOutput },
-        });
-      } catch {}
-
     } catch (err: any) {
-      const fallbackReport = generateSmartLocalAnalysis(docText, docType, analysisType, jurisdiction);
-
-      setResult(fallbackReport);
+      analysisOutput = generateSmartLocalAnalysis(docText, docType, analysisType, jurisdiction);
+      setResult(analysisOutput);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } finally {
       setIsAnalyzing(false);
+
+      // Save document securely to AsyncStorage Vault
+      try {
+        const title = `${docType} Analysis — ${new Date().toLocaleDateString()}`;
+        const newDoc = {
+          id: Date.now().toString(),
+          title,
+          documentType: docType,
+          content: analysisOutput,
+          createdAt: new Date().toISOString(),
+        };
+        const existing = await AsyncStorage.getItem(VAULT_STORAGE_KEY);
+        const parsed = existing ? JSON.parse(existing) : [];
+        await AsyncStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify([newDoc, ...parsed]));
+      } catch (e) {
+        console.log('Failed to auto-save to vault', e);
+      }
     }
   };
 
