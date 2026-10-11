@@ -14,10 +14,10 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
-import * as Print from 'expo-print';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases from 'react-native-purchases';
 import MatterModal from '@/components/MatterModal';
+import { exportToChamberPDF } from '@/services/pdfExport';
 
 const RESEARCH_TYPES = ['General', 'Case Law', 'Statute', 'Constitution'];
 const FREE_LIMIT_KEY = '@lawvise_research_free_count';
@@ -235,41 +235,21 @@ export default function ResearchScreen() {
   const handleExportPDF = async () => {
     if (!result) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const cleanResultText = cleanMarkdown(result);
-      const htmlContent = `
-        <html>
-          <head>
-            <style>
-              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #111827; line-height: 1.6; }
-              h1 { color: #1e3a8a; border-bottom: 2px solid #C9A84C; padding-bottom: 10px; font-size: 22px; }
-              .badge { background: #f3f4f6; border: 1px solid #d1d5db; padding: 10px; font-size: 11px; font-weight: bold; margin-bottom: 20px; color: #4b5563; }
-              .content { font-size: 13px; white-space: pre-wrap; }
-            </style>
-          </head>
-          <body>
-            <h1>LawVise Official Legal Citation Paper</h1>
-            <div class="badge">Jurisdiction: ${jurisdiction.toUpperCase()} | Scope: ${selectedType}</div>
-            <div class="content">${cleanResultText.replace(/\n/g, '<br/>')}</div>
-          </body>
-        </html>
-      `;
+    
+    const cleanResultText = cleanMarkdown(result);
+    const sanitizedTitle = query ? query.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) : 'Legal_Research';
 
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      const sanitizedTitle = query ? query.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) : 'Legal_Research';
-      const customFileName = `LawVise_${sanitizedTitle}_Citation_Paper.pdf`;
-      const permanentUri = FileSystem.documentDirectory + customFileName;
-      
-      await FileSystem.moveAsync({ from: uri, to: permanentUri });
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(permanentUri, { mimeType: 'application/pdf', dialogTitle: 'Export Citation Paper PDF' });
-      } else {
-        Alert.alert('PDF Generated', `File saved at: ${permanentUri}`);
-      }
-    } catch {
-      Alert.alert('Export Failed', 'Could not generate PDF document.');
-    }
+    await exportToChamberPDF({
+      title: `Legal Citation Paper: ${sanitizedTitle.replace(/_/g, ' ')}`,
+      subtitle: `Jurisdiction: ${jurisdiction.toUpperCase()} | Scope: ${selectedType}`,
+      sections: [
+        {
+          heading: 'Research Memorandum Analysis',
+          content: cleanResultText
+        }
+      ],
+      footerNote: 'LawVise Official Legal Citation Paper • Chamber-Grade Intelligence'
+    });
   };
 
   const handleExportMarkdown = async () => {
