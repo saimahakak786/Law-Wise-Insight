@@ -15,18 +15,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
 import JurisdictionSelector from '@/components/JurisdictionSelector';
 
+// Distinct professional icon accent colors matched for your off-white theme
 const QUICK_ACTIONS = [
-  { id: 'vault', label: 'Firm\nVault', icon: 'folder' as const, route: '/vault' },
-  { id: 'analyze', label: 'Analyze\nDocument', icon: 'file-text' as const, route: '/(tabs)/analyze' },
-  { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat' },
-  { id: 'fact-matcher', label: 'Fact\nMatcher', icon: 'git-merge' as const, route: '/(tabs)/fact-matcher' },
-  { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/client-intake' },
-  { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/causelist' },
-
-  { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft' },
-  { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator' },
-  { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research' },
-  { id: 'tracker', label: 'Case\nTracker', icon: 'briefcase' as const, route: '/(tabs)/cases' },
+  { id: 'vault', label: 'Firm\nVault', icon: 'folder' as const, route: '/vault', color: '#B8860B' }, // Deep Gold
+  { id: 'analyze', label: 'Analyze\nDocument', icon: 'file-text' as const, route: '/(tabs)/analyze', color: '#2563EB' }, // Blue
+  { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat', color: '#0D9488' }, // Teal
+  { id: 'fact-matcher', label: 'Fact\nMatcher', icon: 'git-merge' as const, route: '/(tabs)/fact-matcher', color: '#7C3AED' }, // Purple
+  { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/client-intake', color: '#059669' }, // Emerald
+  { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/causelist', color: '#EA580C' }, // Orange
+  { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft', color: '#DB2777' }, // Pink
+  { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator', color: '#0891B2' }, // Cyan
+  { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research', color: '#4F46E5' }, // Indigo
+  { id: 'tracker', label: 'Case\nTracker', icon: 'briefcase' as const, route: '/(tabs)/cases', color: '#CA8A04' }, // Amber
 ];
 
 const MOCK_FALLBACK_DOCUMENTS = [
@@ -41,7 +41,7 @@ const MOCK_FALLBACK_CASES = [
   { id: 3, title: 'Verma Employment Arbitration', status: 'active', nextHearing: 'Sep 18, 11:00 AM' },
 ];
 
-const MAX_RECORDING_SECONDS = 300; // Updated to 5 minutes (300 seconds)
+const MAX_RECORDING_SECONDS = 300;
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -66,7 +66,7 @@ export default function HomeScreen() {
   const [transcript, setTranscript] = useState('');
   const [savedMemos, setSavedMemos] = useState<string[]>([]);
   
-  const [freeDictationsLeft, setFreeDictationsLeft] = useState(50); // Updated to 50 free limits for testing
+  const [freeDictationsLeft, setFreeDictationsLeft] = useState(50);
   const [isProUser, setIsProUser] = useState(false);
 
   useEffect(() => {
@@ -314,12 +314,9 @@ export default function HomeScreen() {
             style={({ pressed }) => [styles.actionCard, { backgroundColor: colors.card, opacity: pressed ? 0.85 : 1 }]}
             onPress={() => handleQuickActionPress(action)}
           >
-            <LinearGradient
-              colors={['#C9A84C22', '#C9A84C08']}
-              style={styles.actionIconBg}
-            >
-              <Feather name={action.icon} size={24} color="#C9A84C" />
-            </LinearGradient>
+            <View style={[styles.actionIconBg, { backgroundColor: `${action.color}15` }]}>
+              <Feather name={action.icon} size={24} color={action.color} />
+            </View>
             <Text style={[styles.actionLabel, { color: colors.foreground }]}>{action.label}</Text>
           </Pressable>
         ))}
