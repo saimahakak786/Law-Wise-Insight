@@ -12,6 +12,7 @@ import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import UpgradeModal from '@/components/UpgradeModal';
+import { exportToChamberPDF } from '@/services/pdfExport';
 
 const FREE_VAULT_LIMIT = 5;
 const VAULT_STORAGE_KEY = '@lawwise_saved_documents';
@@ -19,7 +20,7 @@ const VAULT_STORAGE_KEY = '@lawwise_saved_documents';
 export default function VaultScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { savedDocuments, activeMatter } = useApp();
+  const { savedDocuments, activeMatter, jurisdiction } = useApp();
 
   const [documents, setDocuments] = useState<StoredDocument[]>([]);
   const [searchFilter, setSearchFilter] = useState('');
@@ -54,7 +55,6 @@ export default function VaultScreen() {
     Alert.alert('Copied', 'Document content copied to clipboard.');
   };
 
-  // 🚀 Robust Native Share implementation replacing expo-sharing errors
   const handleShare = async (doc: StoredDocument) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -71,6 +71,21 @@ export default function VaultScreen() {
     } catch (error: any) {
       Alert.alert('Share Failed', error?.message || 'Could not share the document.');
     }
+  };
+
+  const handleExportVaultPDF = async (doc: StoredDocument) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await exportToChamberPDF({
+      title: doc.title,
+      subtitle: `Document Type: ${doc.documentType.toUpperCase()} | Jurisdiction: ${(jurisdiction || 'IN').toUpperCase()}`,
+      sections: [
+        {
+          heading: 'Vault Record Content & Summary',
+          content: doc.content
+        }
+      ],
+      footerNote: `LawVise Secure Firm Vault • Saved on ${new Date(doc.createdAt).toLocaleDateString()}`
+    });
   };
 
   const handleDeleteDoc = (id: string, title: string) => {
@@ -142,7 +157,6 @@ export default function VaultScreen() {
         contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Section */}
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
             <Feather name="archive" size={22} color="#C9A84C" />
@@ -153,7 +167,6 @@ export default function VaultScreen() {
           </Text>
         </View>
 
-        {/* Free Tier Storage Notice Banner */}
         {!isPro && (
           <Pressable 
             style={[styles.storageBanner, { backgroundColor: colors.card, borderColor: '#C9A84C40' }]}
@@ -176,7 +189,6 @@ export default function VaultScreen() {
           </Pressable>
         )}
 
-        {/* Active Matter Context Indicator */}
         {activeMatter && (
           <View style={[styles.matterNotice, { backgroundColor: colors.card, borderColor: '#C9A84C' }]}>
             <Feather name="briefcase" size={14} color="#C9A84C" />
@@ -186,7 +198,6 @@ export default function VaultScreen() {
           </View>
         )}
 
-        {/* Search Bar */}
         <View style={[styles.searchWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Feather name="search" size={16} color={colors.mutedForeground} style={{ marginRight: 8 }} />
           <TextInput
@@ -203,7 +214,6 @@ export default function VaultScreen() {
           ) : null}
         </View>
 
-        {/* Document Detail Viewer or Edit Form or List */}
         {selectedDoc ? (
           <View style={[styles.detailContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.detailHeader}>
@@ -265,6 +275,10 @@ export default function VaultScreen() {
                 </ScrollView>
 
                 <View style={styles.detailActionRow}>
+                  <Pressable style={styles.actionBtn} onPress={() => handleExportVaultPDF(selectedDoc)}>
+                    <Feather name="file-text" size={14} color="#C9A84C" />
+                    <Text style={styles.actionBtnText}>PDF</Text>
+                  </Pressable>
                   <Pressable style={styles.actionBtn} onPress={() => handleStartEdit(selectedDoc)}>
                     <Feather name="edit-2" size={14} color="#C9A84C" />
                     <Text style={styles.actionBtnText}>Edit</Text>
@@ -279,7 +293,7 @@ export default function VaultScreen() {
                   </Pressable>
                   <Pressable style={[styles.actionBtn, { borderColor: '#EF4444' }]} onPress={() => handleDeleteDoc(selectedDoc.id, selectedDoc.title)}>
                     <Feather name="trash-2" size={14} color="#EF4444" />
-                    <Text style={[styles.actionBtnText, { color: '#EF4444' }]}>Delete</Text>
+                    <Text style={[styles.actionBtnText, { color: '#EF4444' }]}>Del</Text>
                   </Pressable>
                 </View>
               </View>
@@ -320,6 +334,15 @@ export default function VaultScreen() {
                     <Text style={[styles.docTypeTag, { color: '#C9A84C' }]}>{item.documentType.toUpperCase()}</Text>
                     
                     <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
+                      <Pressable 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleExportVaultPDF(item);
+                        }} 
+                        style={styles.cardActionBtn}
+                      >
+                        <Feather name="file-text" size={13} color="#C9A84C" />
+                      </Pressable>
                       <Pressable 
                         onPress={(e) => {
                           e.stopPropagation();
@@ -377,7 +400,6 @@ export default function VaultScreen() {
         )}
       </ScrollView>
 
-      {/* Upgrade Modal for Vault Limit */}
       <UpgradeModal
         visible={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
