@@ -15,7 +15,7 @@ export interface PDFExportOptions {
   footerNote?: string;
 }
 
-export async function exportToChamberPDF(options: PDFExportOptions) {
+export async function exportToChamberPDF(options: PDFExportOptions): Promise<void> {
   try {
     const { title, subtitle, sections, footerNote } = options;
 
@@ -118,7 +118,7 @@ export async function exportToChamberPDF(options: PDFExportOptions) {
     const { uri } = await Print.printToFileAsync({ html: htmlContent });
     const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
     const customFileName = `LawVise_${sanitizedTitle}.pdf`;
-    const permanentUri = FileSystem.documentDirectory + customFileName;
+    const permanentUri = (FileSystem.documentDirectory || '') + customFileName;
 
     await FileSystem.moveAsync({ from: uri, to: permanentUri });
 
@@ -127,8 +127,9 @@ export async function exportToChamberPDF(options: PDFExportOptions) {
     } else {
       Alert.alert('PDF Generated', `File saved at: ${permanentUri}`);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : 'Could not generate chamber PDF document.';
     console.error('PDF Export Error:', error);
-    Alert.alert('Export Failed', error?.message || 'Could not generate chamber PDF document.');
+    Alert.alert('Export Failed', errMessage);
   }
 }
