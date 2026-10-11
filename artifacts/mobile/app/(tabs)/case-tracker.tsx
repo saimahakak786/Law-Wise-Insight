@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 // Import custom components
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import { exportToChamberPDF } from '@/services/pdfExport';
 
 const STORAGE_KEY = '@lawwise_cause_list_matters';
 const CASES_STORAGE_KEY = '@lawwise_cases_portfolio_v2';
@@ -92,7 +93,7 @@ export default function CauseListScreen() {
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#C9A84C',
-        sound: 'court_alarm', // 👈 Matches court_alarm.mp3 asset name without extension
+        sound: 'court_alarm',
       });
     }
   };
@@ -143,7 +144,6 @@ export default function CauseListScreen() {
     }
   };
 
-  // 🛠️ Local timezone date parser to prevent UTC offset & negative millis issues
   const parseDateInput = (dateStr: string) => {
     const cleanStr = dateStr.trim();
     const parts = cleanStr.split(/[-/]/);
@@ -152,14 +152,14 @@ export default function CauseListScreen() {
       let day, month, year;
       if (parts[0].length === 4) {
         year = parseInt(parts[0], 10);
-        month = parseInt(parts[1], 10) - 1; // 0-indexed months
+        month = parseInt(parts[1], 10) - 1;
         day = parseInt(parts[2], 10);
       } else {
         day = parseInt(parts[0], 10);
         month = parseInt(parts[1], 10) - 1;
         year = parseInt(parts[2], 10);
       }
-      return new Date(year, month, day, 9, 0, 0); // Local time 9:00 AM alarm
+      return new Date(year, month, day, 9, 0, 0);
     }
     return new Date(dateStr);
   };
@@ -192,9 +192,30 @@ export default function CauseListScreen() {
     setSelectedEventType(item.eventType || 'Hearing');
   };
 
+  const handleExportItemPDF = async (item: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const daysLeft = getDaysRemaining(item.hearingDate);
+
+    await exportToChamberPDF({
+      title: `Cause List & Compliance Report: ${item.caseTitle}`,
+      subtitle: `Event Type: ${item.eventType || 'Hearing'} | Forum: ${item.judgeName}`,
+      sections: [
+        {
+          heading: 'Matter & Deadline Schedule Details',
+          content: `Case Title: ${item.caseTitle}\nTarget Date: ${item.hearingDate} (${daysLeft >= 0 ? `${daysLeft} days remaining` : 'Overdue'})\nItem Number: ${item.itemNumber}\nForum / Judge: ${item.judgeName}\nJurisdiction: ${jurisdiction}`
+        },
+        {
+          heading: 'Compliance & Action Notes',
+          content: `This record is formally logged under LawVise Cause List & Compliance module for tracking mandatory court schedules, written statements, and limitation deadlines.`
+        }
+      ],
+      footerNote: 'LawVise Cause List & Compliance Module • Official Schedule Record'
+    });
+  };
+
   const handleWhatsAppShare = (item: any) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const message = `⚖️ *Court Hearing & Compliance Update*\n\n*Case:* ${item.caseTitle}\n*Type:* ${item.eventType || 'Hearing'}\n*Date:* ${item.hearingDate}\n*Item No:* ${item.itemNumber}\n*Forum:* ${item.judgeName}\n\nPlease make a note of this schedule.\n\n*Sent via LawWise*`;
+    const message = `⚖️ *Court Hearing & Compliance Update*\n\n*Case:* ${item.caseTitle}\n*Type:* ${item.eventType || 'Hearing'}\n*Date:* ${item.hearingDate}\n*Item No:* ${item.itemNumber}\n*Forum:* ${item.judgeName}\n\nPlease make a note of this schedule.\n\n*Sent via LawVise*`;
     const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
     
     Linking.canOpenURL(url).then((supported) => {
@@ -243,18 +264,15 @@ export default function CauseListScreen() {
             const TWO_HOURS = 2 * 60 * 60 * 1000;
 
             if (timeUntilHearingMs > TWENTY_FOUR_HOURS) {
-              // Case saved > 24 hours away -> Remind 24h prior
               reminderTime = new Date(hearingDateTime.getTime() - TWENTY_FOUR_HOURS);
               subTitle = `Reminder: Hearing is tomorrow (${hearingDate})`;
             } 
             else if (timeUntilHearingMs > TWO_HOURS) {
-              // Case saved between 2h and 24h away (12h, 8h, 6h, 4h) -> Remind 2 hours prior
               reminderTime = new Date(hearingDateTime.getTime() - TWO_HOURS);
               const hoursLeft = Math.round(timeUntilHearingMs / (1000 * 60 * 60));
               subTitle = `🚨 URGENT: Hearing is in ~${hoursLeft} hour(s)!`;
             } 
             else {
-              // Case saved with less than 2 hours left -> Alert immediately (~5 seconds)
               reminderTime = new Date(Date.now() + 5000);
               const minutesLeft = Math.max(1, Math.round(timeUntilHearingMs / (1000 * 60)));
               subTitle = `🚨 CRITICAL: Hearing starting in ~${minutesLeft} minute(s)!`;
@@ -269,7 +287,7 @@ export default function CauseListScreen() {
               content: {
                 title: `⚖️ URGENT: ${selectedEventType}`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — ${subTitle}`,
-                sound: 'court_alarm.mp3', // 👈 Custom court alarm sound filename
+                sound: 'court_alarm.mp3',
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate, matterId },
               },
@@ -372,7 +390,6 @@ export default function CauseListScreen() {
       contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header Section */}
       <View style={styles.headerContainer}>
         <View style={styles.titleRow}>
           <Feather name="calendar" size={22} color="#C9A84C" />
@@ -383,7 +400,6 @@ export default function CauseListScreen() {
         </Text>
       </View>
 
-      {/* Form Card */}
       <Card style={[styles.formCard, { backgroundColor: colors.card, borderColor: editingMatterId ? '#C9A84C' : colors.border }]}>
         <View style={styles.formHeaderRow}>
           <Text style={styles.sectionHeaderLabel}>
@@ -401,7 +417,6 @@ export default function CauseListScreen() {
           </Pressable>
         </View>
         
-        {/* Event Type Selector */}
         <Text style={[styles.inputLabel, { color: colors.foreground }]}>Deadline Type</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeSelectorScroll}>
           {EVENT_TYPES.map((type) => {
@@ -499,7 +514,6 @@ export default function CauseListScreen() {
         </View>
       </Card>
 
-      {/* Tracked Matters Section */}
       <View style={styles.resultsHeaderRow}>
         <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Active Deadlines & Cause List</Text>
         <View style={styles.countBadge}>
@@ -544,6 +558,9 @@ export default function CauseListScreen() {
                   <View style={[styles.urgencyBadge, { backgroundColor: `${urgencyColor}18`, borderColor: `${urgencyColor}40` }]}>
                     <Text style={[styles.urgencyText, { color: urgencyColor }]}>{urgencyLabel}</Text>
                   </View>
+                  <TouchableOpacity onPress={() => handleExportItemPDF(item)} style={styles.actionBtn}>
+                    <Feather name="file-text" size={14} color="#C9A84C" />
+                  </TouchableOpacity>
                   <TouchableOpacity onPress={() => handleWhatsAppShare(item)} style={styles.actionBtn}>
                     <Feather name="share-2" size={14} color="#10B981" />
                   </TouchableOpacity>
@@ -570,7 +587,6 @@ export default function CauseListScreen() {
         })
       )}
 
-      {/* Case Portfolio Picker Modal */}
       <Modal visible={showCasePickerModal} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setShowCasePickerModal(false)}>
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
