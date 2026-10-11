@@ -6,23 +6,23 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lawwise",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "jsEngine": "hermes",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#070024"
+      "backgroundColor": "#F0F4F5"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.saimahakak786.lawwise",
       "jsEngine": "hermes",
-      "backgroundColor": "#070024"
+      "backgroundColor": "#F0F4F5"
     },
     "android": {
       "package": "com.saimahakak786.lawwise",
       "jsEngine": "hermes",
-      "backgroundColor": "#070024",
+      "backgroundColor": "#F0F4F5",
       "displayName": "LawVise"
     },
     "web": {
@@ -79,10 +79,10 @@
       "reactCompiler": true
     },
     "androidStatusBar": {
-      "backgroundColor": "#070024",
-      "barStyle": "light-content"
+      "backgroundColor": "#F0F4F5",
+      "barStyle": "dark-content"
     },
-    "backgroundColor": "#070024",
+    "backgroundColor": "#F0F4F5",
     "extra": {
       "EXPO_PUBLIC_API_URL": "https://law-wise-insight.onrender.com",
       "eas": {
