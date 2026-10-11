@@ -10,15 +10,14 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases from 'react-native-purchases';
 import * as Clipboard from 'expo-clipboard';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 
-// Import custom components
+// Import custom components & chamber PDF service
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import { exportToChamberPDF } from '@/services/pdfExport';
 
 const FREE_LIMIT_KEY = '@lawvise_factmatcher_free_count';
-const MAX_FREE_USES = 7; // 7 free uses limit for testing
+const MAX_FREE_USES = 7;
 
 export default function FactMatcherScreen() {
   const colors = useColors();
@@ -61,7 +60,6 @@ export default function FactMatcherScreen() {
     }
   };
 
-  // --- Fully Dynamic Open-Ended Precedent Generator (Handles ANY Fact Scenario) ---
   const getDynamicPrecedents = (inputText: string) => {
     const currentJuri = (jurisdiction || 'IN').toUpperCase();
     const cleanText = inputText.trim();
@@ -167,7 +165,6 @@ export default function FactMatcherScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      // 🚀 Robust Chamber-Grade Local Precedent Synthesis Fallback
       setResults(getDynamicPrecedents(facts));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } finally {
@@ -175,7 +172,6 @@ export default function FactMatcherScreen() {
     }
   };
 
-  // --- Action Handlers: Copy, Save, PDF Export ---
   const handleCopy = async (item: any) => {
     await Clipboard.setStringAsync(`Case: ${item.title}\nCitation: ${item.citation}\nPrinciple: ${item.principle}`);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -205,51 +201,24 @@ export default function FactMatcherScreen() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const htmlContent = `
-        <html>
-          <head>
-            <style>
-              body { font-family: 'Helvetica', Arial, sans-serif; padding: 30px; color: #111; }
-              h1 { color: #C9A84C; font-size: 22px; border-bottom: 2px solid #C9A84C; padding-bottom: 8px; }
-              .meta { font-size: 12px; color: #555; margin-bottom: 20px; }
-              .facts-box { background: #f8f9fa; padding: 12px; border-left: 4px solid #C9A84C; margin-bottom: 20px; font-size: 13px; }
-              .card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; page-break-inside: avoid; }
-              .citation { background: #fff3cd; color: #856404; padding: 3px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; display: inline-block; }
-              .title { font-size: 15px; font-weight: bold; margin: 8px 0; }
-              .principle { font-size: 13px; color: #333; line-height: 1.5; }
-            </style>
-          </head>
-          <body>
-            <h1>LawVise - Precedent Match Report</h1>
-            <div class="meta">Jurisdiction: <b>${jurisdiction}</b> | Date: ${new Date().toLocaleDateString()}</div>
-            
-            <div class="facts-box">
-              <strong>Analyzed Facts:</strong><br/>
-              ${facts}
-            </div>
 
-            <h3>Matched Precedents (${results.length})</h3>
-            ${results.map(item => `
-              <div class="card">
-                <span class="citation">${item.citation}</span>
-                <div class="title">${item.title}</div>
-                <div class="principle">${item.principle}</div>
-              </div>
-            `).join('')}
-          </body>
-        </html>
-      `;
+    const sections = [
+      {
+        heading: 'Analyzed Fact Scenario',
+        content: facts
+      },
+      ...results.map((item, index) => ({
+        heading: `Precedent [${index + 1}] — ${item.citation} (${item.relevance ?? '95% Match'})`,
+        content: `Title: ${item.title}\n\nLegal Principle & Holding:\n${item.principle}`
+      }))
+    ];
 
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri);
-      } else {
-        Alert.alert('PDF Generated', `File saved to: ${uri}`);
-      }
-    } catch {
-      Alert.alert('Export Error', 'Could not generate PDF report.');
-    }
+    await exportToChamberPDF({
+      title: 'LawVise - Precedent Match Report',
+      subtitle: `Jurisdiction: ${jurisdiction.toUpperCase()} | Total Matches: ${results.length}`,
+      sections,
+      footerNote: 'LawVise Fact Matcher & Precedent Finder • Chamber-Grade Legal Report'
+    });
   };
 
   const handleUpgrade = async () => {
@@ -309,7 +278,6 @@ export default function FactMatcherScreen() {
         contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Section */}
         <View style={styles.headerContainer}>
           <View style={styles.titleRow}>
             <Feather name="git-merge" size={22} color="#C9A84C" />
@@ -320,7 +288,6 @@ export default function FactMatcherScreen() {
           </Text>
         </View>
 
-        {/* Form Card */}
         <Card style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.sectionHeaderLabel}>CASE SCENARIO / FACTS ({jurisdiction})</Text>
           
@@ -343,7 +310,6 @@ export default function FactMatcherScreen() {
           />
         </Card>
 
-        {/* Results Header & PDF Export Button */}
         <View style={styles.resultsHeaderRow}>
           <Text style={[styles.resultsHeader, { color: colors.foreground }]}>Matched Precedents</Text>
           {results.length > 0 && (
@@ -378,7 +344,6 @@ export default function FactMatcherScreen() {
               <Text style={[styles.caseTitle, { color: colors.foreground }]}>{item.title}</Text>
               <Text style={[styles.principleText, { color: colors.mutedForeground }]}>{item.principle}</Text>
 
-              {/* Action Bar (Copy & Save) */}
               <View style={styles.actionRow}>
                 <Pressable style={styles.actionBtn} onPress={() => handleCopy(item)}>
                   <Feather name="copy" size={14} color="#C9A84C" />
