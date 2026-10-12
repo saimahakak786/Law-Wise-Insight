@@ -88,31 +88,148 @@ export default function CalculatorScreen() {
       console.log("Limitation API Error (using multi-jurisdictional offline fallback):", e);
 
       const jurLower = jurisdiction?.toLowerCase() || '';
+      const lower = limCaseType.toLowerCase();
+
       let fallbackYears = 3;
       let fallbackDesc = `Standard limitation period for ${limCaseType} under ${jurisdiction} framework.`;
       let fallbackDeadline = limEventDate ? 'Check statutory timeline' : 'Within statutory period from cause of action';
 
-      const lower = limCaseType.toLowerCase();
-
       if (jurLower.includes('usa') || jurLower.includes('united states')) {
-        fallbackYears = lower.includes('property') ? 10 : (lower.includes('contract') || lower.includes('debt') ? 6 : 3);
-        fallbackDesc = `U.S. federal/state statutory limitation guideline for ${limCaseType} under U.S. jurisprudence.`;
-      } else if (jurLower.includes('uk') || jurLower.includes('kingdom')) {
-        fallbackYears = lower.includes('property') ? 12 : (lower.includes('contract') || lower.includes('debt') ? 6 : 3);
-        fallbackDesc = `Limitation Act 1980 framework for England, Wales & Northern Ireland regarding ${limCaseType}.`;
-      } else if (jurLower.includes('uae') || jurLower.includes('emirates')) {
-        fallbackYears = lower.includes('commercial') ? 10 : (lower.includes('cheque') ? 2 : 3);
-        fallbackDesc = `UAE Civil Code & Commercial Transactions Law framework for ${limCaseType}.`;
-      } else {
+        if (lower.includes('money') || lower.includes('debt') || lower.includes('contract')) {
+          fallbackYears = 6;
+          fallbackDesc = `U.S. State Statute of Limitations for Written Contracts & Debt Recovery.`;
+        } else if (lower.includes('cheque') || lower.includes('instrument')) {
+          fallbackYears = 3;
+          fallbackDesc = `UCC Article 3 (Section 3-118) limitation for negotiable instruments.`;
+        } else if (lower.includes('consumer')) {
+          fallbackYears = 3;
+          fallbackDesc = `U.S. State Consumer Protection Acts general civil window.`;
+        } else if (lower.includes('damages') || lower.includes('tort') || lower.includes('motor accident')) {
+          fallbackYears = 2;
+          fallbackDesc = `Standard U.S. tort and personal injury limitation period.`;
+        } else if (lower.includes('property')) {
+          fallbackYears = 10;
+          fallbackDesc = `Adverse possession and real property recovery statute.`;
+        } else if (lower.includes('labour')) {
+          fallbackYears = 2;
+          fallbackDesc = `FLSA / EEOC employment claim guidelines.`;
+        } else if (lower.includes('criminal')) {
+          fallbackYears = 5;
+          fallbackDesc = `General federal/state non-capital criminal offense statute of limitations.`;
+        } else if (lower.includes('appeal') || lower.includes('writ')) {
+          fallbackYears = 0.08; 
+          fallbackDesc = `Appellate procedural notice of appeal filing deadline (approx. 30 days).`;
+        } else if (lower.includes('execution')) {
+          fallbackYears = 10;
+          fallbackDesc = `Judgment lien enforcement and decree execution period.`;
+        } else {
+          fallbackYears = 3;
+          fallbackDesc = `U.S. civil residual statute of limitations.`;
+        }
+      } 
+      else if (jurLower.includes('uk') || jurLower.includes('kingdom')) {
+        if (lower.includes('money') || lower.includes('debt') || lower.includes('contract')) {
+          fallbackYears = 6;
+          fallbackDesc = `Section 5 of the Limitation Act 1980 for simple contracts and debt.`;
+        } else if (lower.includes('cheque')) {
+          fallbackYears = 6;
+          fallbackDesc = `Limitation Act 1980 financial instrument recovery framework.`;
+        } else if (lower.includes('consumer') || lower.includes('service') || lower.includes('damages') || lower.includes('appeal')) {
+          fallbackYears = 3;
+          fallbackDesc = `Limitation Act 1980 tort, consumer, and service claim framework.`;
+        } else if (lower.includes('property')) {
+          fallbackYears = 12;
+          fallbackDesc = `Section 15 of the Limitation Act 1980 for recovery of land/property.`;
+        } else if (lower.includes('labour')) {
+          fallbackYears = 3;
+          fallbackDesc = `Employment Tribunal standard claim filing window (e.g., unfair dismissal).`;
+        } else if (lower.includes('criminal')) {
+          fallbackYears = 0.5; 
+          fallbackDesc = `Magistrates' Court summary offense time bar (Section 127 Magistrates' Courts Act 1980).`;
+        } else if (lower.includes('motor accident')) {
+          fallbackYears = 3;
+          fallbackDesc = `Personal injury limitation under Section 11 of the Limitation Act 1980.`;
+        } else if (lower.includes('writ')) {
+          fallbackYears = 0.25; 
+          fallbackDesc = `Administrative Court Judicial Review prompt filing requirement (typically 3 months).`;
+        } else if (lower.includes('execution')) {
+          fallbackYears = 6;
+          fallbackDesc = `Limitation Act 1980 enforcement window for judgment debts/decrees.`;
+        } else {
+          fallbackYears = 6;
+          fallbackDesc = `Limitation Act 1980 standard civil framework.`;
+        }
+      } 
+      else if (jurLower.includes('uae') || jurLower.includes('emirates')) {
+        if (lower.includes('commercial') || lower.includes('money') || lower.includes('debt')) {
+          fallbackYears = 10;
+          fallbackDesc = `UAE Commercial Transactions Law general commercial obligation period.`;
+        } else if (lower.includes('cheque')) {
+          fallbackYears = 2;
+          fallbackDesc = `UAE Commercial Transactions Law recourse period for dishonored cheques.`;
+        } else if (lower.includes('consumer') || lower.includes('service')) {
+          fallbackYears = 2;
+          fallbackDesc = `UAE Consumer Protection Law provisions.`;
+        } else if (lower.includes('damages') || lower.includes('tort') || lower.includes('motor accident')) {
+          fallbackYears = 3;
+          fallbackDesc = `UAE Civil Code unlawful acts (tort/harm) prescription period (3 years from knowledge).`;
+        } else if (lower.includes('property')) {
+          fallbackYears = 15;
+          fallbackDesc = `UAE Civil Code real property and ownership dispute limitation framework.`;
+        } else if (lower.includes('labour')) {
+          fallbackYears = 1;
+          fallbackDesc = `UAE Labour Law statutory deadline for raising worker disputes to court.`;
+        } else if (lower.includes('criminal')) {
+          fallbackYears = 3; 
+          fallbackDesc = `UAE Penal Code statute of limitations for misdemeanors.`;
+        } else if (lower.includes('appeal') || lower.includes('writ')) {
+          fallbackYears = 0.08; 
+          fallbackDesc = `UAE procedural laws for filing court appeals (30 days from judgment).`;
+        } else if (lower.includes('execution')) {
+          fallbackYears = 15;
+          fallbackDesc = `UAE Civil Procedures Law execution of judicial decrees limitation span.`;
+        } else {
+          fallbackYears = 3;
+          fallbackDesc = `UAE Civil Code general prescription period.`;
+        }
+      } 
+      else {
         if (lower.includes('consumer')) {
           fallbackYears = 2;
           fallbackDesc = `Section 69 of the Consumer Protection Act, 2019.`;
         } else if (lower.includes('cheque bounce')) {
-          fallbackYears = 0.1;
-          fallbackDesc = `Section 138 Negotiable Instruments Act timeline.`;
+          fallbackYears = 0.08; 
+          fallbackDesc = `Section 138 Negotiable Instruments Act timeline (30 days from notice expiry).`;
         } else if (lower.includes('property')) {
           fallbackYears = 12;
-          fallbackDesc = `Limitation Act provisions for immovable property recovery.`;
+          fallbackDesc = `Limitation Act, 1963 Schedule Article 65 for immovable property.`;
+        } else if (lower.includes('money') || lower.includes('debt')) {
+          fallbackYears = 3;
+          fallbackDesc = `Limitation Act, 1963 Article 19/21 for money lent or recovered.`;
+        } else if (lower.includes('damages') || lower.includes('tort')) {
+          fallbackYears = 1;
+          fallbackDesc = `Limitation Act, 1963 Article 75/79 for compensation of torts.`;
+        } else if (lower.includes('service matter')) {
+          fallbackYears = 1;
+          fallbackDesc = `Administrative tribunal service dispute limitation framework.`;
+        } else if (lower.includes('labour')) {
+          fallbackYears = 3;
+          fallbackDesc = `Industrial Disputes Act / Labour adjudication norms.`;
+        } else if (lower.includes('criminal')) {
+          fallbackYears = 3; 
+          fallbackDesc = `Code of Criminal Procedure, 1973 (CrPC) Section 468 bar to taking cognizance.`;
+        } else if (lower.includes('motor accident')) {
+          fallbackYears = 0; 
+          fallbackDesc = `Motor Vehicles Act (MACT) claim petition with no absolute time bar, filed promptly.`;
+        } else if (lower.includes('appeal')) {
+          fallbackYears = 0.25; 
+          fallbackDesc = `Limitation Act, 1963 Articles 114–117 for appeals.`;
+        } else if (lower.includes('execution')) {
+          fallbackYears = 12;
+          fallbackDesc = `Article 136 of the Limitation Act, 1963 for execution of any decree.`;
+        } else {
+          fallbackYears = 3;
+          fallbackDesc = `Limitation Act, 1963 standard period for ${limCaseType}.`;
         }
       }
 
@@ -120,7 +237,7 @@ export default function CalculatorScreen() {
         periodYears: fallbackYears,
         deadline: fallbackDeadline,
         description: fallbackDesc,
-        notes: `Calculated successfully via Lawwise multi-jurisdictional fallback (${jurisdiction}).`
+        notes: `Calculated successfully via Lawwise multi-jurisdictional fallback (${jurisdiction || 'India'}).`
       });
     } finally {
       setLimitationPending(false);
