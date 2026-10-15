@@ -20,7 +20,6 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 
-// Import custom components
 import Button from '../../components/Button';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -158,7 +157,6 @@ export default function SignUpPage() {
     setShowPassword((v) => !v);
   };
 
-  // Verification step for email address
   if (
     signUp.status === 'missing_requirements' &&
     signUp.unverifiedFields.includes('email_address') &&
@@ -186,7 +184,6 @@ export default function SignUpPage() {
           <Text style={styles.pasteText}>Paste Code from Clipboard</Text>
         </Pressable>
 
-        {/* Segmented OTP Boxes Container */}
         <Pressable style={styles.otpContainer} onPress={() => otpInputRef.current?.focus()}>
           <TextInput
             ref={otpInputRef}
@@ -251,7 +248,6 @@ export default function SignUpPage() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
         <View style={styles.logoRow}>
           <Feather name="shield" size={32} color="#C5A059" />
           <Text style={styles.logoText}>LawVise</Text>
@@ -260,7 +256,6 @@ export default function SignUpPage() {
         <Text style={styles.title}>Create account</Text>
         <Text style={styles.subtitle}>Your AI-powered legal workspace</Text>
 
-        {/* Email */}
         <View style={styles.inputWrapper}>
           <Feather name="mail" size={18} color="#6B7280" style={styles.inputIcon} />
           <TextInput
@@ -278,7 +273,6 @@ export default function SignUpPage() {
           <Text style={styles.error}>{errors.fields.emailAddress.message}</Text>
         )}
 
-        {/* Password */}
         <View style={styles.inputWrapper}>
           <Feather name="lock" size={18} color="#6B7280" style={styles.inputIcon} />
           <TextInput
@@ -335,7 +329,7 @@ export default function SignUpPage() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account? </Text>
-          <Link href="/(auth)/sign-in">
+          <Link href="/sign-in">
             <Text style={styles.footerLink}>Sign in</Text>
           </Link>
         </View>
