@@ -81,7 +81,6 @@ export default function SignInPage() {
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
-      // Filter out harmless route navigation or cancel noise to avoid false-alarm error boxes
       if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate') && !errorMessage.includes('Route')) {
         setSignInError(errorMessage);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -204,7 +203,6 @@ export default function SignInPage() {
     }
   };
 
-  // Verification State (MFA challenge)
   if (signIn.status === 'needs_client_trust' || signIn.status === 'needs_second_factor') {
     useEffect(() => {
       const sendInitialCode = async () => {
@@ -288,7 +286,6 @@ export default function SignInPage() {
     );
   }
 
-  // Forgot password: send code step
   if (forgotStep === 'send_code' || forgotStep === 'sending') {
     return (
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -336,7 +333,6 @@ export default function SignInPage() {
     );
   }
 
-  // Forgot password: enter code + new password step
   if (forgotStep === 'reset_password' || forgotStep === 'resetting') {
     return (
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -484,7 +480,7 @@ export default function SignInPage() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>New to LawVise? </Text>
-          <Link href="/(auth)/sign-up">
+          <Link href="/sign-up">
             <Text style={styles.footerLink}>Create account</Text>
           </Link>
         </View>
