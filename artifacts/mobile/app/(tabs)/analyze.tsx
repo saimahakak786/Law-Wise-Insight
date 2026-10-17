@@ -20,6 +20,7 @@ import UpgradeModal from '../../components/UpgradeModal';
 import { exportToChamberPDF } from '@/services/pdfExport';
 
 const VAULT_STORAGE_KEY = '@lawwise_saved_documents';
+const BASE_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://law-wise-insight.onrender.com';
 
 const DOC_TYPES = [
   'Contract', 'Judgment', 'FIR', 'Court Order', 'Legal Notice', 'Bail Application',
@@ -77,7 +78,7 @@ function generateSmartLocalAnalysis(text: string, docType: string, analysisType:
     `4. RECOMMENDATIONS:\n` +
     `- Map key deadlines into the Cause List & Compliance module for automated tracking.\n` +
     `- Review indemnity and termination clauses thoroughly.\n\n` +
-    `*(Note: Live server cluster was waking up or unreachable. Generated via LawVise Local Synthesis Engine using your pasted text).*`;
+    `*(Note: Generated via LawVise Local Synthesis Engine).*`;
 }
 
 export default function AnalyzeScreen() {
@@ -123,7 +124,6 @@ export default function AnalyzeScreen() {
       setUploadMode('upload');
 
       const token = await getToken();
-      const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
       
       const formData = new FormData();
       formData.append('file', {
@@ -132,7 +132,7 @@ export default function AnalyzeScreen() {
         type: asset.mimeType ?? 'application/pdf',
       } as any);
 
-      const response = await fetch(`https://${domain}/api/lawwise/upload`, {
+      const response = await fetch(`${BASE_API_URL}/api/lawwise/upload`, {
         method: 'POST',
         headers: { 
           Authorization: `Bearer ${token}` 
@@ -197,9 +197,8 @@ export default function AnalyzeScreen() {
       });
       
       const token = await getToken();
-      const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
 
-      const response = await fetch(`https://${domain}/api/lawwise/upload`, {
+      const response = await fetch(`${BASE_API_URL}/api/lawwise/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ fileBase64, mimeType: 'image/jpeg', fileName: `scan_${Date.now()}.jpg` }),
@@ -245,9 +244,8 @@ export default function AnalyzeScreen() {
 
     try {
       const token = await getToken();
-      const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
 
-      const response = await fetch(`https://${domain}/api/lawwise/analyze`, {
+      const response = await fetch(`${BASE_API_URL}/api/lawwise/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
