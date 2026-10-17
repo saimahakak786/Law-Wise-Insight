@@ -93,7 +93,7 @@ export default function CauseListScreen() {
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#C9A84C',
-        sound: 'court_alarm',
+        sound: 'court_alarm.mp3', // Uses bundled court_alarm.mp3
       });
     }
   };
@@ -287,7 +287,7 @@ export default function CauseListScreen() {
               content: {
                 title: `⚖️ URGENT: ${selectedEventType}`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — ${subTitle}`,
-                sound: 'court_alarm.mp3',
+                sound: 'court_alarm.mp3', // Uses bundled court_alarm.mp3
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate, matterId },
               },
