@@ -9,7 +9,7 @@ const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 async function extractTextWithGemini(fileBase64: string, mimeType: string, prompt: string): Promise<string> {
-  // Using gemini-2.5-flash for reliable legal OCR and document parsing
+  // Fixed model name to gemini-2.5-flash
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   const result = await model.generateContent([
     { inlineData: { mimeType, data: fileBase64 } },
@@ -18,16 +18,15 @@ async function extractTextWithGemini(fileBase64: string, mimeType: string, promp
   return result.response.text();
 }
 
-router.post("/upload", requireAuth, async (req, res): Promise<void> => {
+router.post(["/upload", "/lawwise/upload"], requireAuth, async (req, res): Promise<void> => {
   const parsed = UploadDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const { fileBase64, mimeType, fileName, language } = parsed.data;
+  const { fileBase64, mimeType, fileName } = parsed.data;
 
-  // 10MB limit on base64 (~13.3MB base64 for 10MB binary)
   if (fileBase64.length > 13_000_000) {
     res.status(400).json({ error: "File too large. Maximum size is 10MB." });
     return;
@@ -40,7 +39,7 @@ router.post("/upload", requireAuth, async (req, res): Promise<void> => {
       extractedText = await extractTextWithGemini(
         fileBase64,
         mimeType,
-        "Extract all text meticulously from this legal PDF document. Preserve hierarchical structure, clause numbering, headings, and formatting exactly as written."
+        "Extract all text meticulously from this legal PDF document. Preserve structure and formatting."
       );
     } else if (mimeType.includes("wordprocessingml") || mimeType.includes("msword")) {
       const buffer = Buffer.from(fileBase64, "base64");
@@ -50,7 +49,7 @@ router.post("/upload", requireAuth, async (req, res): Promise<void> => {
       extractedText = await extractTextWithGemini(
         fileBase64,
         mimeType,
-        "Perform high-precision legal OCR on this image. Extract all text accurately, including signatures, stamps, marginalia, and clause references. Return only the extracted text."
+        "Perform high-precision legal OCR on this image. Extract all readable text accurately."
       );
     } else {
       res.status(400).json({ error: `Unsupported file type: ${mimeType}` });
