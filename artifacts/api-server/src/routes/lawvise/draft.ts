@@ -5,7 +5,7 @@ import { streamAI } from "../../lib/ai";
 
 const router = Router();
 
-router.post("/lawwise/draft", requireAuth, async (req, res): Promise<void> => {
+router.post("/draft", requireAuth, async (req, res): Promise<void> => {
   const parsed = DraftDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -13,11 +13,6 @@ router.post("/lawwise/draft", requireAuth, async (req, res): Promise<void> => {
   }
 
   const { documentType, jurisdiction, details, language } = parsed.data;
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
 
   const lang = language ?? "English";
   const juris = jurisdiction ?? "India";
@@ -39,16 +34,20 @@ CRITICAL MANDATES:
   }\n\nProvide the complete, uncompromised document ready for execution and filing.`;
 
   try {
+    let fullDraft = "";
     await streamAI(systemPrompt, userPrompt, (text) => {
-      res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+      fullDraft += text;
+    });
+
+    res.status(200).json({
+      success: true,
+      draft: fullDraft,
+      result: fullDraft,
     });
   } catch (err) {
     req.log.error({ err }, "Document drafting failed");
-    res.write(`data: ${JSON.stringify({ error: "Drafting failed. Please try again." })}\n\n`);
+    res.status(500).json({ error: "Drafting failed. Please try again." });
   }
-
-  res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-  res.end();
 });
 
 export default router;
