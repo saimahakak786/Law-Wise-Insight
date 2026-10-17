@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/requireAuth";
 import { LegalResearchBody } from "@workspace/api-zod";
-import { streamAI } from "../../lib/ai";
+import { callAI } from "../../lib/ai"; // Changed to non-streaming callAI
 
 const router = Router();
 
@@ -11,6 +11,7 @@ CRITICAL RULES:
 1. Never include conversational filler, pleasantries, or introductory/concluding remarks. Start directly with the formal research brief.
 2. Prioritize absolute legal accuracy, precise statutory interpretations, authentic multi-reporter citations, and peer-reviewed legal research papers/scholarship.
 3. Dynamically adapt your legal framework, terminology, and court hierarchies based on the requested jurisdiction (e.g., India, UAE, USA, UK, or international law).
+4. NEVER invent or hallucinate fictional case names when given factual queries.
 
 Always format your output cleanly using the following professional structure:
 
@@ -34,9 +35,8 @@ Always format your output cleanly using the following professional structure:
 
 6. PRACTICAL & STRATEGIC IMPLICATIONS:
    - Application to ongoing litigation, cross-border compliance, or judicial adjudication.`;
+
 router.post("/research", requireAuth, async (req, res): Promise<void> => {
-
-
   const parsed = LegalResearchBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -45,31 +45,30 @@ router.post("/research", requireAuth, async (req, res): Promise<void> => {
 
   const { query, jurisdiction, researchType, language } = parsed.data;
 
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
-
   const juris = jurisdiction ?? "India";
   const lang = language ?? "English";
   
-  // Injecting active jurisdiction dynamically into the system prompt
   const systemPrompt = `${RESEARCH_SYSTEM_PROMPT}\n\nACTIVE JURISDICTION: ${juris}. Always respond strictly in ${lang} and ground all legal analysis strictly within the laws of ${juris}.`;
 
   const researchTypeNote = researchType ? `Research Type: ${researchType}\n` : "";
   const userPrompt = `${researchTypeNote}Legal Research Query / Case Name: ${query}\n\nJurisdiction: ${juris}`;
 
   try {
+    // Collect full AI response instead of raw streaming
+    let fullOutput = "";
     await streamAI(systemPrompt, userPrompt, (text) => {
-      res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+      fullOutput += text;
+    });
+
+    // Send complete structured JSON payload back to mobile app
+    res.status(200).json({
+      success: true,
+      result: fullOutput,
     });
   } catch (err) {
     req.log.error({ err }, "Legal research failed");
-    res.write(`data: ${JSON.stringify({ error: "Research failed. Please try again." })}\n\n`);
+    res.status(500).json({ error: "Research failed. Please try again." });
   }
-
-  res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-  res.end();
 });
 
 export default router;
