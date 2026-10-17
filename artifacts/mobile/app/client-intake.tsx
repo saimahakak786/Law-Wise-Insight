@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Pressable } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ScrollView, Alert, ActivityIndicator, Pressable, Platform,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Constants from 'expo-constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@clerk/expo';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { exportToChamberPDF } from '@/services/pdfExport';
 import { useApp } from '@/context/AppContext';
 
-const API_URL = Constants.expoConfig?.extra?.apiUrl || 'https://law-wise-insight.onrender.com';
+const BASE_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://law-wise-insight.onrender.com';
 
 export default function ClientIntakeScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { getToken } = useAuth();
   const { jurisdiction } = useApp();
 
   const [clientName, setClientName] = useState('');
@@ -20,9 +26,11 @@ export default function ClientIntakeScreen() {
   const [loading, setLoading] = useState(false);
   const [conflictReport, setConflictReport] = useState('');
 
+  const padTop = insets.top + (Platform.OS === 'web' ? 40 : 16);
+
   const handleSaveClient = async () => {
-    if (!clientName || !phone) {
-      Alert.alert('Error', 'Please enter at least Client Name and Phone number.');
+    if (!clientName.trim() || !phone.trim()) {
+      Alert.alert('Missing Fields', 'Please enter at least Client Full Name and Phone number.');
       return;
     }
 
@@ -31,23 +39,24 @@ export default function ClientIntakeScreen() {
     setConflictReport('');
 
     try {
-      const token = (global as any).authToken || ''; 
-      const response = await fetch(`${API_URL}/api/lawvise/intake`, {
+      const token = await getToken();
+      const response = await fetch(`${BASE_API_URL}/api/lawvise/intake`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ clientName, phone, caseType, notes })
+        body: JSON.stringify({ clientName, phone, caseType, notes, jurisdiction })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to process client intake.');
+        throw new Error(data.error || `Server returned status ${response.status}`);
       }
 
-      setConflictReport(data.report);
+      const reportText = data.report || data.result || data.analysis || data.text || 'Intake recorded successfully.';
+      setConflictReport(reportText);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Client intake saved & Conflict Check completed!');
     } catch (err: any) {
@@ -86,10 +95,14 @@ export default function ClientIntakeScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={{ paddingTop: padTop, paddingBottom: insets.bottom + 40, paddingHorizontal: 20 }}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.header}>Client Intake & Conflict Check</Text>
 
-      <Text style={styles.label}>Client Full Name</Text>
+      <Text style={styles.label}>Client Full Name *</Text>
       <TextInput
         style={styles.input}
         placeholder="e.g. Mrs. Khalida Parveen"
@@ -98,7 +111,7 @@ export default function ClientIntakeScreen() {
         onChangeText={setClientName}
       />
 
-      <Text style={styles.label}>Phone Number</Text>
+      <Text style={styles.label}>Phone Number *</Text>
       <TextInput
         style={styles.input}
         placeholder="e.g. +91 9876543210"
@@ -137,7 +150,7 @@ export default function ClientIntakeScreen() {
 
       {conflictReport ? (
         <View style={styles.reportContainer}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <Text style={styles.reportHeader}>⚖️ AI Conflict & Intake Report</Text>
             <Pressable style={styles.pdfButton} onPress={handleExportIntakePDF}>
               <Feather name="file-text" size={14} color="#000" />
@@ -158,16 +171,16 @@ export default function ClientIntakeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#121212' },
-  header: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginBottom: 20, marginTop: 10 },
-  label: { color: '#DAA520', fontSize: 14, marginBottom: 6, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: '#121212' },
+  header: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginBottom: 20 },
+  label: { color: '#C9A84C', fontSize: 13, marginBottom: 6, fontWeight: '600' },
   input: { backgroundColor: '#1E1E1E', color: '#fff', padding: 12, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#333' },
   textArea: { height: 100, textAlignVertical: 'top' },
-  button: { backgroundColor: '#DAA520', padding: 14, borderRadius: 8, alignItems: 'center', marginBottom: 16 },
+  button: { backgroundColor: '#C9A84C', padding: 14, borderRadius: 8, alignItems: 'center', marginBottom: 16 },
   buttonText: { color: '#000', fontWeight: 'bold', fontSize: 16 },
-  reportContainer: { backgroundColor: '#1E1E1E', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#DAA520', marginBottom: 20 },
-  reportHeader: { color: '#DAA520', fontSize: 18, fontWeight: 'bold' },
-  pdfButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#DAA520', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  reportContainer: { backgroundColor: '#1E1E1E', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#C9A84C', marginBottom: 20 },
+  reportHeader: { color: '#C9A84C', fontSize: 16, fontWeight: 'bold' },
+  pdfButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#C9A84C', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   pdfButtonText: { color: '#000', fontWeight: 'bold', fontSize: 12 },
   reportText: { color: '#ddd', fontSize: 14, lineHeight: 22 },
   backButton: { padding: 12, alignItems: 'center', marginBottom: 30 },
