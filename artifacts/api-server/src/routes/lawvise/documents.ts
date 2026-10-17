@@ -11,7 +11,10 @@ function parseId(raw: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-router.get("/lawwise/documents", requireAuth, async (req, res): Promise<void> => {
+// ---------------------------------------------------------------------------
+// GET /documents & /lawwise/documents - Fetch User's Chamber Documents
+// ---------------------------------------------------------------------------
+router.get(["/documents", "/lawwise/documents"], requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const { folderId, search } = req.query;
 
@@ -34,14 +37,17 @@ router.get("/lawwise/documents", requireAuth, async (req, res): Promise<void> =>
       .from(legalDocumentsTable)
       .where(and(...conditions))
       .orderBy(desc(legalDocumentsTable.createdAt));
-    res.json(docs);
+    res.status(200).json(docs);
   } catch (err) {
     req.log.error({ err, userId }, "Failed to fetch legal documents");
     res.status(500).json({ error: "Failed to retrieve documents. Please try again." });
   }
 });
 
-router.post("/lawwise/documents", requireAuth, async (req, res): Promise<void> => {
+// ---------------------------------------------------------------------------
+// POST /documents & /lawwise/documents - Save New Legal Document / Draft
+// ---------------------------------------------------------------------------
+router.post(["/documents", "/lawwise/documents"], requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const parsed = SaveDocumentBody.safeParse(req.body);
   if (!parsed.success) {
@@ -61,7 +67,10 @@ router.post("/lawwise/documents", requireAuth, async (req, res): Promise<void> =
   }
 });
 
-router.patch("/lawwise/documents/:id", requireAuth, async (req, res): Promise<void> => {
+// ---------------------------------------------------------------------------
+// PATCH /documents/:id & /lawwise/documents/:id - Update Document Content / Folder
+// ---------------------------------------------------------------------------
+router.patch(["/documents/:id", "/lawwise/documents/:id"], requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
@@ -86,14 +95,17 @@ router.patch("/lawwise/documents/:id", requireAuth, async (req, res): Promise<vo
       res.status(404).json({ error: "Document not found" });
       return;
     }
-    res.json(updated);
+    res.status(200).json(updated);
   } catch (err) {
     req.log.error({ err, documentId: id }, "Failed to update legal document");
     res.status(500).json({ error: "Failed to update document. Please try again." });
   }
 });
 
-router.delete("/lawwise/documents/:id", requireAuth, async (req, res): Promise<void> => {
+// ---------------------------------------------------------------------------
+// DELETE /documents/:id & /lawwise/documents/:id - Delete Document Record
+// ---------------------------------------------------------------------------
+router.delete(["/documents/:id", "/lawwise/documents/:id"], requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
