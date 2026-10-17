@@ -54,7 +54,8 @@ CRITICAL RULES:
   }
 }
 
-router.post("/lawwise/analyze", requireAuth, async (req, res): Promise<void> => {
+// Cleaned endpoint path to match router mounting
+router.post("/analyze", requireAuth, async (req, res): Promise<void> => {
   const parsed = AnalyzeDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -63,25 +64,24 @@ router.post("/lawwise/analyze", requireAuth, async (req, res): Promise<void> => 
 
   const { content, analysisType, documentType, jurisdiction, language } = parsed.data;
 
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
-
   const systemPrompt = buildAnalysisSystemPrompt(analysisType, documentType, jurisdiction, language);
   const userPrompt = `Document Type: ${documentType}\nJurisdiction: ${jurisdiction ?? "India"}\n\n--- DOCUMENT CONTENT ---\n${content}\n--- END ---`;
 
   try {
+    let fullAnalysis = "";
     await streamAI(systemPrompt, userPrompt, (text) => {
-      res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+      fullAnalysis += text;
+    });
+
+    res.status(200).json({
+      success: true,
+      analysis: fullAnalysis,
+      result: fullAnalysis,
     });
   } catch (err) {
     req.log.error({ err }, "Document analysis failed");
-    res.write(`data: ${JSON.stringify({ error: "Analysis failed. Please try again." })}\n\n`);
+    res.status(500).json({ error: "Analysis failed. Please try again." });
   }
-
-  res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-  res.end();
 });
 
 export default router;
