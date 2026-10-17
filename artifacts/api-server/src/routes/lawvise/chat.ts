@@ -14,7 +14,7 @@ CORE MANDATES:
 4. STRUCTURED FORMATTING: Organize responses using clear professional headings, numbered points, and systematic breakdowns (e.g., Legal Issue, Applicable Statute/Precedent, Application, Strategic Recommendation).
 5. PROFESSIONAL TONE: Maintain an uncompromised, objective, court-ready counsel persona.`;
 
-router.post("/lawwise/chat", requireAuth, async (req, res): Promise<void> => {
+router.post(["/chat", "/lawwise/chat"], requireAuth, async (req, res): Promise<void> => {
   const parsed = LegalChatBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -22,11 +22,6 @@ router.post("/lawwise/chat", requireAuth, async (req, res): Promise<void> => {
   }
 
   const { message, history, jurisdiction, language } = parsed.data;
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
 
   const lang = language ?? "English";
   const juris = jurisdiction ?? "India";
@@ -42,16 +37,20 @@ router.post("/lawwise/chat", requireAuth, async (req, res): Promise<void> => {
   const userPrompt = `${historyContext}User Query / Factual Matrix:\n${message}\n\nSenior Counsel Consultation:`;
 
   try {
+    let fullResponse = "";
     await streamAI(systemPrompt, userPrompt, (text) => {
-      res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+      fullResponse += text;
+    });
+
+    res.status(200).json({
+      success: true,
+      response: fullResponse,
+      result: fullResponse,
     });
   } catch (err) {
     req.log.error({ err }, "Legal chat consultation failed");
-    res.write(`data: ${JSON.stringify({ error: "Consultation failed. Please try again." })}\n\n`);
+    res.status(500).json({ error: "Consultation failed. Please try again." });
   }
-
-  res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-  res.end();
 });
 
 export default router;
