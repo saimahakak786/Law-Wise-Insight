@@ -11,7 +11,10 @@ function parseId(raw: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-router.get("/lawwise/cases", requireAuth, async (req, res): Promise<void> => {
+// ---------------------------------------------------------------------------
+// GET /cases & /lawwise/cases - Fetch User's Causelist / Active Cases
+// ---------------------------------------------------------------------------
+router.get(["/cases", "/lawwise/cases"], requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const cases = await db
@@ -19,14 +22,17 @@ router.get("/lawwise/cases", requireAuth, async (req, res): Promise<void> => {
       .from(legalCasesTable)
       .where(eq(legalCasesTable.userId, userId))
       .orderBy(desc(legalCasesTable.createdAt));
-    res.json(cases);
+    res.status(200).json(cases);
   } catch (err) {
     req.log.error({ err }, "Failed to fetch legal cases");
     res.status(500).json({ error: "Failed to retrieve cases. Please try again." });
   }
 });
 
-router.post("/lawwise/cases", requireAuth, async (req, res): Promise<void> => {
+// ---------------------------------------------------------------------------
+// POST /cases & /lawwise/cases - Create New Case Entry
+// ---------------------------------------------------------------------------
+router.post(["/cases", "/lawwise/cases"], requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const parsed = CreateCaseBody.safeParse(req.body);
   if (!parsed.success) {
@@ -46,7 +52,10 @@ router.post("/lawwise/cases", requireAuth, async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/lawwise/cases/:id", requireAuth, async (req, res): Promise<void> => {
+// ---------------------------------------------------------------------------
+// PATCH /cases/:id & /lawwise/cases/:id - Update Case Status / Notes
+// ---------------------------------------------------------------------------
+router.patch(["/cases/:id", "/lawwise/cases/:id"], requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
@@ -71,14 +80,17 @@ router.patch("/lawwise/cases/:id", requireAuth, async (req, res): Promise<void> 
       res.status(404).json({ error: "Case not found" });
       return;
     }
-    res.json(updated);
+    res.status(200).json(updated);
   } catch (err) {
     req.log.error({ err, caseId: id }, "Failed to update legal case");
     res.status(500).json({ error: "Failed to update case. Please try again." });
   }
 });
 
-router.delete("/lawwise/cases/:id", requireAuth, async (req, res): Promise<void> => {
+// ---------------------------------------------------------------------------
+// DELETE /cases/:id & /lawwise/cases/:id - Remove Case Record
+// ---------------------------------------------------------------------------
+router.delete(["/cases/:id", "/lawwise/cases/:id"], requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = parseId(req.params.id);
   if (!id) {
