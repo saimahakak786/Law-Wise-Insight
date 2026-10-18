@@ -1,7 +1,7 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 export interface PDFSection {
   heading: string;
@@ -15,121 +15,152 @@ export interface PDFExportOptions {
   footerNote?: string;
 }
 
+/**
+ * Generates and shares a chamber-grade legal PDF document.
+ */
 export async function exportToChamberPDF(options: PDFExportOptions): Promise<void> {
   try {
     const { title, subtitle, sections, footerNote } = options;
 
-    const sectionsHtml = sections.map(sec => `
-      <div class="section">
-        <h2>${sec.heading}</h2>
-        <div class="content">${sec.content.replace(/\n/g, '<br/>')}</div>
-      </div>
-    `).join('');
+    const sectionsHTML = sections
+      .map(
+        (sec) => `
+        <div class="section">
+          <div class="section-heading">${sec.heading}</div>
+          <div class="section-content">${sec.content.replace(/\n/g, '<br/>')}</div>
+        </div>
+      `
+      )
+      .join('');
 
     const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
           <style>
+            @page {
+              size: A4;
+              margin: 20mm;
+            }
             body {
               font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-              background-color: #F4F4F5;
-              color: #1F2037;
-              padding: 40px;
-              margin: 0;
+              color: #1F2937;
               line-height: 1.6;
+              padding: 0;
+              margin: 0;
             }
             .header {
-              border-bottom: 3px solid #C9A84C;
-              padding-bottom: 15px;
-              margin-bottom: 30px;
+              border-bottom: 2px solid #C9A84C;
+              padding-bottom: 12px;
+              margin-bottom: 24px;
             }
-            .firm-brand {
+            .brand {
               font-size: 10px;
               font-weight: 700;
-              letter-spacing: 2px;
               color: #C9A84C;
+              letter-spacing: 1.5px;
               text-transform: uppercase;
-              margin-bottom: 6px;
+              margin-bottom: 4px;
             }
-            h1 {
-              font-size: 24px;
+            .title {
+              font-size: 20px;
               font-weight: 700;
-              color: #1F2037;
-              margin: 0 0 8px 0;
+              color: #0F172A;
+              margin: 0 0 4px 0;
             }
             .subtitle {
-              font-size: 13px;
-              color: #52525B;
-              font-weight: 500;
+              font-size: 12px;
+              color: #6B7280;
+              margin: 0;
             }
             .section {
-              background: #FFFFFF;
-              border: 1px solid #E4E4E7;
-              border-radius: 8px;
-              padding: 20px;
               margin-bottom: 20px;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+              page-break-inside: avoid;
             }
-            h2 {
-              font-size: 14px;
-              font-weight: 700;
-              color: #C9A84C;
-              letter-spacing: 1px;
-              text-transform: uppercase;
-              margin: 0 0 10px 0;
-              border-bottom: 1px solid #F4F4F5;
-              padding-bottom: 6px;
-            }
-            .content {
+            .section-heading {
               font-size: 13px;
-              color: #27272A;
+              font-weight: 700;
+              color: #0F172A;
+              border-left: 3px solid #C9A84C;
+              padding-left: 8px;
+              margin-bottom: 8px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .section-content {
+              font-size: 12px;
+              color: #374151;
               white-space: pre-wrap;
-              word-break: break-word;
+              background-color: #F9FAFB;
+              padding: 12px;
+              border-radius: 6px;
+              border: 1px solid #E5E7EB;
             }
             .footer {
               margin-top: 40px;
-              border-top: 1px solid #E4E4E7;
-              padding-top: 15px;
-              font-size: 11px;
-              color: #71717A;
+              border-top: 1px solid #E5E7EB;
+              padding-top: 12px;
+              font-size: 10px;
+              color: #9CA3AF;
               text-align: center;
-              font-weight: 500;
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <div class="firm-brand">LawVise Chamber-Grade Legal System</div>
-            <h1>${title}</h1>
+            <div class="brand">LAWVISE LEGAL CHAMBER RECORD</div>
+            <div class="title">${title}</div>
             ${subtitle ? `<div class="subtitle">${subtitle}</div>` : ''}
           </div>
 
-          ${sectionsHtml}
+          ${sectionsHTML}
 
           <div class="footer">
-            ${footerNote || 'LawVise Official Legal Record • Generated Securely'}
+            ${footerNote || 'LawVise Chamber Records • Generated for Official Legal Use'}
           </div>
         </body>
       </html>
     `;
 
-    const { uri } = await Print.printToFileAsync({ html: htmlContent });
-    const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-    const customFileName = `LawVise_${sanitizedTitle}.pdf`;
-    const permanentUri = (FileSystem.documentDirectory || '') + customFileName;
+    // Step 1: Generate PDF File via Expo Print
+    const { uri } = await Print.printToFileAsync({
+      html: htmlContent,
+      base64: false,
+    });
 
-    await FileSystem.moveAsync({ from: uri, to: permanentUri });
-
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(permanentUri, { mimeType: 'application/pdf', dialogTitle: 'Export Chamber PDF' });
-    } else {
-      Alert.alert('PDF Generated', `File saved at: ${permanentUri}`);
+    // Step 2: On Web, trigger direct print / download
+    if (Platform.OS === 'web') {
+      await Print.printAsync({ html: htmlContent });
+      return;
     }
+
+    // Step 3: Verify if sharing is available on mobile device
+    const isSharingAvailable = await Sharing.isAvailableAsync();
+    if (!isSharingAvailable) {
+      Alert.alert('Export Error', 'File sharing is not available on this device.');
+      return;
+    }
+
+    // Step 4: Ensure file resides in documentDirectory with clean filename
+    const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const docDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
+    const targetUri = `${docDir}${sanitizedTitle}_${Date.now()}.pdf`;
+
+    await FileSystem.copyAsync({
+      from: uri,
+      to: targetUri,
+    });
+
+    // Step 5: Trigger native system share dialog (WhatsApp, Mail, Drive, Save to Files)
+    await Sharing.shareAsync(targetUri, {
+      UTI: '.pdf',
+      mimeType: 'application/pdf',
+      dialogTitle: `Export Legal PDF: ${title}`,
+    });
   } catch (error: unknown) {
-    const errMessage = error instanceof Error ? error.message : 'Could not generate chamber PDF document.';
     console.error('PDF Export Error:', error);
-    Alert.alert('Export Failed', errMessage);
+    const message = error instanceof Error ? error.message : 'Could not generate chamber PDF.';
+    Alert.alert('Export Failed', message);
   }
 }
