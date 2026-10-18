@@ -12,6 +12,13 @@ interface VoiceDictationProps {
   onUpgradePress: () => void;
 }
 
+// Explicit interface for React Native FormData attachment to satisfy tsc
+interface ReactNativeFile {
+  uri: string;
+  type: string;
+  name: string;
+}
+
 const MAX_RECORDING_DURATION_MS = 5 * 60 * 1000; // 5 Minutes max limit
 
 export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress }: VoiceDictationProps) {
@@ -24,8 +31,8 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
   
   // Live Timer States
   const [secondsElapsed, setSecondsElapsed] = useState(0);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const intervalTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     checkUserStatus();
@@ -108,12 +115,10 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       setIsRecording(true);
       setSecondsElapsed(0);
 
-      // Start live visual counter (every 1 second)
       intervalTimerRef.current = setInterval(() => {
         setSecondsElapsed((prev) => prev + 1);
       }, 1000);
 
-      // Set 5-minute hard auto-stop timer
       recordingTimerRef.current = setTimeout(async () => {
         Alert.alert('Maximum Limit Reached', 'Voice dictation has automatically stopped at the 5-minute limit.');
         await stopAndUploadRecording();
@@ -156,18 +161,19 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       const formData = new FormData();
       const fileUri = Platform.OS === 'android' ? uri : uri.replace('file://', '');
       
-      formData.append('audio', {
+      const audioFile: ReactNativeFile = {
         uri: fileUri,
         type: 'audio/m4a',
         name: 'dictation.m4a',
-      } as any);
+      };
+
+      formData.append('audio', audioFile as unknown as Blob);
 
       const response = await fetch('https://law-wise-insight.onrender.com/api/lawvise/dictate', {
         method: 'POST',
         body: formData,
         headers: { 
           Authorization: `Bearer ${token}`,
-          // Let React Native automatically set the multipart boundary Content-Type header
         },
       });
 
