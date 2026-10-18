@@ -57,6 +57,20 @@ export default function SignInPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [forgotError, setForgotError] = useState('');
 
+  const isMfaRequired = signIn?.status === 'needs_client_trust' || signIn?.status === 'needs_second_factor';
+
+  // Unconditional useEffect for MFA code initialization
+  useEffect(() => {
+    if (isMfaRequired) {
+      const sendInitialCode = async () => {
+        try {
+          await signIn?.mfa.sendEmailCode();
+        } catch {}
+      };
+      sendInitialCode();
+    }
+  }, [isMfaRequired, signIn]);
+
   const navigate = useCallback(
     ({ decorateUrl }: { session?: unknown; decorateUrl: (url: string) => string }) => {
       const url = decorateUrl('/');
@@ -73,11 +87,11 @@ export default function SignInPage() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      await signIn.password({ emailAddress: identifier.trim(), password });
+      await signIn?.password({ emailAddress: identifier.trim(), password });
       
-      if (signIn.status === 'complete') {
+      if (signIn?.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await signIn.finalize({ navigate });
+        await signIn?.finalize({ navigate });
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
@@ -93,11 +107,11 @@ export default function SignInPage() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     try {
-      await signIn.mfa.verifyEmailCode({ code });
+      await signIn?.mfa.verifyEmailCode({ code });
 
-      if (signIn.status === 'complete') {
+      if (signIn?.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await signIn.finalize({ navigate });
+        await signIn?.finalize({ navigate });
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
@@ -163,7 +177,7 @@ export default function SignInPage() {
     setForgotStep('sending');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      await signIn.create({ strategy: 'reset_password_email_code', identifier: forgotIdentifier.trim() });
+      await signIn?.create({ strategy: 'reset_password_email_code', identifier: forgotIdentifier.trim() });
       setForgotStep('reset_password');
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
@@ -180,15 +194,15 @@ export default function SignInPage() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      const result = await signIn.attemptFirstFactor({
+      const result = await signIn?.attemptFirstFactor({
         strategy: 'reset_password_email_code',
         code: resetCode.trim(),
         password: newPassword,
       });
 
-      if (result.status === 'complete') {
+      if (result?.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await signIn.finalize({ navigate });
+        await signIn?.finalize({ navigate });
       } else {
         setForgotError('Password reset incomplete. Please verify the code.');
         setForgotStep('reset_password');
@@ -203,16 +217,7 @@ export default function SignInPage() {
     }
   };
 
-  if (signIn.status === 'needs_client_trust' || signIn.status === 'needs_second_factor') {
-    useEffect(() => {
-      const sendInitialCode = async () => {
-        try {
-          await signIn.mfa.sendEmailCode();
-        } catch {}
-      };
-      sendInitialCode();
-    }, [signIn]);
-
+  if (isMfaRequired) {
     return (
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
         <Feather name="shield" size={48} color="#C5A059" style={{ marginBottom: 24 }} />
@@ -263,7 +268,6 @@ export default function SignInPage() {
         <View style={{ width: '100%', marginTop: 16 }}>
           <Button
             title={fetchStatus === 'fetching' ? "Verifying..." : "Verify Identity"}
-            variant="primary"
             onPress={handleVerify}
             disabled={code.length < 6 || fetchStatus === 'fetching'}
             style={code.length < 6 || fetchStatus === 'fetching' ? styles.disabledBtn : undefined}
@@ -274,7 +278,7 @@ export default function SignInPage() {
           onPress={async () => { 
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
             try {
-              await signIn.mfa.sendEmailCode();
+              await signIn?.mfa.sendEmailCode();
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch {}
           }} 
@@ -319,7 +323,6 @@ export default function SignInPage() {
 
           <Button
             title={forgotStep === 'sending' ? "Sending Code..." : "Send Reset Code"}
-            variant="primary"
             onPress={handleSendResetCode}
             disabled={!forgotIdentifier.trim() || forgotStep === 'sending'}
             style={{ marginTop: 8 }}
@@ -386,7 +389,6 @@ export default function SignInPage() {
 
           <Button
             title={forgotStep === 'resetting' ? "Resetting..." : "Confirm & Reset Password"}
-            variant="primary"
             onPress={handleResetPassword}
             disabled={!resetCode || newPassword.length < 6 || forgotStep === 'resetting'}
             style={{ marginTop: 8 }}
@@ -455,7 +457,6 @@ export default function SignInPage() {
 
         <Button
           title={fetchStatus === 'fetching' ? "Signing In..." : "Sign In"}
-          variant="primary"
           onPress={handleSignIn}
           disabled={!identifier || !password || fetchStatus === 'fetching'}
           style={{ marginTop: 4 }}
@@ -561,7 +562,7 @@ const styles = StyleSheet.create({
     borderColor: '#D8E2E0',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'center',
+    justify.content: 'center',
   },
   otpBoxActive: {
     borderColor: '#C5A059',
