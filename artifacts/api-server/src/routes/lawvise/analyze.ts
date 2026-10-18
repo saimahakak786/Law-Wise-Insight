@@ -40,7 +40,7 @@ router.post(["/analyze", "/lawwise/analyze"], requireAuth, async (req, res): Pro
       result: analysis,
     });
   } catch (err) {
-    req.log.error({ err }, "Document analysis failed");
+    console.error("Document analysis failed:", err);
     res.status(500).json({ error: "Document analysis failed. Please try again." });
   }
 });
