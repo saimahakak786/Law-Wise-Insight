@@ -14,7 +14,7 @@ import {
 import { useSignIn, useSSO } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import { Link, useRouter, type Href } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -38,13 +38,14 @@ export default function SignInPage() {
   useWarmUpBrowser();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signIn, fetchStatus } = useSignIn();
+  const { signIn, isLoaded } = useSignIn();
   const { startSSOFlow } = useSSO();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [signInError, setSignInError] = useState('');
   const otpInputRef = useRef<TextInput>(null);
@@ -59,66 +60,73 @@ export default function SignInPage() {
 
   const isMfaRequired = signIn?.status === 'needs_client_trust' || signIn?.status === 'needs_second_factor';
 
-  // Unconditional useEffect for MFA code initialization
   useEffect(() => {
-    if (isMfaRequired) {
+    if (isMfaRequired && signIn) {
       const sendInitialCode = async () => {
         try {
-          await signIn?.mfa.sendEmailCode();
-        } catch {}
+          if ('mfa' in signIn && (signIn as any).mfa?.sendEmailCode) {
+            await (signIn as any).mfa.sendEmailCode();
+          }
+        } catch (e) {
+          console.log('MFA send error:', e);
+        }
       };
       sendInitialCode();
     }
   }, [isMfaRequired, signIn]);
 
-  const navigate = useCallback(
-    ({ decorateUrl }: { session?: unknown; decorateUrl: (url: string) => string }) => {
-      const url = decorateUrl('/');
-      if (!url.startsWith('http')) {
-        router.push(url as Href);
-      }
-    },
-    [router]
-  );
-
   const handleSignIn = async () => {
-    if (!identifier || !password) return;
+    if (!identifier || !password || !isLoaded || !signIn) return;
     setSignInError('');
+    setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      await signIn?.password({ emailAddress: identifier.trim(), password });
-      
-      if (signIn?.status === 'complete') {
+      const result = await signIn.create({
+        identifier: identifier.trim(),
+        password,
+      });
+
+      if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await signIn?.finalize({ navigate });
+        router.replace('/');
       }
     } catch (e: any) {
-      const errorMessage = e?.errors?.[0]?.message || e?.message;
-      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate') && !errorMessage.includes('Route')) {
-        setSignInError(errorMessage);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
+      const errorMessage = e?.errors?.[0]?.message || e?.message || 'Sign in failed.';
+      setSignInError(errorMessage);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleVerify = async () => {
+    if (!isLoaded || !signIn) return;
     setSignInError('');
+    setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    try {
-      await signIn?.mfa.verifyEmailCode({ code });
 
-      if (signIn?.status === 'complete') {
+    try {
+      let result;
+      if ('mfa' in signIn && (signIn as any).mfa?.verifyEmailCode) {
+        result = await (signIn as any).mfa.verifyEmailCode({ code });
+      } else {
+        result = await signIn.attemptSecondFactor({
+          strategy: 'email_code',
+          code,
+        });
+      }
+
+      if (result?.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await signIn?.finalize({ navigate });
+        router.replace('/');
       }
     } catch (e: any) {
-      const errorMessage = e?.errors?.[0]?.message || e?.message;
-      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate')) {
-        setSignInError(errorMessage);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
+      const errorMessage = e?.errors?.[0]?.message || e?.message || 'Verification failed.';
+      setSignInError(errorMessage);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -154,16 +162,12 @@ export default function SignInPage() {
 
       if (createdSessionId && setActive) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await setActive({
-          session: createdSessionId,
-          navigate: ({ decorateUrl }) => {
-            router.push(decorateUrl('/') as Href);
-          },
-        });
+        await setActive({ session: createdSessionId });
+        router.replace('/');
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
-      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate')) {
+      if (errorMessage && !errorMessage.includes('cancel')) {
         setSignInError('Google sign-in was interrupted. Please try again.');
       }
     } finally {
@@ -172,12 +176,16 @@ export default function SignInPage() {
   }, [startSSOFlow, router]);
 
   const handleSendResetCode = async () => {
-    if (!forgotIdentifier.trim()) { setForgotError('Please enter your email.'); return; }
+    if (!forgotIdentifier.trim() || !isLoaded || !signIn) {
+      setForgotError('Please enter your email.');
+      return;
+    }
     setForgotError('');
     setForgotStep('sending');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     try {
-      await signIn?.create({ strategy: 'reset_password_email_code', identifier: forgotIdentifier.trim() });
+      await signIn.create({ strategy: 'reset_password_email_code', identifier: forgotIdentifier.trim() });
       setForgotStep('reset_password');
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
@@ -187,29 +195,35 @@ export default function SignInPage() {
   };
 
   const handleResetPassword = async () => {
-    if (!resetCode || !newPassword) { setForgotError('Please fill in both fields.'); return; }
-    if (newPassword.length < 6) { setForgotError('Password must be at least 6 characters.'); return; }
+    if (!resetCode || !newPassword || !isLoaded || !signIn) {
+      setForgotError('Please fill in both fields.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setForgotError('Password must be at least 6 characters.');
+      return;
+    }
     setForgotError('');
     setForgotStep('resetting');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      const result = await signIn?.attemptFirstFactor({
+      const result = await signIn.attemptFirstFactor({
         strategy: 'reset_password_email_code',
         code: resetCode.trim(),
         password: newPassword,
       });
 
-      if (result?.status === 'complete') {
+      if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await signIn?.finalize({ navigate });
+        router.replace('/');
       } else {
         setForgotError('Password reset incomplete. Please verify the code.');
         setForgotStep('reset_password');
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
-      if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate')) {
+      if (errorMessage && !errorMessage.includes('cancel')) {
         setForgotError(errorMessage);
       }
       setForgotStep('reset_password');
@@ -267,10 +281,10 @@ export default function SignInPage() {
         
         <View style={{ width: '100%', marginTop: 16 }}>
           <Button
-            title={fetchStatus === 'fetching' ? "Verifying..." : "Verify Identity"}
+            title={loading ? "Verifying..." : "Verify Identity"}
             onPress={handleVerify}
-            disabled={code.length < 6 || fetchStatus === 'fetching'}
-            style={code.length < 6 || fetchStatus === 'fetching' ? styles.disabledBtn : undefined}
+            disabled={code.length < 6 || loading}
+            style={code.length < 6 || loading ? styles.disabledBtn : undefined}
           />
         </View>
 
@@ -278,7 +292,9 @@ export default function SignInPage() {
           onPress={async () => { 
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
             try {
-              await signIn?.mfa.sendEmailCode();
+              if ('mfa' in signIn && (signIn as any).mfa?.sendEmailCode) {
+                await (signIn as any).mfa.sendEmailCode();
+              }
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch {}
           }} 
@@ -456,9 +472,9 @@ export default function SignInPage() {
         </Pressable>
 
         <Button
-          title={fetchStatus === 'fetching' ? "Signing In..." : "Sign In"}
+          title={loading ? "Signing In..." : "Sign In"}
           onPress={handleSignIn}
-          disabled={!identifier || !password || fetchStatus === 'fetching'}
+          disabled={!identifier || !password || loading || !isLoaded}
           style={{ marginTop: 4 }}
         />
 
@@ -562,7 +578,7 @@ const styles = StyleSheet.create({
     borderColor: '#D8E2E0',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justify.content: 'center',
+    justifyContent: 'center',
   },
   otpBoxActive: {
     borderColor: '#C5A059',
