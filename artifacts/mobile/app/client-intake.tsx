@@ -59,9 +59,9 @@ export default function ClientIntakeScreen() {
       setConflictReport(reportText);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Client intake saved & Conflict Check completed!');
-    } catch (err: any) {
+    } catch (err) {
       // Fallback local report generation if backend is waking up or unavailable
-      const fallbackReport = `[LawVise On-Device Intake Synthesis]\n\nClient Name: ${clientName}\nPhone: ${phone}\nCase Type / Matter: ${caseType || 'General Consultation'}\nJurisdiction: ${jurisdiction}\n\n1. CONFLICT CHECK STATUS:\n- Initial clearance verified. No immediate cross-retainer conflicts recorded in local register.\n\n2. INTAKE SUMMARY & NOTES:\n${notes || 'No supplementary facts provided.'}\n\n3. RECOMMENDED NEXT STEPS:\n- Register client profile in Firm Vault & Case Tracker.\n- Schedule initial consultation and map limitation periods into Cause List.`;
+      const fallbackReport = `[LawVise On-Device Intake Synthesis]\n\nClient Name: ${clientName}\nPhone: ${phone}\nCase Type / Matter: ${caseType || 'General Consultation'}\nJurisdiction: ${jurisdiction || 'IN'}\n\n1. CONFLICT CHECK STATUS:\n- Initial clearance verified. No immediate cross-retainer conflicts recorded in local register.\n\n2. INTAKE SUMMARY & NOTES:\n${notes || 'No supplementary facts provided.'}\n\n3. RECOMMENDED NEXT STEPS:\n- Register client profile in Firm Vault & Case Tracker.\n- Schedule initial consultation and map limitation periods into Cause List.`;
       
       setConflictReport(fallbackReport);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -161,7 +161,7 @@ export default function ClientIntakeScreen() {
         </View>
       ) : null}
 
-      {navigation && (navigation as any).canGoBack && (navigation as any).canGoBack() && (
+      {navigation.canGoBack() && (
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>Back to Dashboard</Text>
         </TouchableOpacity>
