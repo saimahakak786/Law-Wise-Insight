@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
@@ -34,7 +34,7 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
     return () => {
       cleanupTimers();
       if (recording) {
-        recording.stopAndUnloadAsync();
+        recording.stopAndUnloadAsync().catch(() => {});
       }
     };
   }, []);
@@ -62,12 +62,16 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
   };
 
   const checkUserStatus = async () => {
-    const proActive = await checkProStatus();
-    setIsProUser(proActive);
+    try {
+      const proActive = await checkProStatus();
+      setIsProUser(proActive);
 
-    if (!proActive) {
-      const allowed = await checkDictationLimit();
-      setCanUse(allowed);
+      if (!proActive) {
+        const allowed = await checkDictationLimit();
+        setCanUse(allowed);
+      }
+    } catch (err) {
+      console.log('Error checking user status:', err);
     }
   };
 
@@ -79,14 +83,27 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
 
   const startRecording = async () => {
     try {
+      const permission = await Audio.getPermissionsAsync();
+      if (!permission.granted) {
+        const req = await Audio.requestPermissionsAsync();
+        if (!req.granted) {
+          Alert.alert('Permission Required', 'Microphone permission is needed for voice dictation.');
+          return;
+        }
+      }
+
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+        staysActiveInBackground: false,
       });
 
       const { recording: newRecording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
+      
       setRecording(newRecording);
       setIsRecording(true);
       setSecondsElapsed(0);
@@ -104,7 +121,7 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
 
     } catch (err) {
       console.error('Failed to start recording', err);
-      Alert.alert('Error', 'Could not start audio recording.');
+      Alert.alert('Error', 'Could not start audio recording. Please check microphone permissions.');
       setIsRecording(false);
       cleanupTimers();
     }
@@ -119,6 +136,8 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
 
     try {
       await recording.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+
       const uri = recording.getURI();
       setRecording(null);
 
@@ -135,8 +154,10 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       const token = await getToken();
 
       const formData = new FormData();
+      const fileUri = Platform.OS === 'android' ? uri : uri.replace('file://', '');
+      
       formData.append('audio', {
-        uri,
+        uri: fileUri,
         type: 'audio/m4a',
         name: 'dictation.m4a',
       } as any);
@@ -146,16 +167,17 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
         body: formData,
         headers: { 
           Authorization: `Bearer ${token}`,
+          // Let React Native automatically set the multipart boundary Content-Type header
         },
       });
 
       const data = await response.json();
       setIsProcessing(false);
 
-      if (response.ok) {
+      if (response.ok && data.transcription) {
         onTranscriptionComplete(data.transcription);
       } else {
-        Alert.alert('Error', data.error || 'Transcription failed.');
+        Alert.alert('Transcription Failed', data.error || 'Could not transcribe audio. Please try speaking closer to the mic.');
       }
 
     } catch (error) {
@@ -195,7 +217,7 @@ export default function VoiceDictation({ onTranscriptionComplete, onUpgradePress
       {isProcessing ? (
         <View style={styles.processingRow}>
           <ActivityIndicator color="#C9A84C" size="small" />
-          <Text style={styles.processingText}>Transcribing & Translating Audio...</Text>
+          <Text style={styles.processingText}>Transcribing Audio...</Text>
         </View>
       ) : (
         <View style={styles.wrapperRow}>
@@ -253,9 +275,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
   },
   micText: {
-    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     color: '#070D24',
+    fontWeight: '600',
   },
   upgradeBadge: {
     flexDirection: 'row',
@@ -269,9 +291,9 @@ const styles = StyleSheet.create({
     borderColor: '#C9A84C40',
   },
   upgradeBadgeText: {
-    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     color: '#C9A84C',
+    fontWeight: '600',
   },
   processingRow: {
     flexDirection: 'row',
@@ -285,7 +307,6 @@ const styles = StyleSheet.create({
     borderColor: '#1B2448',
   },
   processingText: {
-    fontFamily: 'Inter_500Medium',
     fontSize: 13,
     color: '#8B9CC5',
   },
