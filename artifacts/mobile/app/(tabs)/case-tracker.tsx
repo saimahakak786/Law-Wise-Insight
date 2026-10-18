@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 
-// Import custom components
+// Import custom components & chamber PDF service
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { exportToChamberPDF } from '@/services/pdfExport';
@@ -33,7 +33,7 @@ const EVENT_TYPES = [
   { label: 'Peremptory Compliance', icon: 'check-square', color: '#8E24AA' },
 ];
 
-export default function CauseListScreen() {
+export default function CaseTrackerScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { jurisdiction } = useApp();
@@ -42,7 +42,7 @@ export default function CauseListScreen() {
   const [judgeName, setJudgeName] = useState('');
   const [caseTitle, setCaseTitle] = useState('');
   const [itemNumber, setItemNumber] = useState('');
-  const [hearingDate, setHearingDate] = useState(''); // Format: DD-MM-YYYY or YYYY-MM-DD
+  const [hearingDate, setHearingDate] = useState('');
   const [selectedEventType, setSelectedEventType] = useState('Hearing');
   const [loading, setLoading] = useState(false);
   const [matters, setMatters] = useState<any[]>([]);
@@ -93,7 +93,7 @@ export default function CauseListScreen() {
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#C9A84C',
-        sound: 'court_alarm.mp3', // Uses bundled court_alarm.mp3
+        sound: 'court_alarm.mp3',
       });
     }
   };
@@ -168,8 +168,7 @@ export default function CauseListScreen() {
     const target = parseDateInput(dateStr);
     const now = new Date();
     const diffTime = target.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const handleSelectCaseFromPortfolio = (c: any) => {
@@ -206,10 +205,10 @@ export default function CauseListScreen() {
         },
         {
           heading: 'Compliance & Action Notes',
-          content: `This record is formally logged under LawVise Cause List & Compliance module for tracking mandatory court schedules, written statements, and limitation deadlines.`
+          content: `This record is formally logged under LawVise Case Tracker module for tracking mandatory court schedules, written statements, and limitation deadlines.`
         }
       ],
-      footerNote: 'LawVise Cause List & Compliance Module • Official Schedule Record'
+      footerNote: 'LawVise Case Tracker Module • Official Schedule Record'
     });
   };
 
@@ -287,7 +286,7 @@ export default function CauseListScreen() {
               content: {
                 title: `⚖️ URGENT: ${selectedEventType}`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — ${subTitle}`,
-                sound: 'court_alarm.mp3', // Uses bundled court_alarm.mp3
+                sound: 'court_alarm.mp3',
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate, matterId },
               },
@@ -344,7 +343,7 @@ export default function CauseListScreen() {
   const handleDeleteMatter = async (id: string, title: string) => {
     Alert.alert(
       'Remove Deadline',
-      `Are you sure you want to remove "${title}" from your active cause list?`,
+      `Are you sure you want to remove "${title}" from your active case tracker?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -393,7 +392,7 @@ export default function CauseListScreen() {
       <View style={styles.headerContainer}>
         <View style={styles.titleRow}>
           <Feather name="calendar" size={22} color="#C9A84C" />
-          <Text style={styles.screenTitle}>Cause List & Compliance</Text>
+          <Text style={styles.screenTitle}>Case Tracker & Cause List</Text>
         </View>
         <Text style={[styles.screenSub, { color: colors.mutedForeground }]}>
           Track daily cause lists, written statements, affidavits, counter-filings, and limitation periods under {jurisdiction} law.
