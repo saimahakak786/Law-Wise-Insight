@@ -4,7 +4,6 @@ import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import { useApp } from '@/context/AppContext';
-import { fetch } from 'expo/fetch';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -51,9 +50,12 @@ export default function FactMatcherScreen() {
 
   const checkProStatus = async () => {
     try {
-      const customerInfo = await Purchases.getCustomerInfo();
-      if (customerInfo?.entitlements?.active?.['pro']) {
-        setIsPro(true);
+      const isConfigured = await Purchases.isConfigured();
+      if (isConfigured) {
+        const customerInfo = await Purchases.getCustomerInfo();
+        if (customerInfo?.entitlements?.active?.['pro']) {
+          setIsPro(true);
+        }
       }
     } catch {
       setIsPro(false);
