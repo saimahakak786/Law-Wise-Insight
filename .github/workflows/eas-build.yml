@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  eas-build:
+  eas-buildId:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -22,9 +22,6 @@ jobs:
         with:
           version: latest
           run_install: false
-
-      - name: Install EAS CLI Globally
-        run: npm install -g eas-cli
 
       - name: Install Workspace Dependencies
         run: pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
@@ -42,12 +39,15 @@ jobs:
           git diff --staged --quiet || git commit -m "chore: auto-generate pnpm-lock.yaml"
           git push || echo "No changes to push"
 
+      - name: Create .env file for Mobile Bundle
+        run: |
+          echo "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY }}" > artifacts/mobile/.env
+          echo "EXPO_PUBLIC_API_URL=${{ secrets.EXPO_PUBLIC_API_URL }}" >> artifacts/mobile/.env
+
       - name: Build Android App Locally
         working-directory: artifacts/mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
         run: eas build --platform android --local --profile preview --non-interactive
 
       - name: Upload APK Artifact
