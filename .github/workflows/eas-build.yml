@@ -34,14 +34,6 @@ jobs:
           cd artifacts/mobile
           pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
 
-      - name: Commit pnpm Lock File
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml
-          git diff --staged --quiet || git commit -m "chore: auto-generate pnpm-lock.yaml"
-          git push || echo "No changes to push"
-
       - name: Create .env file for Mobile Bundle
         run: |
           echo "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY }}" > artifacts/mobile/.env
@@ -51,6 +43,8 @@ jobs:
         working-directory: artifacts/mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
         run: eas build --platform android --local --profile preview --non-interactive
 
       - name: Upload APK Artifact
