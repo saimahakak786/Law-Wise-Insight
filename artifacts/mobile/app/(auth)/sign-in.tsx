@@ -22,6 +22,7 @@ import * as Clipboard from 'expo-clipboard';
 
 import Button from '../../components/Button';
 
+// Complete WebBrowser authentication session
 WebBrowser.maybeCompleteAuthSession();
 
 function useWarmUpBrowser() {
@@ -89,7 +90,7 @@ export default function SignInPage() {
 
       if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/');
+        router.replace('/(tabs)');
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || 'Sign in failed.';
@@ -119,7 +120,7 @@ export default function SignInPage() {
 
       if (result?.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/');
+        router.replace('/(tabs)');
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || 'Verification failed.';
@@ -155,20 +156,21 @@ export default function SignInPage() {
     setSignInError('');
 
     try {
+      const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: 'oauth_google',
-        redirectUrl: AuthSession.makeRedirectUri({ scheme: 'lawwise' }),
+        redirectUrl,
       });
 
       if (createdSessionId && setActive) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await setActive({ session: createdSessionId });
-        router.replace('/');
+        router.replace('/(tabs)');
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
       if (errorMessage && !errorMessage.includes('cancel')) {
-        setSignInError('Google sign-in was interrupted. Please try again.');
+        setSignInError(errorMessage || 'Google sign-in was interrupted. Please try again.');
       }
     } finally {
       setGoogleLoading(false);
@@ -216,7 +218,7 @@ export default function SignInPage() {
 
       if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/');
+        router.replace('/(tabs)');
       } else {
         setForgotError('Password reset incomplete. Please verify the code.');
         setForgotStep('reset_password');
