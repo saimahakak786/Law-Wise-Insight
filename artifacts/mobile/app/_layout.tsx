@@ -27,16 +27,11 @@ const queryClient = new QueryClient({
 });
 
 // LawVise Eye-Soothing Light Theme Constants
-const APP_BACKGROUND = '#F0F4F5'; // Soft off-white / pale slate background
-const TEXT_PRIMARY = '#334155';    // Balanced dark slate (easy on the eyes, not harsh black)
-const ACCENT_PRIMARY = '#CA9C36';  // Golden-amber primary action color
+const APP_BACKGROUND = '#F0F4F5'; 
+const TEXT_PRIMARY = '#334155';    
+const ACCENT_PRIMARY = '#CA9C36';  
 
-// Apply default text styling globally
-if ((Text as any).defaultProps == null) {
-  (Text as any).defaultProps = {};
-}
-(Text as any).defaultProps.style = [{ color: TEXT_PRIMARY }, (Text as any).defaultProps.style];
-
+// Replace with your Production Clerk Key if EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY is not injected
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk';
 
 const tokenCache = {
@@ -186,20 +181,6 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-
-  if (!publishableKey) {
-    SplashScreen.hideAsync();
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: APP_BACKGROUND, padding: 24 }}>
-        <Text style={{ color: '#EF4444', fontSize: 16, textAlign: 'center', marginBottom: 12 }}>
-          Missing Clerk publishable key
-        </Text>
-        <Text style={{ color: '#64748B', fontSize: 13, textAlign: 'center' }}>
-          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY was not set at build time.
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
