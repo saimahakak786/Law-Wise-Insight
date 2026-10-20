@@ -41,7 +41,7 @@ const MOCK_FALLBACK_CASES = [
 ];
 
 const MAX_RECORDING_SECONDS = 300;
-const VAULT_STORAGE_KEY = '@lawwise_saved_documents';
+const VAULT_STORAGE_KEY = '@lawvise_saved_documents'; // Fixed prefix to match 'lawvise'
 
 export default function HomeScreen() {
   const colors = useColors();
