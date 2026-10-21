@@ -29,7 +29,9 @@ function useWarmUpBrowser() {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     void WebBrowser.warmUpAsync();
-    return () => { void WebBrowser.coolDownAsync(); };
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
   }, []);
 }
 
@@ -59,7 +61,8 @@ export default function SignInPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [forgotError, setForgotError] = useState('');
 
-  const isMfaRequired = signIn?.status === 'needs_client_trust' || signIn?.status === 'needs_second_factor';
+  const isMfaRequired =
+    signIn?.status === 'needs_client_trust' || signIn?.status === 'needs_second_factor';
 
   useEffect(() => {
     if (isMfaRequired && signIn) {
@@ -95,6 +98,7 @@ export default function SignInPage() {
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || 'Sign in failed.';
       setSignInError(errorMessage);
+      Alert.alert('Sign In Failed', errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
@@ -125,6 +129,7 @@ export default function SignInPage() {
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || 'Verification failed.';
       setSignInError(errorMessage);
+      Alert.alert('Verification Failed', errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
@@ -156,7 +161,11 @@ export default function SignInPage() {
     setSignInError('');
 
     try {
-      const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
+      // Directs Clerk to the specific native OAuth callback path required on Android
+      const redirectUrl = AuthSession.makeRedirectUri({
+        path: 'oauth-native-callback',
+      });
+
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl,
@@ -166,11 +175,16 @@ export default function SignInPage() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await setActive({ session: createdSessionId });
         router.replace('/(tabs)');
+      } else {
+        Alert.alert('Sign-In', 'Session creation requires additional steps.');
       }
     } catch (e: any) {
-      const errorMessage = e?.errors?.[0]?.message || e?.message;
-      if (errorMessage && !errorMessage.includes('cancel')) {
-        setSignInError(errorMessage || 'Google sign-in was interrupted. Please try again.');
+      const errorMessage = e?.errors?.[0]?.message || e?.message || JSON.stringify(e);
+      console.error('Google Sign-In Error:', e);
+
+      if (errorMessage && !errorMessage.toLowerCase().includes('cancel')) {
+        setSignInError(errorMessage);
+        Alert.alert('Google Sign-In Error', errorMessage);
       }
     } finally {
       setGoogleLoading(false);
@@ -192,6 +206,7 @@ export default function SignInPage() {
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
       setForgotError(errorMessage || 'Failed to send reset code. Please try again.');
+      Alert.alert('Reset Failed', errorMessage || 'Failed to send reset code.');
       setForgotStep('send_code');
     }
   };
@@ -227,6 +242,7 @@ export default function SignInPage() {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
       if (errorMessage && !errorMessage.includes('cancel')) {
         setForgotError(errorMessage);
+        Alert.alert('Reset Password Error', errorMessage);
       }
       setForgotStep('reset_password');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -580,7 +596,7 @@ const styles = StyleSheet.create({
     borderColor: '#D8E2E0',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'center',
+    justify.content: 'center',
   },
   otpBoxActive: {
     borderColor: '#C5A059',
