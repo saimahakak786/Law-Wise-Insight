@@ -161,10 +161,8 @@ export default function SignInPage() {
     setSignInError('');
 
     try {
-      // Directs Clerk to the specific native OAuth callback path required on Android
-      const redirectUrl = AuthSession.makeRedirectUri({
-        path: 'oauth-native-callback',
-      });
+      // Root deep link redirect for standalone Android APKs
+      const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
 
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: 'oauth_google',
@@ -596,7 +594,7 @@ const styles = StyleSheet.create({
     borderColor: '#D8E2E0',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justify.content: 'center',
+    justifyContent: 'center',
   },
   otpBoxActive: {
     borderColor: '#C5A059',
