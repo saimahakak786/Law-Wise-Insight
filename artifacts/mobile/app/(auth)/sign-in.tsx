@@ -1,4 +1,4 @@
-aimport React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -93,13 +93,17 @@ export default function SignInPage() {
         password,
       });
 
+      console.log('SignIn create result status:', result.status);
+
       if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // FIX: Set active session before navigating
         await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Action Required', `Sign-in status: ${result.status}`);
+        Alert.alert(
+          'Additional Steps Required', 
+          `Clerk returned status: "${result.status}". Please verify your account configuration.`
+        );
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || 'Sign in failed.';
@@ -168,7 +172,6 @@ export default function SignInPage() {
     setSignInError('');
 
     try {
-      // Root deep link redirect for standalone Android APKs
       const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
 
       const { createdSessionId, setActive: setSSOActive, signUp, signIn: ssoSignIn } = await startSSOFlow({
