@@ -14,7 +14,7 @@ import {
 import { useSignIn, useSSO } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import { Link, useRouter } from 'expo-router';
+import { Link, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -93,22 +93,30 @@ export default function SignInPage() {
         password,
       });
 
-      console.log('SignIn create result status:', result.status);
-
       if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)');
+        router.replace('/(tabs)' as Href);
       } else {
-        Alert.alert(
-          'Additional Steps Required', 
-          `Clerk returned status: "${result.status}". Please verify your account configuration.`
-        );
+        Alert.alert('Action Required', `Sign-in status: ${result.status}`);
       }
     } catch (e: any) {
+      const errCode = e?.errors?.[0]?.code;
       const errorMessage = e?.errors?.[0]?.message || e?.message || 'Sign in failed.';
-      setSignInError(errorMessage);
-      Alert.alert('Sign In Failed', errorMessage);
+
+      if (errCode === 'form_identifier_not_found') {
+        Alert.alert(
+          'Account Not Found',
+          'No account matches this email. Please create an account first.',
+          [
+            { text: 'Create Account', onPress: () => router.push('/sign-up' as Href) },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+      } else {
+        setSignInError(errorMessage);
+        Alert.alert('Sign In Failed', errorMessage);
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
@@ -135,7 +143,7 @@ export default function SignInPage() {
       if (result?.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)');
+        router.replace('/(tabs)' as Href);
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || 'Verification failed.';
@@ -172,6 +180,7 @@ export default function SignInPage() {
     setSignInError('');
 
     try {
+      // Root deep link redirect scheme aligned to 'lawvise'
       const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
 
       const { createdSessionId, setActive: setSSOActive, signUp, signIn: ssoSignIn } = await startSSOFlow({
@@ -184,17 +193,35 @@ export default function SignInPage() {
       if (createdSessionId && activateSession) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await activateSession({ session: createdSessionId });
-        router.replace('/(tabs)');
-      } else if (signUp && signUp.status === 'complete' && activateSession) {
-        await activateSession({ session: signUp.createdSessionId });
-        router.replace('/(tabs)');
-      } else if (ssoSignIn && ssoSignIn.status === 'complete' && activateSession) {
-        await activateSession({ session: ssoSignIn.createdSessionId });
-        router.replace('/(tabs)');
-      } else {
-        console.log('SSO Flow result:', { createdSessionId, signUpStatus: signUp?.status, signInStatus: ssoSignIn?.status });
-        Alert.alert('Google Sign-In', 'Please complete sign-up or verification to finish signing in.');
+        router.replace('/(tabs)' as Href);
+        return;
       }
+
+      if (signUp && signUp.status === 'complete' && activateSession) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await activateSession({ session: signUp.createdSessionId });
+        router.replace('/(tabs)' as Href);
+        return;
+      }
+
+      if (ssoSignIn && ssoSignIn.status === 'complete' && activateSession) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await activateSession({ session: ssoSignIn.createdSessionId });
+        router.replace('/(tabs)' as Href);
+        return;
+      }
+
+      // If user signed in via Google but has no existing record, guide to sign up
+      if (signUp && signUp.status === 'missing_requirements') {
+        Alert.alert(
+          'Account Setup Required',
+          'Please finish creating your LawVise account.',
+          [{ text: 'Continue', onPress: () => router.push('/sign-up' as Href) }]
+        );
+        return;
+      }
+
+      Alert.alert('Google Sign-In', 'Authentication incomplete. Please try again.');
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || JSON.stringify(e);
       console.error('Google Sign-In Error:', e);
@@ -251,7 +278,7 @@ export default function SignInPage() {
       if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)');
+        router.replace('/(tabs)' as Href);
       } else {
         setForgotError('Password reset incomplete. Please verify the code.');
         setForgotStep('reset_password');
@@ -533,7 +560,7 @@ export default function SignInPage() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>New to LawVise? </Text>
-          <Link href="/sign-up">
+          <Link href={'/sign-up' as Href}>
             <Text style={styles.footerLink}>Create account</Text>
           </Link>
         </View>
