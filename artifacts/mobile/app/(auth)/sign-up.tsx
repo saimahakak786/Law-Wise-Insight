@@ -36,7 +36,7 @@ export default function SignUpPage() {
   useWarmUpBrowser();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signUp, errors, fetchStatus } = useSignUp();
+  const { signUp, errors, fetchStatus, setActive } = useSignUp();
   const { startSSOFlow } = useSSO();
 
   const [email, setEmail] = useState('');
@@ -65,9 +65,10 @@ export default function SignUpPage() {
         emailAddress: email.trim(),
         password,
       });
-      if (result.status === 'complete') {
+      if (result.status === 'complete' && setActive) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await signUp.finalize({ navigate });
+        await setActive({ session: result.createdSessionId });
+        router.replace('/(tabs)' as Href);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
@@ -85,10 +86,11 @@ export default function SignUpPage() {
     setSignUpError('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await signUp.attemptEmailAddressVerification({ code });
-      if (signUp.status === 'complete') {
+      const result = await signUp.attemptEmailAddressVerification({ code });
+      if (result.status === 'complete' && setActive) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await signUp.finalize({ navigate });
+        await setActive({ session: result.createdSessionId });
+        router.replace('/(tabs)' as Href);
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
@@ -120,29 +122,49 @@ export default function SignUpPage() {
     setSignUpError('');
 
     try {
-      const { createdSessionId, setActive } = await startSSOFlow({
+      // FIX 1: Aligned scheme to 'lawvise' matching app.json and Clerk dashboard
+      const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
+
+      const { createdSessionId, setActive: setSSOActive, signUp: ssoSignUp, signIn: ssoSignIn } = await startSSOFlow({
         strategy: 'oauth_google',
-        redirectUrl: AuthSession.makeRedirectUri({ scheme: 'lawwise' }),
+        redirectUrl,
       });
 
-      if (createdSessionId && setActive) {
+      const activateSession = setSSOActive || setActive;
+
+      // FIX 2: Universal handler covering direct sessions, completed sign-ups, and sign-ins
+      if (createdSessionId && activateSession) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await setActive({
-          session: createdSessionId,
-          navigate: ({ decorateUrl }) => {
-            router.push(decorateUrl('/') as Href);
-          },
-        });
+        await activateSession({ session: createdSessionId });
+        router.replace('/(tabs)' as Href);
+        return;
       }
+
+      if (ssoSignUp && ssoSignUp.status === 'complete' && activateSession) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await activateSession({ session: ssoSignUp.createdSessionId });
+        router.replace('/(tabs)' as Href);
+        return;
+      }
+
+      if (ssoSignIn && ssoSignIn.status === 'complete' && activateSession) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await activateSession({ session: ssoSignIn.createdSessionId });
+        router.replace('/(tabs)' as Href);
+        return;
+      }
+
+      Alert.alert('Google Sign-Up', 'Authentication incomplete. Please try again.');
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message;
+      console.error('Google Sign-Up error:', e);
       if (errorMessage && !errorMessage.includes('cancel') && !errorMessage.includes('navigate')) {
         setSignUpError('Google sign-up was interrupted. Please try again.');
       }
     } finally {
       setGoogleLoading(false);
     }
-  }, [startSSOFlow, router]);
+  }, [startSSOFlow, router, setActive]);
 
   const handleResendCode = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
