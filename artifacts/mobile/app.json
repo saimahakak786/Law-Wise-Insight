@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "lawwise",
+    "scheme": "lawvise",
     "userInterfaceStyle": "light",
     "jsEngine": "hermes",
     "splash": {
@@ -23,7 +23,22 @@
       "package": "com.saimahakak786.lawwise",
       "jsEngine": "hermes",
       "backgroundColor": "#F0F4F5",
-      "displayName": "LawVise"
+      "displayName": "LawVise",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "lawvise"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -33,7 +48,7 @@
       [
         "@clerk/expo",
         {
-          "scheme": "lawwise"
+          "scheme": "lawvise"
         }
       ],
       [
