@@ -41,7 +41,9 @@ export default function SignInPage() {
   useWarmUpBrowser();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signIn, isLoaded } = useSignIn();
+  
+  // Extract setActive directly from useSignIn
+  const { signIn, isLoaded, setActive } = useSignIn();
   const { startSSOFlow } = useSSO();
 
   const [identifier, setIdentifier] = useState('');
@@ -80,7 +82,7 @@ export default function SignInPage() {
   }, [isMfaRequired, signIn]);
 
   const handleSignIn = async () => {
-    if (!identifier || !password || !isLoaded || !signIn) return;
+    if (!identifier || !password || !isLoaded || !signIn || !setActive) return;
     setSignInError('');
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -93,7 +95,11 @@ export default function SignInPage() {
 
       if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // FIX: Set active session before navigating
+        await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)');
+      } else {
+        Alert.alert('Action Required', `Sign-in status: ${result.status}`);
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || 'Sign in failed.';
@@ -106,7 +112,7 @@ export default function SignInPage() {
   };
 
   const handleVerify = async () => {
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signIn || !setActive) return;
     setSignInError('');
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -124,6 +130,7 @@ export default function SignInPage() {
 
       if (result?.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)');
       }
     } catch (e: any) {
@@ -164,17 +171,26 @@ export default function SignInPage() {
       // Root deep link redirect for standalone Android APKs
       const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
 
-      const { createdSessionId, setActive } = await startSSOFlow({
+      const { createdSessionId, setActive: setSSOActive, signUp, signIn: ssoSignIn } = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl,
       });
 
-      if (createdSessionId && setActive) {
+      const activateSession = setSSOActive || setActive;
+
+      if (createdSessionId && activateSession) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await setActive({ session: createdSessionId });
+        await activateSession({ session: createdSessionId });
+        router.replace('/(tabs)');
+      } else if (signUp && signUp.status === 'complete' && activateSession) {
+        await activateSession({ session: signUp.createdSessionId });
+        router.replace('/(tabs)');
+      } else if (ssoSignIn && ssoSignIn.status === 'complete' && activateSession) {
+        await activateSession({ session: ssoSignIn.createdSessionId });
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Sign-In', 'Session creation requires additional steps.');
+        console.log('SSO Flow result:', { createdSessionId, signUpStatus: signUp?.status, signInStatus: ssoSignIn?.status });
+        Alert.alert('Google Sign-In', 'Please complete sign-up or verification to finish signing in.');
       }
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || JSON.stringify(e);
@@ -187,7 +203,7 @@ export default function SignInPage() {
     } finally {
       setGoogleLoading(false);
     }
-  }, [startSSOFlow, router]);
+  }, [startSSOFlow, router, setActive]);
 
   const handleSendResetCode = async () => {
     if (!forgotIdentifier.trim() || !isLoaded || !signIn) {
@@ -210,7 +226,7 @@ export default function SignInPage() {
   };
 
   const handleResetPassword = async () => {
-    if (!resetCode || !newPassword || !isLoaded || !signIn) {
+    if (!resetCode || !newPassword || !isLoaded || !signIn || !setActive) {
       setForgotError('Please fill in both fields.');
       return;
     }
@@ -231,6 +247,7 @@ export default function SignInPage() {
 
       if (result.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)');
       } else {
         setForgotError('Password reset incomplete. Please verify the code.');
