@@ -183,45 +183,51 @@ export default function SignInPage() {
       // Root deep link redirect scheme aligned to 'lawvise'
       const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
 
-      const { createdSessionId, setActive: setSSOActive, signUp, signIn: ssoSignIn } = await startSSOFlow({
+      const result = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl,
       });
 
+      const { createdSessionId, setActive: setSSOActive, signUp, signIn: ssoSignIn } = result;
       const activateSession = setSSOActive || setActive;
 
-      if (createdSessionId && activateSession) {
+      if (!activateSession) {
+        throw new Error('Session activation handler is missing.');
+      }
+
+      // 1. Direct session ID returned by SSO flow
+      if (createdSessionId) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await activateSession({ session: createdSessionId });
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      if (signUp && signUp.status === 'complete' && activateSession) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await activateSession({ session: signUp.createdSessionId });
-        router.replace('/(tabs)' as Href);
-        return;
-      }
-
-      if (ssoSignIn && ssoSignIn.status === 'complete' && activateSession) {
+      // 2. Existing Sign-In session ID
+      if (ssoSignIn?.createdSessionId) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await activateSession({ session: ssoSignIn.createdSessionId });
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      // If user signed in via Google but has no existing record, guide to sign up
-      if (signUp && signUp.status === 'missing_requirements') {
-        Alert.alert(
-          'Account Setup Required',
-          'Please finish creating your LawVise account.',
-          [{ text: 'Continue', onPress: () => router.push('/sign-up' as Href) }]
-        );
+      // 3. New User Sign-Up session ID (auto-provisioned)
+      if (signUp?.createdSessionId) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await activateSession({ session: signUp.createdSessionId });
+        router.replace('/(tabs)' as Href);
         return;
       }
 
-      Alert.alert('Google Sign-In', 'Authentication incomplete. Please try again.');
+      // 4. Fallback check if status is complete
+      if (signUp?.status === 'complete' && signUp?.createdSessionId) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await activateSession({ session: signUp.createdSessionId });
+        router.replace('/(tabs)' as Href);
+        return;
+      }
+
+      Alert.alert('Google Sign-In', 'Authentication completed, but session could not be established.');
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || JSON.stringify(e);
       console.error('Google Sign-In Error:', e);
