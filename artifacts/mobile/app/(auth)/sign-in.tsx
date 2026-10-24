@@ -180,6 +180,10 @@ export default function SignInPage() {
     setSignInError('');
 
     try {
+      await WebBrowser.dismissBrowser();
+    } catch {}
+
+    try {
       // Root deep link redirect scheme aligned to 'lawvise'
       const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
 
@@ -195,39 +199,32 @@ export default function SignInPage() {
         throw new Error('Session activation handler is missing.');
       }
 
-      // 1. Direct session ID returned by SSO flow
-      if (createdSessionId) {
+      // 1. Grab session ID from any of Clerk's returned objects
+      const sessionId =
+        createdSessionId ||
+        ssoSignIn?.createdSessionId ||
+        signUp?.createdSessionId ||
+        (signUp as any)?.createdSessionId ||
+        (ssoSignIn as any)?.createdSessionId;
+
+      if (sessionId) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await activateSession({ session: createdSessionId });
+        await activateSession({ session: sessionId });
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      // 2. Existing Sign-In session ID
-      if (ssoSignIn?.createdSessionId) {
+      // 2. Fallback check if sign-up / sign-in is marked complete
+      if (signUp?.status === 'complete' || ssoSignIn?.status === 'complete') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await activateSession({ session: ssoSignIn.createdSessionId });
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      // 3. New User Sign-Up session ID (auto-provisioned)
-      if (signUp?.createdSessionId) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await activateSession({ session: signUp.createdSessionId });
-        router.replace('/(tabs)' as Href);
-        return;
-      }
-
-      // 4. Fallback check if status is complete
-      if (signUp?.status === 'complete' && signUp?.createdSessionId) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await activateSession({ session: signUp.createdSessionId });
-        router.replace('/(tabs)' as Href);
-        return;
-      }
-
-      Alert.alert('Google Sign-In', 'Authentication completed, but session could not be established.');
+      Alert.alert(
+        'Google Sign-In',
+        `Status: SignUp (${signUp?.status || 'none'}), SignIn (${ssoSignIn?.status || 'none'})`
+      );
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || JSON.stringify(e);
       console.error('Google Sign-In Error:', e);
@@ -647,7 +644,7 @@ const styles = StyleSheet.create({
     borderColor: '#D8E2E0',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'center',
+    justify.content: 'center',
   },
   otpBoxActive: {
     borderColor: '#C5A059',
