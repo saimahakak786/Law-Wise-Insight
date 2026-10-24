@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
     borderColor: '#D8E2E0',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justify.content: 'center',
+    justifyContent: 'center',
   },
   otpBoxActive: {
     borderColor: '#C5A059',
