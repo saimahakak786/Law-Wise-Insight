@@ -222,17 +222,6 @@ export default function SignInPage() {
         }
       }
 
-      // 3. If it's a new account created via Google SSO that needs finalization
-      if (signUp) {
-        const res = await signUp.create({ strategy: 'oauth_google' });
-        if (res.createdSessionId) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          await activateSession({ session: res.createdSessionId });
-          router.replace('/(tabs)' as Href);
-          return;
-        }
-      }
-
       Alert.alert('Google Sign-In', 'Authentication completed, but session could not be established.');
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || JSON.stringify(e);
