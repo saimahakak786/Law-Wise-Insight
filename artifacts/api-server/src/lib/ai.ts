@@ -55,7 +55,7 @@ export async function callAI(systemPrompt: string, userPrompt: string): Promise<
   return chunks.join("");
 }
 
-// ─── Gemini (Primary with Google Search Grounding) ─────────────────────────
+// ─── Gemini (Primary) ───────────────────────────────────────────────────────
 
 async function streamGemini(
   systemPrompt: string,
@@ -63,11 +63,9 @@ async function streamGemini(
   onChunk: (text: string) => void
 ): Promise<string> {
   const model = genAI!.getGenerativeModel({
-    model: "gemini-2.0-flash ", // Updated to standard supported flash model
+    model: "gemini-2.0-flash",
     systemInstruction: systemPrompt,
     generationConfig: { maxOutputTokens: 8192 },
-    // 🌟 Enables live Google Search tool-use / grounding for real case law & citations
-    tools: [{ googleSearch: {} }] as any,
   });
 
   const result = await model.generateContentStream(userPrompt);
