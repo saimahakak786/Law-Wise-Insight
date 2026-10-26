@@ -63,7 +63,7 @@ async function streamGemini(
   onChunk: (text: string) => void
 ): Promise<string> {
   const model = genAI!.getGenerativeModel({
-    model: "gemini-2.5-flash", // Updated to standard supported flash model
+    model: "gemini-2.0-flash ", // Updated to standard supported flash model
     systemInstruction: systemPrompt,
     generationConfig: { maxOutputTokens: 8192 },
     // 🌟 Enables live Google Search tool-use / grounding for real case law & citations
