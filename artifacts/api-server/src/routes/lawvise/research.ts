@@ -54,11 +54,8 @@ router.post("/research", requireAuth, async (req, res): Promise<void> => {
   const userPrompt = `${researchTypeNote}Legal Research Query / Case Name: ${query}\n\nJurisdiction: ${juris}`;
 
   try {
-    // Collect full AI response instead of raw streaming
-    let fullOutput = "";
-    await streamAI(systemPrompt, userPrompt, (text) => {
-      fullOutput += text;
-    });
+    // Call non-streaming callAI directly to get the response string
+    const fullOutput = await callAI(systemPrompt, userPrompt);
 
     // Send complete structured JSON payload back to mobile app
     res.status(200).json({
