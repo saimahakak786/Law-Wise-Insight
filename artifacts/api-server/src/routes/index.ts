@@ -6,7 +6,8 @@ import storageRouter from "./storage";
 const router: Router = Router();
 
 router.use(healthRouter);
-router.use(lawviseRouter);
+router.use('/lawvise', lawviseRouter);
+
 router.use(storageRouter);
 
 export default router;
