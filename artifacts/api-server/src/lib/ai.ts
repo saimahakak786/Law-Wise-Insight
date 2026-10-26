@@ -1,17 +1,9 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "./logger";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const XAI_API_KEY = process.env.XAI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-
-let genAI: GoogleGenerativeAI | null = null;
-if (GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-} else {
-  logger.warn("GEMINI_API_KEY not set — Gemini provider disabled");
-}
 
 /**
  * Stream AI response through providers: Gemini → Groq → OpenRouter → xAI Grok (fallback chain)
@@ -55,28 +47,73 @@ export async function callAI(systemPrompt: string, userPrompt: string): Promise<
   return chunks.join("");
 }
 
-// ─── Gemini (Primary) ───────────────────────────────────────────────────────
+// ─── Gemini (Free-tier Direct REST API with gemini-2.0-flash) ───────────────
 
 async function streamGemini(
   systemPrompt: string,
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  const model = genAI!.getGenerativeModel({
-    model: "gemini-2.0-flash",
-    systemInstruction: systemPrompt,
-    generationConfig: { maxOutputTokens: 8192 },
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse`;
+  
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": GEMINI_API_KEY,
+    },
+    body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: userPrompt }]
+        }
+      ],
+      generationConfig: {
+        maxOutputTokens: 8192
+      }
+    }),
   });
 
-  const result = await model.generateContentStream(userPrompt);
+  if (!resp.ok) {
+    const errorText = await resp.text();
+    throw new Error(`Gemini API HTTP ${resp.status}: ${errorText}`);
+  }
+
+  const reader = resp.body?.getReader();
+  if (!reader) throw new Error("No response body from Gemini");
+
+  const decoder = new TextDecoder();
   let fullText = "";
-  for await (const chunk of result.stream) {
-    const text = chunk.text();
-    if (text) {
-      fullText += text;
-      onChunk(text);
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = line.slice(6).trim();
+      if (!data) continue;
+      try {
+        const parsed = JSON.parse(data);
+        const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        if (text) {
+          fullText += text;
+          onChunk(text);
+        }
+      } catch {
+        /* skip malformed chunks */
+      }
     }
   }
+
   return fullText;
 }
 
