@@ -1,40 +1,38 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/requireAuth";
 import { LegalResearchBody } from "@workspace/api-zod";
-import { callAI } from "../../lib/ai"; // Changed to non-streaming callAI
+import { callAI } from "../../lib/ai";
 
 const router = Router();
 
-const RESEARCH_SYSTEM_PROMPT = `You are LawVise, an elite global judicial research and precedent-analysis engine designed for senior advocates, barristers, attorneys, and judges. 
+const RESEARCH_SYSTEM_PROMPT = `You are LawVise, an elite global judicial research and precedent-analysis engine designed for senior advocates, barristers, attorneys, and judges.
 
-CRITICAL RULES:
-1. Never include conversational filler, pleasantries, or introductory/concluding remarks. Start directly with the formal research brief.
-2. Prioritize absolute legal accuracy, precise statutory interpretations, authentic multi-reporter citations, and peer-reviewed legal research papers/scholarship.
-3. Dynamically adapt your legal framework, terminology, and court hierarchies based on the requested jurisdiction (e.g., India, UAE, USA, UK, or international law).
-4. NEVER invent or hallucinate fictional case names when given factual queries.
+CRITICAL INSTRUCTION: You must output your response STRICTLY as a valid JSON object (and nothing else). Do not include markdown code blocks like \`\`\`json or any conversational filler. 
 
-Always format your output cleanly using the following professional structure:
+Use this exact JSON structure:
+{
+  "overview": "Concise summary of the legal research query and framework.",
+  "cases": [
+    {
+      "title": "Full Case Name / Cause Title (e.g. State of Maharashtra v. XYZ)",
+      "citation": "Authentic Citation (e.g. 2024 SCC 123 or AIR 2024 SC 45)",
+      "court": "Court Name (e.g. Supreme Court of India)",
+      "coram": "Bench / Panel Composition",
+      "date": "Judgment Date",
+      "matchPercentage": 95,
+      "category": "Supreme Court Precedent",
+      "facts": "Concise summary of facts",
+      "statutes": "Applicable sections and statutes",
+      "ratio": "Ratio decidendi and binding legal principle",
+      "implications": "Practical and strategic litigation implications"
+    }
+  ]
+}
 
-1. CASE CITATION & BENCH/COURT DETAILS:
-   - Cause Title (Parties name)
-   - Authentic Citations (e.g., SCC/AIR for India; F.3d/U.S. for USA; WLR/All ER for UK; Federal Supreme Court reports for UAE)
-   - Court Name & Coram / Panel Composition
-   - Date of Judgment
-
-2. FACTUAL MATRIX & CORE LEGAL ISSUES:
-   - Concise summary of facts and precise formulation of questions of law.
-
-3. RELEVANT STATUTES, SECTIONS & RULES:
-   - Specific acts, codes, sections, and authoritative statutory interpretations applicable in the given jurisdiction.
-
-4. RATIO DECIDENDI & BINDING PRECEDENTS:
-   - Core legal principle established, judicial reasoning, and subsequent binding weight.
-
-5. ACADEMIC & RESEARCH PAPER CITATIONS:
-   - List relevant peer-reviewed law review articles, university law journal papers, and authoritative legal treatises addressing this doctrine/query, including author name, paper/article title, journal name, and year of publication.
-
-6. PRACTICAL & STRATEGIC IMPLICATIONS:
-   - Application to ongoing litigation, cross-border compliance, or judicial adjudication.`;
+RULES:
+1. Find and return 3 to 5 highly relevant, authentic real-world case law precedents for the given query and jurisdiction.
+2. NEVER invent or hallucinate fictional case names or citations.
+3. Ensure the output is 100% valid JSON parsable by JSON.parse().`;
 
 router.post("/research", requireAuth, async (req, res): Promise<void> => {
   const parsed = LegalResearchBody.safeParse(req.body);
@@ -51,16 +49,34 @@ router.post("/research", requireAuth, async (req, res): Promise<void> => {
   const systemPrompt = `${RESEARCH_SYSTEM_PROMPT}\n\nACTIVE JURISDICTION: ${juris}. Always respond strictly in ${lang} and ground all legal analysis strictly within the laws of ${juris}.`;
 
   const researchTypeNote = researchType ? `Research Type: ${researchType}\n` : "";
-  const userPrompt = `${researchTypeNote}Legal Research Query / Case Name: ${query}\n\nJurisdiction: ${juris}`;
+  const userPrompt = `${researchTypeNote}Legal Research Query / Case Facts: ${query}\n\nJurisdiction: ${juris}`;
 
   try {
-    // Call non-streaming callAI directly to get the response string
     const fullOutput = await callAI(systemPrompt, userPrompt);
 
-    // Send complete structured JSON payload back to mobile app
+    // Clean up any accidental markdown code blocks if the AI included them
+    let cleanedOutput = fullOutput.trim();
+    if (cleanedOutput.startsWith("```json")) {
+      cleanedOutput = cleanedOutput.replace(/^```json/, "").replace(/```$/, "").trim();
+    } else if (cleanedOutput.startsWith("```")) {
+      cleanedOutput = cleanedOutput.replace(/^```/, "").replace(/```$/, "").trim();
+    }
+
+    // Validate that it's valid JSON, or pass it through
+    let parsedJson;
+    try {
+      parsedJson = JSON.parse(cleanedOutput);
+    } catch (e) {
+      // Fallback: wrap raw text in a JSON structure if parsing fails
+      parsedJson = {
+        overview: cleanedOutput,
+        cases: []
+      };
+    }
+
     res.status(200).json({
       success: true,
-      result: fullOutput,
+      result: JSON.stringify(parsedJson), // Send structured JSON string to frontend
     });
   } catch (err) {
     req.log.error({ err }, "Legal research failed");
