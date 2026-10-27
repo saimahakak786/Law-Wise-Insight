@@ -16,8 +16,9 @@ export async function streamAI(
   if (GEMINI_API_KEY) {
     try {
       return await streamGemini(systemPrompt, userPrompt, onChunk);
-    } catch (err) {
-      logger.warn({ err }, "Gemini failed, trying Groq...");
+    } catch (err: any) {
+      logger.error({ err: err.message || err }, "Gemini API call failed");
+      console.error("Gemini Error Details:", err);
     }
   }
   if (GROQ_API_KEY) {
@@ -37,7 +38,7 @@ export async function streamAI(
   if (XAI_API_KEY) {
     return await streamXAI(systemPrompt, userPrompt, onChunk);
   }
-  throw new Error("No AI provider available. Set OPENROUTER_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, or XAI_API_KEY.");
+  throw new Error("No AI provider available. Set GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, or XAI_API_KEY.");
 }
 
 /** Non-streaming call — collects all chunks and returns full text */
@@ -47,7 +48,7 @@ export async function callAI(systemPrompt: string, userPrompt: string): Promise<
   return chunks.join("");
 }
 
-// ─── Gemini (Free-tier Direct REST API with gemini-2.0-flash) ───────────────
+// ─── Gemini (Robust Direct REST API with gemini-2.0-flash) ──────────────────
 
 async function streamGemini(
   systemPrompt: string,
@@ -56,6 +57,9 @@ async function streamGemini(
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse`;
   
+  // Combine system prompt and user prompt safely to guarantee compatibility
+  const combinedPrompt = `[Instructions / System Context]\n${systemPrompt}\n\n[User Query / Case Facts]\n${userPrompt}`;
+
   const resp = await fetch(url, {
     method: "POST",
     headers: {
@@ -63,17 +67,15 @@ async function streamGemini(
       "x-goog-api-key": GEMINI_API_KEY,
     },
     body: JSON.stringify({
-      system_instruction: {
-        parts: [{ text: systemPrompt }]
-      },
       contents: [
         {
           role: "user",
-          parts: [{ text: userPrompt }]
+          parts: [{ text: combinedPrompt }]
         }
       ],
       generationConfig: {
-        maxOutputTokens: 8192
+        maxOutputTokens: 8192,
+        temperature: 0.3
       }
     }),
   });
@@ -112,6 +114,10 @@ async function streamGemini(
         /* skip malformed chunks */
       }
     }
+  }
+
+  if (!fullText.trim()) {
+    throw new Error("Gemini returned empty response text.");
   }
 
   return fullText;
