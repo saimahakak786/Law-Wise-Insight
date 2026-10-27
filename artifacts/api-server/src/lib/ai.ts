@@ -3,15 +3,11 @@ import { logger } from "./logger";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-/**
- * Stream AI response: Prioritizing Gemini (Free Tier) first, then Groq
- */
 export async function streamAI(
   systemPrompt: string,
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  // 1. Try Gemini first (Free Google AI Studio Tier via non-streaming v1beta endpoint)
   if (GEMINI_API_KEY) {
     try {
       return await callGeminiNonStreaming(systemPrompt, userPrompt, onChunk);
@@ -20,7 +16,6 @@ export async function streamAI(
     }
   }
 
-  // 2. Fallback to Groq
   if (GROQ_API_KEY) {
     try {
       return await callGroqNonStreaming(systemPrompt, userPrompt, onChunk);
@@ -38,14 +33,12 @@ export async function callAI(systemPrompt: string, userPrompt: string): Promise<
   return chunks.join("");
 }
 
-// ─── Gemini (Free Tier - Non-Streaming v1beta) ───────────────────────────────
-
 async function callGeminiNonStreaming(
   systemPrompt: string,
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  const models = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
   let lastError: any = null;
 
   const combinedPrompt = `${systemPrompt}\n\n[User Request / Case Facts]\n${userPrompt}`;
@@ -60,7 +53,11 @@ async function callGeminiNonStreaming(
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: combinedPrompt }] }],
-          generationConfig: { maxOutputTokens: 8192, temperature: 0.3 }
+          generationConfig: { 
+            maxOutputTokens: 8192, 
+            temperature: 0.2,
+            responseMimeType: "application/json" // Enforces strict JSON output from Gemini
+          }
         }),
       });
 
@@ -73,7 +70,7 @@ async function callGeminiNonStreaming(
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (text) {
-        onChunk(text); // Deliver the full response text cleanly
+        onChunk(text);
         return text;
       }
       throw new Error(`Empty response from Gemini (${model})`);
@@ -83,8 +80,6 @@ async function callGeminiNonStreaming(
   }
   throw lastError || new Error("All Gemini models failed.");
 }
-
-// ─── Groq (Non-Streaming Fallback) ───────────────────────────────────────────
 
 async function callGroqNonStreaming(
   systemPrompt: string,
@@ -105,6 +100,7 @@ async function callGroqNonStreaming(
       ],
       stream: false,
       max_tokens: 8192,
+      response_format: { type: "json_object" } // Enforces strict JSON on Groq as well
     }),
   });
 
