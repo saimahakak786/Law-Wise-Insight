@@ -1,175 +1,51 @@
 import { logger } from "./logger";
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const XAI_API_KEY = process.env.XAI_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 /**
- * Stream AI response through providers: Groq → OpenAI → OpenRouter → xAI → Gemini
+ * Stream AI response: Prioritizing Gemini (Free Tier) first, then Groq
  */
 export async function streamAI(
   systemPrompt: string,
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
+  // 1. Try Gemini first (Free Google AI Studio Tier)
+  if (GEMINI_API_KEY) {
+    try {
+      return await streamGemini(systemPrompt, userPrompt, onChunk);
+    } catch (err: any) {
+      logger.warn({ err: err.message || err }, "Gemini failed, trying Groq...");
+    }
+  }
+
+  // 2. Fallback to Groq
   if (GROQ_API_KEY) {
     try {
       return await streamGroq(systemPrompt, userPrompt, onChunk);
     } catch (err: any) {
-      logger.warn({ err: err.message || err }, "Groq failed, trying OpenAI...");
+      logger.warn({ err: err.message || err }, "Groq failed.");
     }
-  }
-  if (OPENAI_API_KEY) {
-    try {
-      return await streamOpenAI(systemPrompt, userPrompt, onChunk);
-    } catch (err: any) {
-      logger.warn({ err: err.message || err }, "OpenAI failed, trying OpenRouter...");
-    }
-  }
-  if (OPENROUTER_API_KEY) {
-    try {
-      return await streamOpenRouter(systemPrompt, userPrompt, onChunk);
-    } catch (err: any) {
-      logger.warn({ err: err.message || err }, "OpenRouter failed, trying xAI...");
-    }
-  }
-  if (XAI_API_KEY) {
-    try {
-      return await streamXAI(systemPrompt, userPrompt, onChunk);
-    } catch (err: any) {
-      logger.warn({ err: err.message || err }, "xAI failed, trying Gemini...");
-    }
-  }
-  if (GEMINI_API_KEY) {
-    return await streamGemini(systemPrompt, userPrompt, onChunk);
   }
   
-  throw new Error("No AI provider available. Please set GROQ_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY in Render.");
+  throw new Error("No free AI provider available. Please set GEMINI_API_KEY in Render.");
 }
 
-/** Non-streaming call — collects all chunks and returns full text */
 export async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
   const chunks: string[] = [];
   await streamAI(systemPrompt, userPrompt, (c) => chunks.push(c));
   return chunks.join("");
 }
 
-// ─── Groq (Primary & Ultra Fast) ────────────────────────────────────────────
-
-async function streamGroq(
-  systemPrompt: string,
-  userPrompt: string,
-  onChunk: (text: string) => void
-): Promise<string> {
-  const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      stream: true,
-      max_tokens: 8192,
-    }),
-  });
-  return parseSseStream(resp, onChunk);
-}
-
-// ─── OpenAI (Secondary) ─────────────────────────────────────────────────────
-
-async function streamOpenAI(
-  systemPrompt: string,
-  userPrompt: string,
-  onChunk: (text: string) => void
-): Promise<string> {
-  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      stream: true,
-      max_tokens: 8192,
-    }),
-  });
-  return parseSseStream(resp, onChunk);
-}
-
-// ─── OpenRouter (Tertiary) ──────────────────────────────────────────────────
-
-async function streamOpenRouter(
-  systemPrompt: string,
-  userPrompt: string,
-  onChunk: (text: string) => void
-): Promise<string> {
-  const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://lawwise.app",
-      "X-Title": "Lawwise",
-    },
-    body: JSON.stringify({
-      model: "meta-llama/llama-3.3-70b-instruct",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      stream: true,
-      max_tokens: 8192,
-    }),
-  });
-  return parseSseStream(resp, onChunk);
-}
-
-// ─── xAI Grok (Quaternary) ───────────────────────────────────────────────────
-
-async function streamXAI(
-  systemPrompt: string,
-  userPrompt: string,
-  onChunk: (text: string) => void
-): Promise<string> {
-  const resp = await fetch("https://api.x.ai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${XAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "grok-3-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      stream: true,
-      max_tokens: 8192,
-    }),
-  });
-  return parseSseStream(resp, onChunk);
-}
-
-// ─── Gemini (Fallback) ───────────────────────────────────────────────────────
+// ─── Gemini (Free Tier) ───────────────────────────────────────────────────────
 
 async function streamGemini(
   systemPrompt: string,
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+  const models = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-1.5-flash"];
   let lastError: any = null;
 
   const combinedPrompt = `[Instructions / System Context]\n${systemPrompt}\n\n[User Query / Case Facts]\n${userPrompt}`;
@@ -233,16 +109,35 @@ async function streamGemini(
   throw lastError || new Error("All Gemini models failed.");
 }
 
-// ─── SSE stream parser ───────────────────────────────────────────────────────
+// ─── Groq ────────────────────────────────────────────────────────────────────
 
-async function parseSseStream(
-  resp: Response,
+async function streamGroq(
+  systemPrompt: string,
+  userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
+  const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "llama-3.1-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      stream: true,
+      max_tokens: 8192,
+    }),
+  });
+
   if (!resp.ok) {
     const body = await resp.text();
-    throw new Error(`HTTP ${resp.status}: ${body}`);
+    throw new Error(`Groq HTTP ${resp.status}: ${body}`);
   }
+  
   const reader = resp.body?.getReader();
   if (!reader) throw new Error("No response body");
 
