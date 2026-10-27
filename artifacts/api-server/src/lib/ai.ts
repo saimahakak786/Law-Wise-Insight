@@ -11,10 +11,10 @@ export async function streamAI(
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  // 1. Try Gemini first (Free Google AI Studio Tier)
+  // 1. Try Gemini first (Free Google AI Studio Tier via non-streaming v1beta endpoint)
   if (GEMINI_API_KEY) {
     try {
-      return await streamGemini(systemPrompt, userPrompt, onChunk);
+      return await callGeminiNonStreaming(systemPrompt, userPrompt, onChunk);
     } catch (err: any) {
       logger.warn({ err: err.message || err }, "Gemini failed, trying Groq...");
     }
@@ -23,13 +23,13 @@ export async function streamAI(
   // 2. Fallback to Groq
   if (GROQ_API_KEY) {
     try {
-      return await streamGroq(systemPrompt, userPrompt, onChunk);
+      return await callGroqNonStreaming(systemPrompt, userPrompt, onChunk);
     } catch (err: any) {
       logger.warn({ err: err.message || err }, "Groq failed.");
     }
   }
   
-  throw new Error("No free AI provider available. Please set GEMINI_API_KEY in Render.");
+  throw new Error("No free AI provider available. Please set GEMINI_API_KEY in Render environment variables.");
 }
 
 export async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
@@ -38,29 +38,28 @@ export async function callAI(systemPrompt: string, userPrompt: string): Promise<
   return chunks.join("");
 }
 
-// ─── Gemini (Free Tier) ───────────────────────────────────────────────────────
+// ─── Gemini (Free Tier - Non-Streaming v1beta) ───────────────────────────────
 
-async function streamGemini(
+async function callGeminiNonStreaming(
   systemPrompt: string,
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  const models = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-1.5-flash"];
+  const models = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
   let lastError: any = null;
 
-  const combinedPrompt = `[Instructions / System Context]\n${systemPrompt}\n\n[User Query / Case Facts]\n${userPrompt}`;
+  const combinedPrompt = `${systemPrompt}\n\n[User Request / Case Facts]\n${userPrompt}`;
 
   for (const model of models) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
     try {
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
         },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: combinedPrompt }] }],
+          contents: [{ parts: [{ text: combinedPrompt }] }],
           generationConfig: { maxOutputTokens: 8192, temperature: 0.3 }
         }),
       });
@@ -70,38 +69,14 @@ async function streamGemini(
         throw new Error(`Gemini API (${model}) HTTP ${resp.status}: ${errorText}`);
       }
 
-      const reader = resp.body?.getReader();
-      if (!reader) throw new Error(`No response body from Gemini (${model})`);
+      const data = await resp.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      const decoder = new TextDecoder();
-      let fullText = "";
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (!data) continue;
-          try {
-            const parsed = JSON.parse(data);
-            const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-            if (text) {
-              fullText += text;
-              onChunk(text);
-            }
-          } catch {
-            /* skip */
-          }
-        }
+      if (text) {
+        onChunk(text); // Deliver the full response text cleanly
+        return text;
       }
-
-      if (fullText.trim()) return fullText;
+      throw new Error(`Empty response from Gemini (${model})`);
     } catch (err) {
       lastError = err;
     }
@@ -109,9 +84,9 @@ async function streamGemini(
   throw lastError || new Error("All Gemini models failed.");
 }
 
-// ─── Groq ────────────────────────────────────────────────────────────────────
+// ─── Groq (Non-Streaming Fallback) ───────────────────────────────────────────
 
-async function streamGroq(
+async function callGroqNonStreaming(
   systemPrompt: string,
   userPrompt: string,
   onChunk: (text: string) => void
@@ -128,7 +103,7 @@ async function streamGroq(
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      stream: true,
+      stream: false,
       max_tokens: 8192,
     }),
   });
@@ -138,34 +113,11 @@ async function streamGroq(
     throw new Error(`Groq HTTP ${resp.status}: ${body}`);
   }
   
-  const reader = resp.body?.getReader();
-  if (!reader) throw new Error("No response body");
-
-  const decoder = new TextDecoder();
-  let fullText = "";
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6).trim();
-      if (data === "[DONE]") return fullText;
-      try {
-        const parsed = JSON.parse(data);
-        const content = parsed.choices?.[0]?.delta?.content ?? "";
-        if (content) {
-          fullText += content;
-          onChunk(content);
-        }
-      } catch {
-        /* skip */
-      }
-    }
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content ?? "";
+  if (content) {
+    onChunk(content);
+    return content;
   }
-  return fullText;
+  throw new Error("Empty response from Groq");
 }
