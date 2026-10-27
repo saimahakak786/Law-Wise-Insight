@@ -48,79 +48,89 @@ export async function callAI(systemPrompt: string, userPrompt: string): Promise<
   return chunks.join("");
 }
 
-// ─── Gemini (Robust Direct REST API with gemini-2.0-flash) ──────────────────
+// ─── Gemini (Optimized for new AQ. auth keys) ────────────────────────────────
 
 async function streamGemini(
   systemPrompt: string,
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse`;
-  
-  // Combine system prompt and user prompt safely to guarantee compatibility
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+  let lastError: any = null;
+
   const combinedPrompt = `[Instructions / System Context]\n${systemPrompt}\n\n[User Query / Case Facts]\n${userPrompt}`;
 
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": GEMINI_API_KEY,
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: combinedPrompt }]
-        }
-      ],
-      generationConfig: {
-        maxOutputTokens: 8192,
-        temperature: 0.3
+  for (const model of models) {
+    // IMPORTANT: Only pass ?alt=sse in URL. The AQ. key goes EXCLUSIVELY in the header to prevent "Multiple credentials" error.
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
+    
+    try {
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": GEMINI_API_KEY,
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: combinedPrompt }]
+            }
+          ],
+          generationConfig: {
+            maxOutputTokens: 8192,
+            temperature: 0.3
+          }
+        }),
+      });
+
+      if (!resp.ok) {
+        const errorText = await resp.text();
+        throw new Error(`Gemini API (${model}) HTTP ${resp.status}: ${errorText}`);
       }
-    }),
-  });
 
-  if (!resp.ok) {
-    const errorText = await resp.text();
-    throw new Error(`Gemini API HTTP ${resp.status}: ${errorText}`);
-  }
+      const reader = resp.body?.getReader();
+      if (!reader) throw new Error(`No response body from Gemini (${model})`);
 
-  const reader = resp.body?.getReader();
-  if (!reader) throw new Error("No response body from Gemini");
+      const decoder = new TextDecoder();
+      let fullText = "";
+      let buffer = "";
 
-  const decoder = new TextDecoder();
-  let fullText = "";
-  let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6).trim();
-      if (!data) continue;
-      try {
-        const parsed = JSON.parse(data);
-        const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-        if (text) {
-          fullText += text;
-          onChunk(text);
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (!data) continue;
+          try {
+            const parsed = JSON.parse(data);
+            const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+            if (text) {
+              fullText += text;
+              onChunk(text);
+            }
+          } catch {
+            /* skip malformed chunks */
+          }
         }
-      } catch {
-        /* skip malformed chunks */
       }
+
+      if (fullText.trim()) {
+        return fullText; // Success!
+      }
+    } catch (err) {
+      lastError = err;
+      console.warn(`Model ${model} failed, trying next...`, err);
     }
   }
 
-  if (!fullText.trim()) {
-    throw new Error("Gemini returned empty response text.");
-  }
-
-  return fullText;
+  throw lastError || new Error("All Gemini models failed to return content.");
 }
 
 // ─── Groq (Secondary) ───────────────────────────────────────────────────────
