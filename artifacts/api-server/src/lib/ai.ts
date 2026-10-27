@@ -38,7 +38,7 @@ async function callGeminiNonStreaming(
   userPrompt: string,
   onChunk: (text: string) => void
 ): Promise<string> {
-  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
   let lastError: any = null;
 
   const combinedPrompt = `${systemPrompt}\n\n[User Request / Case Facts]\n${userPrompt}`;
@@ -48,16 +48,10 @@ async function callGeminiNonStreaming(
     try {
       const resp = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: combinedPrompt }] }],
-          generationConfig: { 
-            maxOutputTokens: 8192, 
-            temperature: 0.2,
-            responseMimeType: "application/json" // Enforces strict JSON output from Gemini
-          }
+          generationConfig: { maxOutputTokens: 8192, temperature: 0.2 }
         }),
       });
 
@@ -93,14 +87,13 @@ async function callGroqNonStreaming(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "llama-3.1-70b-versatile",
+      model: "llama-3.3-70b-versatile",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       stream: false,
       max_tokens: 8192,
-      response_format: { type: "json_object" } // Enforces strict JSON on Groq as well
     }),
   });
 
