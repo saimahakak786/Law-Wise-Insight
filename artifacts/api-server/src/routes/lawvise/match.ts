@@ -31,7 +31,8 @@ CRITICAL RULES:
 
     const userPrompt = `Case facts and legal matrix:\n${facts}\n\nJurisdiction: ${juris}\n\nFind matching legal precedents with real case names and jurisdiction-specific citations. Return ONLY JSON.`;
 
-    const result = await callAI(systemPrompt, userPrompt);
+    // FIXED: Passed 'juris' as the third argument here
+    const result = await callAI(systemPrompt, userPrompt, juris);
 
     let matches = [];
 
@@ -77,7 +78,7 @@ CRITICAL RULES:
           {
             title: "Judicial Precedent Analysis: Re: Match Query",
             citation: `${juris} Precedent Database`,
-            principle: result.trim().substring(f => f, 500) || "Analysis generated successfully, but formatting required structural adjustment.",
+            principle: result.trim().substring(0, 500) || "Analysis generated successfully, but formatting required structural adjustment.",
             matchScore: "92%"
           }
         ];
