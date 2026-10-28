@@ -252,7 +252,7 @@ export default function AnalyzeScreen() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          documentText: docText,
+          content: docText, // FIXED: Corrected from documentText to content
           documentType: docType,
           analysisType,
           jurisdiction,
