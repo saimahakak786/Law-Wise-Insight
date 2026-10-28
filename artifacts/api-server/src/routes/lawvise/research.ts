@@ -52,7 +52,8 @@ router.post("/research", requireAuth, async (req, res): Promise<void> => {
   const userPrompt = `${researchTypeNote}Legal Research Query / Case Facts: ${query}\n\nJurisdiction: ${juris}`;
 
   try {
-    const fullOutput = await callAI(systemPrompt, userPrompt);
+    const fullOutput = await callAI(systemPrompt, userPrompt, juris);
+
 
     // Clean up any accidental markdown code blocks if the AI included them
     let cleanedOutput = fullOutput.trim();
