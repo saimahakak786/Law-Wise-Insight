@@ -76,7 +76,7 @@ router.post("/research", requireAuth, async (req, res): Promise<void> => {
 
     res.status(200).json({
       success: true,
-      result: JSON.stringify(parsedJson), // Send structured JSON string to frontend
+      result: parsedJson,
     });
   } catch (err) {
     req.log.error({ err }, "Legal research failed");
