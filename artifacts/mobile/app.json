@@ -82,10 +82,17 @@
         }
       ],
       [
-        "expo-notifications",
-        {
-          "sounds": [
-            "./attached_assets/court_alarm.mp3"
+        
+        [
+  "expo-notifications",
+  {
+    "sounds": [
+      "./assets/images/court_alarm.mp3"
+    ]
+  }
+]
+
+      
           ]
         }
       ]
