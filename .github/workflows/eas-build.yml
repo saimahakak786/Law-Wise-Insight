@@ -50,6 +50,7 @@ jobs:
           ORG_GRADLE_PROJECT_jvmargs: "-Xmx3048m -XX:MaxMetaspaceSize=512m"
         run: |
           chmod +x gradlew
+          ./gradlew clean
           ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK Artifact
