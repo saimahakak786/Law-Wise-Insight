@@ -21,7 +21,8 @@ const QUICK_ACTIONS = [
   { id: 'chat', label: 'Legal\nChat', icon: 'message-circle' as const, route: '/(tabs)/chat', color: '#0D9488' },
   { id: 'fact-matcher', label: 'Fact\nMatcher', icon: 'git-merge' as const, route: '/(tabs)/fact-matcher', color: '#7C3AED' },
   { id: 'intake', label: 'Client\nIntake', icon: 'user-plus' as const, route: '/client-intake', color: '#059669' },
-  { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/causelist', color: '#EA580C' },
+  { id: 'causelist', label: 'Cause List\n& Reminders', icon: 'calendar' as const, route: '/(tabs)/case-tracker', color: '#EA580C' },
+
   { id: 'draft', label: 'Draft\nDocument', icon: 'edit-3' as const, route: '/draft', color: '#DB2777' },
   { id: 'calc', label: 'Calculators', icon: 'calculator' as const, route: '/calculator', color: '#0891B2' },
   { id: 'research', label: 'Legal\nResearch', icon: 'search' as const, route: '/research', color: '#4F46E5' },
