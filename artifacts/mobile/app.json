@@ -1,4 +1,34 @@
-{
+Skip to content
+saimahakak786
+Law-Wise-Insight
+Repository navigation
+Code
+Issues
+Pull requests
+Actions
+Projects
+Security and quality
+Insights
+Settings
+Build Android App Locally
+Update app.json #346
+All jobs
+Run details
+Annotations
+1 error, 2 warnings, and 1 notice
+build-android
+failed 5 minutes ago in 28s
+Search logs
+1s
+1s
+4s
+0s
+7s
+11s
+0s
+1s
+Run npx expo prebuild --platform android --clean --no-install
+JsonFileError: Error parsing JSON: {
   "expo": {
     "name": "LawVise",
     "slug": "law-wise-insight",
@@ -115,3 +145,167 @@
     }
   }
 }
+
+├─ File: /home/runner/work/Law-Wise-Insight/Law-Wise-Insight/artifacts/mobile/app.json
+└─ Cause: SyntaxError: JSON5: invalid character '}' at 97:9
+   95 |       
+   96 |           ]
+>  97 |         }
+      |         ^
+   98 |       ]
+   99 |     ],
+  100 |     "experiments": {
+JsonFileError: Error parsing JSON: {
+  "expo": {
+    "name": "LawVise",
+    "slug": "law-wise-insight",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "lawvise",
+    "userInterfaceStyle": "light",
+    "jsEngine": "hermes",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F0F4F5"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.saimahakak786.lawwise",
+      "jsEngine": "hermes",
+      "backgroundColor": "#F0F4F5"
+    },
+    "android": {
+      "package": "com.saimahakak786.lawwise",
+      "jsEngine": "hermes",
+      "backgroundColor": "#F0F4F5",
+      "displayName": "LawVise",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "lawvise"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "@clerk/expo",
+        {
+          "scheme": "lawvise"
+        }
+      ],
+      [
+        "expo-router",
+        {
+          "origin": "https://law-wise-insight.onrender.com"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow LawVise to access your microphone for voice dictation."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "packagingOptions": {
+              "pickFirst": [
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+              ]
+            },
+            "gradleProperties": {
+              "org.gradle.jvmargs": "-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError"
+            }
+          }
+        }
+      ],
+      [
+        
+        [
+  "expo-notifications",
+  {
+    "sounds": [
+      "./assets/images/court_alarm.mp3"
+    ]
+  }
+]
+
+      
+          ]
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#F0F4F5",
+      "barStyle": "dark-content"
+    },
+    "backgroundColor": "#F0F4F5",
+    "extra": {
+      "EXPO_PUBLIC_API_URL": "https://law-wise-insight.onrender.com",
+      "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk__test_b3JpZW50ZWQtZWxlcGhhbnQtNDA5OC5jbGVyay5hY2NvdW50cy5kZXYk",
+      "eas": {
+        "projectId": "992c7d24-c74c-4481-98df-31c2575db0f5"
+      }
+    }
+  }
+}
+
+├─ File: /home/runner/work/Law-Wise-Insight/Law-Wise-Insight/artifacts/mobile/app.json
+└─ Cause: SyntaxError: JSON5: invalid character '}' at 97:9
+   95 |       
+   96 |           ]
+>  97 |         }
+      |         ^
+   98 |       ]
+   99 |     ],
+  100 |     "experiments": {
+    at parseJsonString (/home/runner/work/Law-Wise-Insight/Law-Wise-Insight/node_modules/@expo/json-file/build/JsonFile.js:199:19)
+    at JsonFile.read (/home/runner/work/Law-Wise-Insight/Law-Wise-Insight/node_modules/@expo/json-file/build/JsonFile.js:160:12)
+    at getStaticConfig (/home/runner/work/Law-Wise-Insight/Law-Wise-Insight/node_modules/@expo/config/build/getConfig.js:62:38)
+    at getConfig (/home/runner/work/Law-Wise-Insight/Law-Wise-Insight/node_modules/@expo/config/build/Config.js:199:85)
+    at prebuildAsync (/home/runner/work/Law-Wise-Insight/Law-Wise-Insight/artifacts/mobile/node_modules/expo/node_modules/@expo/cli/build/src/prebuild/prebuildAsync.js:88:51)
+    at /home/runner/work/Law-Wise-Insight/Law-Wise-Insight/artifacts/mobile/node_modules/expo/node_modules/@expo/cli/build/src/prebuild/index.js:109:16
+    at expoPrebuild (/home/runner/work/Law-Wise-Insight/Law-Wise-Insight/artifacts/mobile/node_modules/expo/node_modules/@expo/cli/build/src/prebuild/index.js:119:7)
+Error: Process completed with exit code 1.
+0s
+0s
+0s
+0s
+0s
+0s
+0s
+Footer
+© 2026 GitHub, Inc.
+Footer navigation
+Terms
+Privacy
+Security
+Status
+Community
+Docs
+Contact
+Manage cookies
+Do not share my personal information
