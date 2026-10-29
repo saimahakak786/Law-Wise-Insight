@@ -124,10 +124,14 @@ export async function exportToChamberPDF(options: PDFExportOptions): Promise<voi
     `;
 
     // Step 1: Generate PDF File via Expo Print
-    const { uri } = await Print.printToFileAsync({
+    const file = await Print.printToFileAsync({
       html: htmlContent,
       base64: false,
     });
+
+    if (!file || !file.uri) {
+      throw new Error('Failed to generate PDF file URI.');
+    }
 
     // Step 2: On Web, trigger direct print / download
     if (Platform.OS === 'web') {
@@ -142,19 +146,18 @@ export async function exportToChamberPDF(options: PDFExportOptions): Promise<voi
       return;
     }
 
-    // Step 4: Ensure file resides in documentDirectory with clean filename
-    const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-    const docDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
-    const targetUri = `${docDir}${sanitizedTitle}_${Date.now()}.pdf`;
+    // Step 4: Ensure target destination uses cache/document directory correctly
+    const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase().substring(0, 30);
+    const targetUri = `${FileSystem.cacheDirectory}${sanitizedTitle}_${Date.now()}.pdf`;
 
     await FileSystem.copyAsync({
-      from: uri,
+      from: file.uri,
       to: targetUri,
     });
 
-    // Step 5: Trigger native system share dialog (WhatsApp, Mail, Drive, Save to Files)
+    // Step 5: Trigger native system share dialog
     await Sharing.shareAsync(targetUri, {
-      UTI: '.pdf',
+      UTI: 'com.adobe.pdf',
       mimeType: 'application/pdf',
       dialogTitle: `Export Legal PDF: ${title}`,
     });
