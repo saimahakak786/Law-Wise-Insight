@@ -93,7 +93,7 @@ export default function CaseTrackerScreen() {
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#C9A84C',
-        sound: 'court_alarm.mp3',
+        sound: 'court_alarm', // Omit .mp3 extension for Android raw resource matching
       });
     }
   };
@@ -286,7 +286,7 @@ export default function CaseTrackerScreen() {
               content: {
                 title: `⚖️ URGENT: ${selectedEventType}`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — ${subTitle}`,
-                sound: 'court_alarm.mp3',
+                sound: 'court_alarm', // Omit .mp3 extension here as well
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate, matterId },
               },
