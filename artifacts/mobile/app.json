@@ -59,8 +59,6 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-print",
-      "expo-sharing",
       [
         "expo-audio",
         {
