@@ -15,8 +15,9 @@ CRITICAL RULES:
    - 2. CRITICAL RISK & LIABILITY CLAUSES
    - 3. STATUTORY COMPLIANCE & GOVERNING LAW
    - 4. RECOMMENDED AMENDMENTS & PROTECTIVE COVENANTS`;
+router.post('/analyze', requireAuth, async (req: Request, res: Response): Promise<void> => {
 
-router.post('/analyze', '/lawwise/analyze', requireAuth, async (req: Request, res: Response): Promise<void> => {
+
   try {
     const parsed = AnalyzeDocumentBody.safeParse(req.body);
 
