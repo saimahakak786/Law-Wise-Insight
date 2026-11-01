@@ -111,7 +111,8 @@ export default function SignInPage() {
     setSignInError('');
 
     try {
-      const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'lawvise' });
+      const redirectUrl = AuthSession.makeRedirectUri();
+
 
       const { createdSessionId, setActive: setSSOActive, signIn: ssoSignIn, signUp: ssoSignUp } = await startSSOFlow({
         strategy: 'oauth_google',
