@@ -118,29 +118,31 @@ export default function SignInPage() {
         redirectUrl,
       });
 
-      // Handle active session establishment robustly
-      if (createdSessionId) {
-        await setActive({ session: createdSessionId });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/(tabs)' as Href);
-        return;
+      // Determine the session ID from whichever object returned it
+      const sessionId = 
+        createdSessionId || 
+        ssoSignIn?.createdSessionId || 
+        ssoSignUp?.createdSessionId;
+
+      if (sessionId) {
+        // Use setSSOActive returned from startSSOFlow or fallback to component-level setActive
+        const activateSession = setSSOActive || setActive;
+        if (activateSession) {
+          await activateSession({ session: sessionId });
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          router.replace('/(tabs)' as Href);
+          return;
+        }
       }
 
-      if (setSSOActive && (ssoSignIn?.createdSessionId || ssoSignUp?.createdSessionId)) {
-        await setSSOActive({ session: ssoSignIn?.createdSessionId || ssoSignUp?.createdSessionId });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/(tabs)' as Href);
-        return;
-      }
-
-      // Fallback check if status is complete
-      if (ssoSignIn?.status === 'complete' && ssoSignIn.createdSessionId) {
+      // Check statuses if session ID wasn't top-level
+      if (ssoSignIn?.status === 'complete' && ssoSignIn.createdSessionId && setActive) {
         await setActive({ session: ssoSignIn.createdSessionId });
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      if (ssoSignUp?.status === 'complete' && ssoSignUp.createdSessionId) {
+      if (ssoSignUp?.status === 'complete' && ssoSignUp.createdSessionId && setActive) {
         await setActive({ session: ssoSignUp.createdSessionId });
         router.replace('/(tabs)' as Href);
         return;
@@ -158,8 +160,6 @@ export default function SignInPage() {
     }
   }, [startSSOFlow, router, setActive]);
 
-  // (Retain your remaining handler methods for verify, reset, etc. below)
-  
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
