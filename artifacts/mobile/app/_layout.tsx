@@ -164,3 +164,52 @@ function InitializingGate({ fontsLoaded, fontError }: { fontsLoaded: boolean; fo
       <View style={styles.loaderContainer}>
         <Text style={{ color: '#EF4444', fontSize: 16, textAlign: 'center', marginBottom: 12, paddingHorizontal: 24 }}>
           Connection or initialization timed out.
+        </Text>
+        <TouchableOpacity 
+          style={{ backgroundColor: ACCENT_PRIMARY, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
+          onPress={() => setTimedOut(false)}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return <RootLayoutNav />;
+}
+
+export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  return (
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <SafeAreaProvider>
+        <ErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <AppProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <InitializingGate fontsLoaded={fontsLoaded} fontError={fontError} />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </AppProvider>
+          </QueryClientProvider>
+        </ErrorBoundary>
+      </SafeAreaProvider>
+    </ClerkProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  loaderContainer: {
+    flex: 1,
+    backgroundColor: APP_BACKGROUND,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
