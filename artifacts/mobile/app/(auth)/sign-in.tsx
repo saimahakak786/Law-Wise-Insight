@@ -113,43 +113,33 @@ export default function SignInPage() {
     try {
       const redirectUrl = AuthSession.makeRedirectUri();
 
-
       const { createdSessionId, setActive: setSSOActive, signIn: ssoSignIn, signUp: ssoSignUp } = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl,
       });
 
-      // Determine the session ID from whichever object returned it
-      const sessionId = 
-        createdSessionId || 
-        ssoSignIn?.createdSessionId || 
-        ssoSignUp?.createdSessionId;
-
-      if (sessionId) {
-        // Use setSSOActive returned from startSSOFlow or fallback to component-level setActive
-        const activateSession = setSSOActive || setActive;
-        if (activateSession) {
-          await activateSession({ session: sessionId });
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          router.replace('/(tabs)' as Href);
-          return;
-        }
-      }
-
-      // Check statuses if session ID wasn't top-level
-      if (ssoSignIn?.status === 'complete' && ssoSignIn.createdSessionId && setActive) {
-        await setActive({ session: ssoSignIn.createdSessionId });
+      if (createdSessionId && setSSOActive) {
+        await setSSOActive({ session: createdSessionId });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      if (ssoSignUp?.status === 'complete' && ssoSignUp.createdSessionId && setActive) {
-        await setActive({ session: ssoSignUp.createdSessionId });
+      if (ssoSignIn?.status === 'complete' && ssoSignIn.createdSessionId && setSSOActive) {
+        await setSSOActive({ session: ssoSignIn.createdSessionId });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      throw new Error('Could not establish session after Google authentication.');
+      if (ssoSignUp?.status === 'complete' && ssoSignUp.createdSessionId && setSSOActive) {
+        await setSSOActive({ session: ssoSignUp.createdSessionId });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/(tabs)' as Href);
+        return;
+      }
+
+      throw new Error('Authentication completed, but no session ID was returned.');
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || JSON.stringify(e);
       if (errorMessage && !errorMessage.toLowerCase().includes('cancel')) {
@@ -159,7 +149,7 @@ export default function SignInPage() {
     } finally {
       setGoogleLoading(false);
     }
-  }, [startSSOFlow, router, setActive]);
+  }, [startSSOFlow, router]);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
