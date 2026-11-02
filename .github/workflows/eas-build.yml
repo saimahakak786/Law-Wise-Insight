@@ -48,6 +48,8 @@ jobs:
         working-directory: artifacts/mobile/android
         env:
           ORG_GRADLE_PROJECT_jvmargs: "-Xmx3048m -XX:MaxMetaspaceSize=512m"
+          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
         run: |
           chmod +x gradlew
           ./gradlew clean
