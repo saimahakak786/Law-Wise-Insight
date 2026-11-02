@@ -18,7 +18,6 @@ import { Link, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as Clipboard from 'expo-clipboard';
 
 import Button from '../../components/Button';
 
@@ -34,8 +33,6 @@ function useWarmUpBrowser() {
   }, []);
 }
 
-type ForgotStep = 'idle' | 'send_code' | 'reset_password' | 'sending' | 'resetting';
-
 export default function SignInPage() {
   useWarmUpBrowser();
   const insets = useSafeAreaInsets();
@@ -47,24 +44,12 @@ export default function SignInPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [signInError, setSignInError] = useState('');
-  const otpInputRef = useRef<TextInput>(null);
-
-  const [forgotStep, setForgotStep] = useState<ForgotStep>('idle');
-  const [forgotIdentifier, setForgotIdentifier] = useState('');
-  const [resetCode, setResetCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [forgotError, setForgotError] = useState('');
-
-  const isMfaRequired =
-    signIn?.status === 'needs_client_trust' || signIn?.status === 'needs_second_factor';
 
   const handleSignIn = async () => {
-    if (!identifier || !password || !isLoaded || !signIn || !setActive) return;
+    if (!identifier || !password || !isLoaded || !signIn || typeof setActive !== 'function') return;
     setSignInError('');
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -118,28 +103,31 @@ export default function SignInPage() {
         redirectUrl,
       });
 
-      if (createdSessionId && setSSOActive) {
-        await setSSOActive({ session: createdSessionId });
+      const sessionId = createdSessionId || ssoSignIn?.createdSessionId || ssoSignUp?.createdSessionId;
+      const activateSession = setSSOActive || setActive;
+
+      if (sessionId && typeof activateSession === 'function') {
+        await activateSession({ session: sessionId });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      if (ssoSignIn?.status === 'complete' && ssoSignIn.createdSessionId && setSSOActive) {
-        await setSSOActive({ session: ssoSignIn.createdSessionId });
+      if (ssoSignIn?.status === 'complete' && ssoSignIn.createdSessionId && typeof setActive === 'function') {
+        await setActive({ session: ssoSignIn.createdSessionId });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      if (ssoSignUp?.status === 'complete' && ssoSignUp.createdSessionId && setSSOActive) {
-        await setSSOActive({ session: ssoSignUp.createdSessionId });
+      if (ssoSignUp?.status === 'complete' && ssoSignUp.createdSessionId && typeof setActive === 'function') {
+        await setActive({ session: ssoSignUp.createdSessionId });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)' as Href);
         return;
       }
 
-      throw new Error('Authentication completed, but no session ID was returned.');
+      throw new Error('Authentication completed, but no session ID or active function was returned.');
     } catch (e: any) {
       const errorMessage = e?.errors?.[0]?.message || e?.message || JSON.stringify(e);
       if (errorMessage && !errorMessage.toLowerCase().includes('cancel')) {
@@ -149,7 +137,7 @@ export default function SignInPage() {
     } finally {
       setGoogleLoading(false);
     }
-  }, [startSSOFlow, router]);
+  }, [startSSOFlow, router, setActive]);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -250,7 +238,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 52,
   },
-  inputIcon: { marginRight: 10 },
+    inputIcon: { marginRight: 10 },
   inputField: { flex: 1, fontSize: 15, color: '#1F2937' },
   eyeBtn: { padding: 4 },
   error: { fontSize: 13, color: '#EF4444', marginBottom: 8, marginTop: -4 },
