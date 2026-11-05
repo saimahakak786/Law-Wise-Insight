@@ -26,6 +26,15 @@ WebBrowser.maybeCompleteAuthSession();
 
 SplashScreen.preventAutoHideAsync();
 
+// 1. GLOBAL NOTIFICATION HANDLER (Allows notifications to pop up & play sound even when app is open)
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 });
@@ -56,7 +65,23 @@ const tokenCache = {
   },
 };
 
+// 2. UPDATED CHANNEL SETUP WITH RUNTIME PERMISSIONS
 async function setupNotificationChannel() {
+  // Check and request runtime notification permissions (Android 13+ & iOS)
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== 'granted') {
+    console.warn('Notification permission was not granted by user.');
+    return;
+  }
+
+  // Create Android Notification Channel
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('court-alerts-v2', {
       name: 'Court Hearing Alerts',
@@ -139,7 +164,7 @@ function InitializingGate({ fontsLoaded, fontError }: { fontsLoaded: boolean; fo
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
-    setupNotificationChannel().catch(() => {});
+    setupNotificationChannel().catch((err) => console.error('Notification setup failed:', err));
     try {
       Purchases.configure({ apiKey: "goog_IVymTFIszZNpmPfSIZHqXBInlhR" });
     } catch (e) {
