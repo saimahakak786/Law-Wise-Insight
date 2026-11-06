@@ -91,9 +91,12 @@ export default function CaseTrackerScreen() {
       await Notifications.setNotificationChannelAsync('court-alerts-v2', {
         name: 'Court & Hearing Alerts',
         importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
+        vibrationPattern: [0, 500, 500, 500],
         lightColor: '#C9A84C',
-        sound: 'court_alarm', // Omit .mp3 extension for Android raw resource matching
+        sound: 'court_alarm', // Matches raw resource court_alarm.mp3/wav
+        enableLights: true,
+        enableVibrate: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
     }
   };
@@ -159,7 +162,7 @@ export default function CaseTrackerScreen() {
         month = parseInt(parts[1], 10) - 1;
         year = parseInt(parts[2], 10);
       }
-      return new Date(year, month, day, 9, 0, 0);
+      return new Date(year, month, day, 9, 0, 0); // Default to 9:00 AM on hearing date
     }
     return new Date(dateStr);
   };
@@ -260,33 +263,30 @@ export default function CaseTrackerScreen() {
             let subTitle = `Due: ${hearingDate}`;
 
             const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-            const TWO_HOURS = 2 * 60 * 60 * 1000;
+            const TWELVE_HOURS = 12 * 60 * 60 * 1000;
 
-            if (timeUntilHearingMs > TWENTY_FOUR_HOURS) {
+            if (timeUntilHearingMs >= TWENTY_FOUR_HOURS) {
+              // Rule 1: Saved early (>= 24 hours before) -> Alarm exactly 24 hours before
               reminderTime = new Date(hearingDateTime.getTime() - TWENTY_FOUR_HOURS);
-              subTitle = `Reminder: Hearing is tomorrow (${hearingDate})`;
-            } 
-            else if (timeUntilHearingMs > TWO_HOURS) {
-              reminderTime = new Date(hearingDateTime.getTime() - TWO_HOURS);
-              const hoursLeft = Math.round(timeUntilHearingMs / (1000 * 60 * 60));
-              subTitle = `🚨 URGENT: Hearing is in ~${hoursLeft} hour(s)!`;
-            } 
-            else {
-              reminderTime = new Date(Date.now() + 5000);
-              const minutesLeft = Math.max(1, Math.round(timeUntilHearingMs / (1000 * 60)));
-              subTitle = `🚨 CRITICAL: Hearing starting in ~${minutesLeft} minute(s)!`;
+              subTitle = `🚨 Alarm: Hearing is tomorrow (${hearingDate})`;
+            } else {
+              // Rule 2: Saved late (< 24 hours before) -> Alarm 12 hours before
+              reminderTime = new Date(hearingDateTime.getTime() - TWELVE_HOURS);
+              subTitle = `🚨 URGENT: Hearing is in ~12 hours!`;
             }
 
+            // Safety fallback: If calculated reminder time is in the past, trigger immediately (in 5 seconds)
             if (reminderTime.getTime() <= Date.now()) {
               reminderTime = new Date(Date.now() + 5000);
+              subTitle = `🚨 URGENT: Hearing is approaching soon!`;
             }
 
             await Notifications.scheduleNotificationAsync({
               identifier: `reminder_${matterId}`,
               content: {
-                title: `⚖️ URGENT: ${selectedEventType}`,
+                title: `🚨 COURT ALARM: ${selectedEventType}`,
                 body: `Case: ${caseTitle} ${itemNumber ? `(Item No. ${itemNumber})` : ''} — ${subTitle}`,
-                sound: 'court_alarm', // Omit .mp3 extension here as well
+                sound: 'court_alarm', // Matches raw resource audio file
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { caseTitle, hearingDate, matterId },
               },
@@ -296,6 +296,7 @@ export default function CaseTrackerScreen() {
                 channelId: 'court-alerts-v2',
               },
             });
+            console.log(`Notification successfully scheduled for: ${reminderTime.toLocaleString()}`);
           }
         } catch (notifError) {
           console.log('Notification trigger error:', notifError);
@@ -331,7 +332,7 @@ export default function CaseTrackerScreen() {
       setEditingMatterId(null);
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', editingMatterId ? 'Deadline updated successfully!' : `${selectedEventType} deadline tracked and urgent reminder activated!`);
+      Alert.alert('Success', editingMatterId ? 'Deadline updated successfully!' : `${selectedEventType} deadline tracked and smart alarm activated!`);
     } catch (error) {
       console.error('Error saving matter:', error);
       Alert.alert('Error', 'Could not save compliance entry.');
@@ -505,7 +506,7 @@ export default function CaseTrackerScreen() {
             />
           )}
           <Button
-            title={loading ? "Saving..." : editingMatterId ? "Update Deadline" : "Save Deadline & Set Reminder"}
+            title={loading ? "Saving..." : editingMatterId ? "Update Deadline" : "Save Deadline & Set Smart Alarm"}
             variant="primary"
             onPress={handleSaveOrUpdateHearing}
             style={[loading && { opacity: 0.5 }, { flex: editingMatterId ? 2 : 1, marginTop: 4, marginVertical: 0, backgroundColor: '#C9A84C' }]}
