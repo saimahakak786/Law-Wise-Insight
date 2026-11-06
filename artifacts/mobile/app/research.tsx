@@ -74,10 +74,11 @@ export default function ResearchScreen() {
     }
   };
 
-  // Helper to clean raw markdown symbols from AI text output
-  const cleanMarkdown = (text: string) => {
+  // Robust markdown cleaner with strict type coercion to prevent rendering crashes
+  const cleanMarkdown = (text: any) => {
     if (!text) return '';
-    return text
+    const str = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
+    return str
       .replace(/#{1,6}\s*/g, '')
       .replace(/\*\*(.*?)\*\*/g, '$1')
       .replace(/\*(.*?)\*/g, '$1')
@@ -137,46 +138,13 @@ export default function ResearchScreen() {
 
       const contentType = response.headers.get('content-type');
       
-      // Handle standard JSON response
       if (contentType && contentType.includes('application/json')) {
         const json = await response.json();
         const textContent = json.content || json.result || json.text || json.memorandum || JSON.stringify(json, null, 2);
-        setResult(textContent);
-      } else if (response.body) {
-        // Handle stream response
-        const reader = (response.body as any)?.getReader();
-        if (reader) {
-          const decoder = new TextDecoder();
-          let buffer = '';
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() ?? '';
-            for (const line of lines) {
-              const cleanLine = line.trim();
-              if (!cleanLine) continue;
-              if (cleanLine.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(cleanLine.slice(6));
-                  if (data.content) setResult((p) => p + data.content);
-                  if (data.done) break;
-                } catch { /* skip */ }
-              } else {
-                try {
-                  const data = JSON.parse(cleanLine);
-                  if (data.content) setResult((p) => p + data.content);
-                } catch {
-                  setResult((p) => p + cleanLine + '\n');
-                }
-              }
-            }
-          }
-        } else {
-          const text = await response.text();
-          setResult(text);
-        }
+        setResult(typeof textContent === 'string' ? textContent : JSON.stringify(textContent));
+      } else {
+        const text = await response.text();
+        setResult(text);
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
