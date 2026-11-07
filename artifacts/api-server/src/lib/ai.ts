@@ -1,98 +1,274 @@
 import { logger } from "./logger";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+const GEMINI_API_KEY =
+  process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+
+const GEMINI_MODEL =
+  process.env.GEMINI_MODEL || "gemini-3.8-flash";
+
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-/**
- * Builds dynamic jurisdiction rules to ensure accurate multi-country research 
- * across UK, USA, UAE, and India.
- */
+// Groq is disabled by default to avoid unexpected API usage or charges.
+// Enable it only if you have checked your account's pricing and limits.
+const ENABLE_GROQ_FALLBACK =
+  process.env.ENABLE_GROQ_FALLBACK === "true";
+
+const GROQ_MODEL =
+  process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+
+const REQUEST_TIMEOUT = 30000;
+
 function getJurisdictionContext(jurisdiction?: string): string {
   switch (jurisdiction?.toUpperCase()) {
     case "INDIA":
     case "IN":
-      return "Apply Indian law (Supreme Court of India, High Courts, CPC, CrPC, BNS, BNSS, and Indian statutory frameworks). Provide proper Indian citations (e.g., SCC, AIR).";
+      return `
+Apply Indian law.
+Consider the Supreme Court of India, relevant High Courts,
+applicable central and state legislation, and binding precedents.
+Distinguish current legislation from repealed or transitional laws.
+Never invent statutory sections or case citations.
+`;
+
     case "USA":
     case "US":
-      return "Apply United States law (US Supreme Court, Federal Circuit/District Courts, or State jurisprudence, Federal Rules of Civil/Criminal Procedure). Provide proper US reporter citations (e.g., U.S., F.3d, S. Ct.).";
+      return `
+Apply United States law.
+Identify whether federal or state law applies.
+Distinguish Supreme Court, federal appellate, district and state decisions.
+Never invent case citations or statutory provisions.
+`;
+
     case "UK":
-      return "Apply English law & UK jurisprudence (UK Supreme Court, Court of Appeal, UK legislation, and common law principles). Provide proper neutral citations (e.g., [2024] UKSC, [2023] EWCA).";
+      return `
+Apply the law of the relevant UK jurisdiction.
+Distinguish England and Wales, Scotland, and Northern Ireland.
+Use appropriate UK legislation and court authorities.
+Never invent neutral citations or judgments.
+`;
+
     case "UAE":
-      return "Apply UAE federal law and local Emirate jurisprudence (UAE Civil/Penal Codes, DIFC Courts or UAE Federal Supreme Court principles where applicable). Provide proper UAE legal references.";
+      return `
+Apply UAE law.
+Distinguish federal law, individual Emirate law,
+DIFC law and ADGM law where relevant.
+Never invent legal provisions or judicial authorities.
+`;
+
     default:
-      return "Apply general international common law, comparative jurisprudence, and standard professional legal formatting.";
+      return `
+Apply the jurisdiction selected by the user.
+If the jurisdiction is unclear, request clarification.
+Do not assume that one country's laws apply globally.
+Never invent legal authorities.
+`;
   }
 }
 
-export async function callAI(systemPrompt: string, userPrompt: string, jurisdiction?: string): Promise<string> {
-  // Inject multi-jurisdiction context if provided
-  const jurisdictionGuideline = getJurisdictionContext(jurisdiction);
-  const enhancedSystemPrompt = `${systemPrompt}\n\nJURISDICTION DIRECTIVE:\n${jurisdictionGuideline}`;
+function buildSystemPrompt(
+  systemPrompt: string,
+  jurisdiction?: string
+): string {
+  return `
+${systemPrompt}
 
-  // 1. Try Google Gemini (gemini-2.0-flash)
-  if (GEMINI_API_KEY) {
-    try {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `${enhancedSystemPrompt}\n\n${userPrompt}` }] }],
-          }),
-        }
-      );
+JURISDICTION:
+${getJurisdictionContext(jurisdiction)}
 
-      if (resp.ok) {
-        const data = await resp.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text;
-      }
-    } catch (err) {
-      logger.warn("Gemini API call failed, trying fallback...");
-    }
+MANDATORY LEGAL ACCURACY RULES:
+
+1. Never fabricate a case name, citation, court, judge or judgment.
+2. Never invent statutory sections or legal provisions.
+3. Never describe an AI-generated case suggestion as verified.
+4. Clearly distinguish established law from legal interpretation.
+5. If information cannot be verified, explicitly say so.
+6. Do not claim to have searched a legal database unless an actual
+   search and retrieval operation has taken place.
+7. Do not manufacture match percentages or confidence scores.
+8. If you lack sufficient information, acknowledge the limitation.
+`;
+}
+
+async function callGemini(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  if (!GEMINI_API_KEY) {
+    throw new Error("Gemini API key is not configured.");
   }
 
-  // 2. Try Groq (llama-3.3-70b-versatile)
-  if (GROQ_API_KEY) {
-    try {
-      const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT
+  );
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: systemPrompt }],
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: userPrompt }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.2,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      logger.error(
+        { status: response.status, error: errorText.slice(0, 500) },
+        "Gemini API request failed"
+      );
+
+      throw new Error(
+        `Gemini returned HTTP ${response.status}.`
+      );
+    }
+
+    const data = await response.json() as {
+      candidates?: Array<{
+        content?: {
+          parts?: Array<{ text?: string }>;
+        };
+      }>;
+    };
+
+    const result = data.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text || "")
+      .join("")
+      .trim();
+
+    if (!result) {
+      throw new Error("Gemini returned an empty response.");
+    }
+
+    return result;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function callGroq(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  if (!GROQ_API_KEY) {
+    throw new Error("Groq API key is not configured.");
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT
+  );
+
+  try {
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
         method: "POST",
         headers: {
           Authorization: `Bearer ${GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
+          model: GROQ_MODEL,
           messages: [
-            { role: "system", content: enhancedSystemPrompt },
+            { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
+          temperature: 0.2,
         }),
-      });
-
-      if (resp.ok) {
-        const data = await resp.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content) return content;
       }
-    } catch (err) {
-      logger.warn("Groq API call failed, using guaranteed fallback...");
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      logger.error(
+        { status: response.status, error: errorText.slice(0, 500) },
+        "Groq API request failed"
+      );
+
+      throw new Error(
+        `Groq returned HTTP ${response.status}.`
+      );
+    }
+
+    const data = await response.json() as {
+      choices?: Array<{
+        message?: {
+          content?: string;
+        };
+      }>;
+    };
+
+    const result = data.choices?.[0]?.message?.content?.trim();
+
+    if (!result) {
+      throw new Error("Groq returned an empty response.");
+    }
+
+    return result;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function callAI(
+  systemPrompt: string,
+  userPrompt: string,
+  jurisdiction?: string
+): Promise<string> {
+  const enhancedPrompt = buildSystemPrompt(
+    systemPrompt,
+    jurisdiction
+  );
+
+  // Primary AI provider: Gemini
+  try {
+    return await callGemini(enhancedPrompt, userPrompt);
+  } catch (geminiError) {
+    logger.warn(
+      { error: geminiError },
+      "Gemini unavailable."
+    );
+  }
+
+  // Optional fallback: Groq, disabled unless explicitly enabled.
+  if (ENABLE_GROQ_FALLBACK && GROQ_API_KEY) {
+    try {
+      return await callGroq(enhancedPrompt, userPrompt);
+    } catch (groqError) {
+      logger.error(
+        { error: groqError },
+        "Groq fallback failed."
+      );
     }
   }
 
-  // 3. Guaranteed Safe Fallback (Prevents 500 Errors & lets your app work instantly)
-  return JSON.stringify({
-    caseName: jurisdiction?.toUpperCase() === "USA" ? "Marbury v. Madison, 5 U.S. 137" : "Precedent Analysis & Statutory Evaluation",
-    citation: jurisdiction?.toUpperCase() === "USA" ? "5 U.S. 137 (1803)" : "Standard Appellate Citation Ref",
-    court: `Apex Court (${jurisdiction || "Global"})`,
-    ruling: "The court evaluated the factual matrix against settled legislative intent, statutory compliance, and natural justice principles.",
-    keyTakeaways: [
-      "Core legal issues properly mapped against local statutory provisions.",
-      "Prima facie evaluation supports maintainability of proceedings.",
-      "Advocate advised to verify local limitation periods."
-    ]
-  }, null, 2);
+  // Never return fabricated legal information.
+  throw new Error(
+    "AI services are currently unavailable. Please try again later."
+  );
 }
 
 export async function streamAI(
@@ -101,7 +277,13 @@ export async function streamAI(
   onChunk: (text: string) => void,
   jurisdiction?: string
 ): Promise<string> {
-  const result = await callAI(systemPrompt, userPrompt, jurisdiction);
+  const result = await callAI(
+    systemPrompt,
+    userPrompt,
+    jurisdiction
+  );
+
   onChunk(result);
+
   return result;
 }
