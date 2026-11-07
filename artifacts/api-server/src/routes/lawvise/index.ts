@@ -1,4 +1,5 @@
 import { Router } from "express";
+
 import analyzeRouter from "./analyze";
 import chatRouter from "./chat";
 import draftRouter from "./draft";
@@ -11,9 +12,9 @@ import foldersRouter from "./folders";
 import settingsRouter from "./settings";
 import notificationsRouter from "./notifications";
 import matchRouter from "./match";
-import dictateRouter from "./dictate"; // Added dictate router import
+import dictateRouter from "./dictate";
 import intakeRouter from "./intake";
-
+import indiaLawsRouter from "./india-laws";
 
 const router: Router = Router();
 
@@ -29,9 +30,10 @@ router.use(foldersRouter);
 router.use(settingsRouter);
 router.use(notificationsRouter);
 router.use(matchRouter);
-router.use(dictateRouter); // Added dictate router use
-
+router.use(dictateRouter);
 router.use(intakeRouter);
 
+// Indian legislation research
+router.use("/india", indiaLawsRouter);
 
 export default router;
