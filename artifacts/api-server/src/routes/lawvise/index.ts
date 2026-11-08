@@ -15,6 +15,7 @@ import matchRouter from "./match";
 import dictateRouter from "./dictate";
 import intakeRouter from "./intake";
 import indiaLawsRouter from "./india-laws";
+import globalCasesRouter from "./global-cases";
 
 const router: Router = Router();
 
@@ -33,7 +34,10 @@ router.use(matchRouter);
 router.use(dictateRouter);
 router.use(intakeRouter);
 
-// Indian legislation research
+// Indian legislation
 router.use("/india", indiaLawsRouter);
+
+// Global case-law research
+router.use("/global-cases", globalCasesRouter);
 
 export default router;
