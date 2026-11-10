@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  migrate:
+  generate:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,8 +25,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
 
-      - name: Push database schema
+      - name: Generate SQL migration
         working-directory: artifacts/api-server/lib/db
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: pnpm push
+        run: pnpm exec drizzle-kit generate --config ./drizzle.config.ts
+
+      - name: Upload migration SQL
+        uses: actions/upload-artifact@v4
+        with:
+          name: lawvise-database-migration
+          path: artifacts/api-server/lib/db/drizzle/
