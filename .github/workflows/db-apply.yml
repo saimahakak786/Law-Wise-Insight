@@ -36,5 +36,12 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          test -f drizzle/0000_deep_dark_phoenix.sql
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0000_deep_dark_phoenix.sql
+          SQL_FILE=$(find drizzle -maxdepth 1 -type f -name '*.sql' | sort | tail -n 1)
+
+          if [ -z "$SQL_FILE" ]; then
+            echo "No SQL migration file found"
+            exit 1
+          fi
+
+          echo "Applying migration: $SQL_FILE"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$SQL_FILE"
