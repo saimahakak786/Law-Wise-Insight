@@ -27,6 +27,8 @@ jobs:
 
       - name: Generate SQL migration
         working-directory: lib/db
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pnpm exec drizzle-kit generate --config ./drizzle.config.ts
 
       - name: Upload migration SQL
