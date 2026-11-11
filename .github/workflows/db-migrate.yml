@@ -26,11 +26,11 @@ jobs:
         run: pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
 
       - name: Generate SQL migration
-        working-directory: artifacts/api-server/lib/db
+        working-directory: lib/db
         run: pnpm exec drizzle-kit generate --config ./drizzle.config.ts
 
       - name: Upload migration SQL
         uses: actions/upload-artifact@v4
         with:
           name: lawvise-database-migration
-          path: artifacts/api-server/lib/db/drizzle/
+          path: lib/db/drizzle/
