@@ -8,8 +8,6 @@ const GEMINI_MODEL =
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-// Groq is disabled by default to avoid unexpected API usage or charges.
-// Enable it only if you have checked your account's pricing and limits.
 const ENABLE_GROQ_FALLBACK =
   process.env.ENABLE_GROQ_FALLBACK === "true";
 
@@ -17,6 +15,7 @@ const GROQ_MODEL =
   process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
 const REQUEST_TIMEOUT = 30000;
+const GEMINI_MAX_RETRIES = 2;
 
 function getJurisdictionContext(jurisdiction?: string): string {
   switch (jurisdiction?.toUpperCase()) {
@@ -89,6 +88,16 @@ MANDATORY LEGAL ACCURACY RULES:
 `;
 }
 
+function isTemporaryError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : String(error);
+
+  return (
+    /HTTP (429|500|502|503|504)/.test(message) ||
+    /timeout|aborted|network|fetch failed/i.test(message)
+  );
+}
+
 async function callGemini(
   systemPrompt: string,
   userPrompt: string
@@ -133,13 +142,14 @@ async function callGemini(
       const errorText = await response.text();
 
       logger.error(
-        { status: response.status, error: errorText.slice(0, 500) },
+        {
+          status: response.status,
+          error: errorText.slice(0, 500),
+        },
         "Gemini API request failed"
       );
 
-      throw new Error(
-        `Gemini returned HTTP ${response.status}.`
-      );
+      throw new Error(`Gemini returned HTTP ${response.status}.`);
     }
 
     const data = await response.json() as {
@@ -163,6 +173,35 @@ async function callGemini(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function callGeminiWithRetry(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  for (let attempt = 0; attempt <= GEMINI_MAX_RETRIES; attempt++) {
+    try {
+      return await callGemini(systemPrompt, userPrompt);
+    } catch (error) {
+      if (
+        attempt === GEMINI_MAX_RETRIES ||
+        !isTemporaryError(error)
+      ) {
+        throw error;
+      }
+
+      const delay = 1000 * Math.pow(2, attempt);
+
+      logger.warn(
+        { attempt: attempt + 1, delay },
+        "Temporary Gemini failure. Retrying."
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw new Error("Gemini retries exhausted.");
 }
 
 async function callGroq(
@@ -204,13 +243,14 @@ async function callGroq(
       const errorText = await response.text();
 
       logger.error(
-        { status: response.status, error: errorText.slice(0, 500) },
+        {
+          status: response.status,
+          error: errorText.slice(0, 500),
+        },
         "Groq API request failed"
       );
 
-      throw new Error(
-        `Groq returned HTTP ${response.status}.`
-      );
+      throw new Error(`Groq returned HTTP ${response.status}.`);
     }
 
     const data = await response.json() as {
@@ -221,7 +261,8 @@ async function callGroq(
       }>;
     };
 
-    const result = data.choices?.[0]?.message?.content?.trim();
+    const result =
+      data.choices?.[0]?.message?.content?.trim();
 
     if (!result) {
       throw new Error("Groq returned an empty response.");
@@ -243,20 +284,26 @@ export async function callAI(
     jurisdiction
   );
 
-  // Primary AI provider: Gemini
   try {
-    return await callGemini(enhancedPrompt, userPrompt);
+    return await callGeminiWithRetry(
+      enhancedPrompt,
+      userPrompt
+    );
   } catch (geminiError) {
     logger.warn(
       { error: geminiError },
-      "Gemini unavailable."
+      "Gemini unavailable after retries."
     );
   }
 
-  // Optional fallback: Groq, disabled unless explicitly enabled.
   if (ENABLE_GROQ_FALLBACK && GROQ_API_KEY) {
     try {
-      return await callGroq(enhancedPrompt, userPrompt);
+      logger.info("Attempting Groq fallback.");
+
+      return await callGroq(
+        enhancedPrompt,
+        userPrompt
+      );
     } catch (groqError) {
       logger.error(
         { error: groqError },
@@ -265,7 +312,6 @@ export async function callAI(
     }
   }
 
-  // Never return fabricated legal information.
   throw new Error(
     "AI services are currently unavailable. Please try again later."
   );
