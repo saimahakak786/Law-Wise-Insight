@@ -306,9 +306,16 @@ export async function callAI(
       );
     } catch (groqError) {
       logger.error(
-        { error: groqError },
-        "Groq fallback failed."
-      );
+  {
+    message: groqError instanceof Error
+      ? groqError.message
+      : String(groqError),
+    stack: groqError instanceof Error
+      ? groqError.stack
+      : undefined,
+  },
+  "Groq fallback failed."
+);
     }
   }
 
