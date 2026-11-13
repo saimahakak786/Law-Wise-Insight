@@ -503,6 +503,110 @@ export async function searchCourtListener(
   });
 }
 
+export interface CourtListenerOpinion {
+  opinionId: number;
+  opinionType: string | null;
+  judgmentText: string;
+}
+
+export async function fetchCourtListenerJudgment(
+  clusterId: string | number
+): Promise<CourtListenerOpinion[]> {
+  const token = process.env.COURTLISTENER_API_TOKEN;
+
+  if (!token) {
+    throw new Error("CourtListener API token is not configured.");
+  }
+
+  const id = String(clusterId).trim();
+
+  if (!/^\d+$/.test(id)) {
+    throw new Error("Invalid CourtListener cluster ID.");
+  }
+
+  const headers = {
+    Authorization: `Token ${token}`,
+  };
+
+  // Step 1: Retrieve the case cluster.
+  const cluster = await fetchJson(
+    `${COURTLISTENER_API}/clusters/${id}/`,
+    headers
+  );
+
+  const opinionLinks = Array.isArray(cluster.sub_opinions)
+    ? cluster.sub_opinions
+    : [];
+
+  if (opinionLinks.length === 0) {
+    return [];
+  }
+
+  // Step 2: Retrieve the individual opinions.
+  const opinions = await Promise.all(
+    opinionLinks.slice(0, 10).map(async (link: unknown) => {
+      if (typeof link !== "string") return null;
+
+      const match = link.match(/\/opinions\/(\d+)\/?/);
+
+      if (!match) return null;
+
+      const opinionId = Number(match[1]);
+
+      try {
+        const opinion = await fetchJson(
+          `${COURTLISTENER_API}/opinions/${opinionId}/`,
+          headers
+        );
+
+        // CourtListener recommends html_with_citations where available.
+        const html =
+          typeof opinion.html_with_citations === "string"
+            ? opinion.html_with_citations
+            : typeof opinion.html === "string"
+              ? opinion.html
+              : "";
+
+        const plainText =
+          typeof opinion.plain_text === "string"
+            ? opinion.plain_text
+            : "";
+
+        const judgmentText = (html || plainText)
+          .replace(/<script[\s\S]*?<\/script>/gi, " ")
+          .replace(/<style[\s\S]*?<\/style>/gi, " ")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&nbsp;/gi, " ")
+          .replace(/&amp;/gi, "&")
+          .replace(/&quot;/gi, '"')
+          .replace(/&#39;|&apos;/gi, "'")
+          .replace(/&lt;/gi, "<")
+          .replace(/&gt;/gi, ">")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        if (!judgmentText) return null;
+
+        return {
+          opinionId,
+          opinionType:
+            typeof opinion.type === "string" ? opinion.type : null,
+          judgmentText,
+        };
+      } catch (error) {
+        console.error(
+          `CourtListener opinion ${opinionId} retrieval failed:`,
+          error
+        );
+        return null;
+      }
+    })
+  );
+
+  return opinions.filter(
+    (item): item is CourtListenerOpinion => item !== null
+  );
+}
 /*
 |--------------------------------------------------------------------------
 | SOURCE DIRECTORY HELPER
