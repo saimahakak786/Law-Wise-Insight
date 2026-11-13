@@ -422,7 +422,7 @@ async function fetchJson(
 |--------------------------------------------------------------------------
 */
 
-async function searchCourtListener(
+export async function searchCourtListener(
   query: string,
   pageSize: number
 ): Promise<CaseSearchResult[]> {
