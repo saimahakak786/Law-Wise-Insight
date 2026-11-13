@@ -154,21 +154,34 @@ export default function FactMatcherScreen() {
       });
 
       if (!response.ok) {
-        throw new Error('Backend matching unavailable, using intelligent domain engine.');
-      }
+  const errorData = await response.json().catch(() => ({}));
+  throw new Error(
+    errorData.error || `Backend request failed (${response.status})`
+  );
+}
 
-      const data = await response.json();
-      const matches = Array.isArray(data) ? data : data.matches;
-      
-      if (!matches || matches.length === 0) {
-        setResults(getDynamicPrecedents(facts));
-      } else {
-        setResults(matches);
-      }
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      setResults(getDynamicPrecedents(facts));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+const data = await response.json();
+const matches = Array.isArray(data) ? data : data.matches;
+
+if (!Array.isArray(matches) || matches.length === 0) {
+  setResults([]);
+  Alert.alert(
+    'No Matches Found',
+    'No matching precedents were returned. Please revise your facts and try again.'
+  );
+} else {
+  setResults(matches);
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+}
+} catch (error: any) {
+  setResults([]);
+  Alert.alert(
+    'Fact Matcher Error',
+    error?.message || 'Unable to match precedents. Please try again.'
+  );
+} finally {
+  setLoading(false);
+}
     } finally {
       setLoading(false);
     }
