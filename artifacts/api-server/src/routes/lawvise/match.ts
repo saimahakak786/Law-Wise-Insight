@@ -13,87 +13,140 @@ router.post("/match", requireAuth, async (req, res): Promise<void> => {
       return;
     }
 
-    const lang = language ?? "English";
-    const juris = jurisdiction ?? "India";
+    const lang =
+      typeof language === "string" && language.trim()
+        ? language.trim()
+        : "English";
 
-    const systemPrompt = `You are LawVise, an elite global judicial precedent-matching engine and cross-border legal intelligence platform designed for senior advocates, barristers, and attorneys. 
+    const juris =
+      typeof jurisdiction === "string" && jurisdiction.trim()
+        ? jurisdiction.trim()
+        : "India";
+
+    const systemPrompt = `
+You are LawVise, a legal precedent research assistant.
 
 ACTIVE JURISDICTION: ${juris}
 
-CRITICAL RULES:
-1. Respond strictly with a valid JSON array of objects. Each object must have these exact keys: 
-   - "citation": string (Official authentic multi-reporter citations tailored to ${juris}, e.g., SCC/AIR for India; F.3d/U.S. for USA; WLR/All ER for UK)
-   - "title": string (THE EXACT CASE NAME / CAUSE TITLE, e.g., "Kesavananda Bharati v. State of Kerala")
-   - "principle": string (Core ratio decidendi, legal reasoning, and how it directly applies to the submitted facts under ${juris})
-   - "matchScore": string (e.g., "97%" or "91%")
-2. Provide 3 to 5 real, verified landmark precedents strictly grounded in the legal framework of ${juris}. NEVER hallucinate fake case names.
-3. Respond strictly in ${lang}.`;
+IMPORTANT INSTRUCTIONS:
 
-    const userPrompt = `Case facts and legal matrix:\n${facts}\n\nJurisdiction: ${juris}\n\nFind matching legal precedents with real case names and jurisdiction-specific citations. Return ONLY JSON.`;
+1. Identify potentially relevant judicial precedents for the submitted facts.
+2. Do not invent case names, citations, courts, dates or legal principles.
+3. If you are uncertain about a case or citation, clearly state that it requires verification.
+4. Do not claim that a case or citation has been independently verified.
+5. Explain the legal principle and its relevance to the submitted facts.
+6. Return ONLY a valid JSON array.
+7. Every object must contain these fields:
 
-    // FIXED: Passed 'juris' as the third argument here
+{
+  "title": "Case name",
+  "citation": "Case citation",
+  "principle": "Legal principle and relevance",
+  "matchScore": "Estimated relevance percentage"
+}
+
+8. Provide up to 5 relevant results.
+9. If you cannot identify reliable relevant precedents, return an empty array.
+10. Respond strictly in ${lang}.
+`;
+
+    const userPrompt = `
+CASE FACTS:
+
+${facts}
+
+JURISDICTION: ${juris}
+
+Identify potentially relevant judicial precedents.
+Return only a valid JSON array.
+`;
+
     const result = await callAI(systemPrompt, userPrompt, juris);
 
-    let matches = [];
+    if (typeof result !== "string" || !result.trim()) {
+      res.status(502).json({
+        error: "The AI service returned an empty response. Please try again."
+      });
+      return;
+    }
+
+    let cleaned = result.trim();
+
+    // Remove Markdown code fences, if present.
+    cleaned = cleaned
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "")
+      .trim();
+
+    let parsed: any;
 
     try {
-      // 1. Thoroughly clean markdown code blocks and whitespace
-      let cleaned = result.trim();
-      if (cleaned.startsWith("```json")) {
-        cleaned = cleaned.replace(/^```json/, "").replace(/```$/, "").trim();
-      } else if (cleaned.startsWith("```")) {
-        cleaned = cleaned.replace(/^```/, "").replace(/```$/, "").trim();
-      }
+      parsed = JSON.parse(cleaned);
+    } catch {
+      console.error("Invalid JSON received from AI:", result);
 
-      // 2. Try direct JSON parse
-      const parsed = JSON.parse(cleaned);
+      res.status(502).json({
+        error: "The AI returned an invalid response. Please try again."
+      });
+      return;
+    }
 
-      if (Array.isArray(parsed)) {
-        matches = parsed;
-      } else if (parsed && typeof parsed === "object") {
-        // Handle case where AI wrapped the array inside an object key (e.g. { matches: [...] } or { cases: [...] })
-        const arrayKey = Object.keys(parsed).find(k => Array.isArray(parsed[k]));
-        if (arrayKey) {
-          matches = parsed[arrayKey];
-        } else {
-          // If it's a single object, wrap it in an array
-          matches = [parsed];
-        }
-      }
-    } catch (parseErr) {
-      console.warn("Direct JSON parse failed, attempting regex array extraction:", parseErr);
-      
-      try {
-        // 3. Fallback: extract the first bracketed array found in the text
-        const jsonMatch = result.match(/\[([\s\S]*)\]/);
-        if (jsonMatch) {
-          matches = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error("No JSON array structure found in AI response");
-        }
-      } catch (regexErr) {
-        console.error("All parsing strategies failed. Returning structured fallback card:", regexErr);
-        // 4. Guaranteed UI fallback so the mobile app displays the analysis text as a card instead of crashing or showing nothing
-        matches = [
-          {
-            title: "Judicial Precedent Analysis: Re: Match Query",
-            citation: `${juris} Precedent Database`,
-            principle: result.trim().substring(0, 500) || "Analysis generated successfully, but formatting required structural adjustment.",
-            matchScore: "92%"
-          }
-        ];
+    // Support either a direct array or an object containing matches/cases.
+    let matches: any[] = [];
+
+    if (Array.isArray(parsed)) {
+      matches = parsed;
+    } else if (parsed && typeof parsed === "object") {
+      if (Array.isArray(parsed.matches)) {
+        matches = parsed.matches;
+      } else if (Array.isArray(parsed.cases)) {
+        matches = parsed.cases;
       }
     }
 
-    // Ensure we always return a valid array to the mobile app
     if (!Array.isArray(matches)) {
-      matches = [matches];
+      res.status(502).json({
+        error: "The AI response did not contain valid case results."
+      });
+      return;
     }
 
-    res.status(200).json(matches);
+    // Validate each result before sending it to the mobile app.
+    const validMatches = matches
+      .filter((item: any) =>
+        item &&
+        typeof item === "object" &&
+        typeof item.title === "string" &&
+        item.title.trim() &&
+        typeof item.citation === "string" &&
+        item.citation.trim() &&
+        typeof item.principle === "string" &&
+        item.principle.trim()
+      )
+      .slice(0, 5)
+      .map((item: any) => ({
+        title: item.title.trim(),
+        citation: item.citation.trim(),
+        principle: item.principle.trim(),
+        matchScore:
+          typeof item.matchScore === "string"
+            ? item.matchScore
+            : "Not provided"
+      }));
+
+    if (validMatches.length === 0) {
+      res.status(200).json([]);
+      return;
+    }
+
+    res.status(200).json(validMatches);
+
   } catch (err: any) {
     console.error("Case matching failed:", err);
-    res.status(500).json({ error: "Matching failed. Please try again." });
+
+    res.status(500).json({
+      error: "Matching failed. Please try again."
+    });
   }
 });
 
