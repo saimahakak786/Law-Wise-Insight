@@ -144,7 +144,7 @@ export default function FactMatcherScreen() {
       const token = await getToken();
       const domain = process.env.EXPO_PUBLIC_DOMAIN || 'law-wise-insight.onrender.com';
       
-      const response = await fetch(`https://${domain}/api/lawwise/match`, {
+      const response = await fetch(`https://${domain}/api/lawvise/match`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
