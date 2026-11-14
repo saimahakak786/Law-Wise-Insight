@@ -491,10 +491,7 @@ export async function searchCourtListener(
 
       excerpt: item.snippet || null,
 
-      sourceRecordId:
-        item.cluster_id ||
-        item.id ||
-        null,
+      sourceRecordId: item.cluster_id || null,
 
       jurisdiction: "US",
 
