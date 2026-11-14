@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 import {
   StyleSheet,
   Text,
@@ -9,6 +10,7 @@ import {
   Alert,
   Platform,
   Pressable,
+  Linking,
 } from 'react-native';
 
 import { useColors } from '@/hooks/useColors';
@@ -32,15 +34,22 @@ export default function FactMatcherScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { getToken } = useAuth();
+
   const { jurisdiction, language, saveDocument } = useApp();
 
   const [facts, setFacts] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
 
-  const [freeUsesLeft, setFreeUsesLeft] = useState(MAX_FREE_USES);
+  const [expandedJudgments, setExpandedJudgments] =
+    useState<string[]>([]);
+
+  const [freeUsesLeft, setFreeUsesLeft] =
+    useState(MAX_FREE_USES);
+
   const [showPaywall, setShowPaywall] = useState(false);
   const [isPro, setIsPro] = useState(false);
+  const [serverMessage, setServerMessage] = useState('');
 
   useEffect(() => {
     checkFreeUsage();
@@ -89,7 +98,71 @@ export default function FactMatcherScreen() {
   // -----------------------------------------
 
   const getMatchScore = (item: any) => {
-    return item.matchScore ?? item.relevance ?? 'Not provided';
+    const score = item.matchScore;
+
+    if (
+      score === null ||
+      score === undefined ||
+      !Number.isFinite(Number(score))
+    ) {
+      return 'Not provided';
+    }
+
+    return `${Number(score)}%`;
+  };
+
+  // -----------------------------------------
+  // JUDGMENT EXPANSION
+  // -----------------------------------------
+
+  const getResultKey = (item: any, index: number) =>
+    String(
+      item.sourceRecordId ??
+      item.citation ??
+      index
+    );
+
+  const toggleJudgment = (item: any, index: number) => {
+    const key = getResultKey(item, index);
+
+    setExpandedJudgments((previous) =>
+      previous.includes(key)
+        ? previous.filter((value) => value !== key)
+        : [...previous, key]
+    );
+  };
+
+  // -----------------------------------------
+  // OPEN ORIGINAL SOURCE
+  // -----------------------------------------
+
+  const openOriginalSource = async (url: string) => {
+    if (!url) {
+      Alert.alert(
+        'Source Unavailable',
+        'The original case URL was not provided.'
+      );
+      return;
+    }
+
+    try {
+      const validUrl = new URL(url);
+
+      if (
+        validUrl.protocol !== 'https:' ||
+        validUrl.hostname !== 'www.courtlistener.com' &&
+        validUrl.hostname !== 'courtlistener.com'
+      ) {
+        throw new Error('Invalid case source URL.');
+      }
+
+      await Linking.openURL(validUrl.toString());
+    } catch {
+      Alert.alert(
+        'Unable to Open Source',
+        'The original case link could not be opened.'
+      );
+    }
   };
 
   // -----------------------------------------
@@ -118,6 +191,8 @@ export default function FactMatcherScreen() {
 
     setLoading(true);
     setResults([]);
+    setServerMessage('');
+    setExpandedJudgments([]);
 
     try {
       const token = await getToken();
@@ -136,10 +211,12 @@ export default function FactMatcherScreen() {
         `https://${domain}/api/lawvise/match`,
         {
           method: 'POST',
+
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
+
           body: JSON.stringify({
             facts: facts.trim(),
             jurisdiction,
@@ -157,18 +234,35 @@ export default function FactMatcherScreen() {
         );
       }
 
+      if (data?.message) {
+        setServerMessage(data.message);
+      }
+
       const matches = Array.isArray(data)
         ? data
         : Array.isArray(data?.matches)
           ? data.matches
           : [];
 
+      if (data?.automatedSearchAvailable === false) {
+        setResults([]);
+
+        Alert.alert(
+          'Automated Search Unavailable',
+          data.message ||
+          `Automated judgment retrieval is not connected for ${jurisdiction}.`
+        );
+
+        return;
+      }
+
       if (matches.length === 0) {
         setResults([]);
 
         Alert.alert(
           'No Matches Found',
-          'The server did not return any matching precedents. Please revise your facts and try again.'
+          data.message ||
+          'No matching judgment texts were returned. Please revise your facts and try again.'
         );
 
         return;
@@ -226,9 +320,12 @@ export default function FactMatcherScreen() {
 
   const handleCopy = async (item: any) => {
     await Clipboard.setStringAsync(
-      `Case: ${item.title}\n` +
-      `Citation: ${item.citation}\n` +
-      `Principle: ${item.principle}`
+      `Case: ${item.title || ''}\n` +
+      `Citation: ${item.citation || ''}\n` +
+      `Court: ${item.court || ''}\n` +
+      `Decision Date: ${item.date || ''}\n` +
+      `AI Estimated Match: ${getMatchScore(item)}\n\n` +
+      `Legal Principle:\n${item.principle || ''}`
     );
 
     Haptics.notificationAsync(
@@ -237,7 +334,7 @@ export default function FactMatcherScreen() {
 
     Alert.alert(
       'Copied',
-      'Precedent copied to clipboard.'
+      'Precedent details copied to clipboard.'
     );
   };
 
@@ -248,14 +345,24 @@ export default function FactMatcherScreen() {
   const handleSaveToVault = async (item: any) => {
     try {
       await saveDocument({
-        title: item.title,
+        title: item.title || 'Untitled Precedent',
+
         documentType: 'Precedent Match',
+
         content:
-          `Citation: ${item.citation}\n` +
-          `Match Score: ${getMatchScore(item)}\n\n` +
-          `Principle:\n${item.principle}\n\n` +
+          `Case: ${item.title || ''}\n` +
+          `Citation: ${item.citation || ''}\n` +
+          `Court: ${item.court || ''}\n` +
+          `Decision Date: ${item.date || ''}\n` +
+          `Original Source: ${item.caseUrl || ''}\n` +
+          `Source Record ID: ${item.sourceRecordId || ''}\n` +
+          `AI Estimated Match: ${getMatchScore(item)}\n\n` +
+          `Legal Principle:\n${item.principle || ''}\n\n` +
+          `Judgment Text:\n${item.judgmentText || 'Not retrieved'}\n\n` +
           `Facts Analyzed:\n${facts}`,
+
         analysisType: 'Fact Matcher',
+
         matterId: null,
       });
 
@@ -265,12 +372,12 @@ export default function FactMatcherScreen() {
 
       Alert.alert(
         'Saved',
-        'Precedent saved to your Vault successfully.'
+        'Precedent and retrieved judgment text saved to your Vault.'
       );
     } catch {
       Alert.alert(
         'Error',
-        'Failed to save to vault.'
+        'Failed to save to Vault.'
       );
     }
   };
@@ -301,11 +408,19 @@ export default function FactMatcherScreen() {
       ...results.map((item, index) => ({
         heading:
           `Precedent [${index + 1}] — ` +
-          `${item.citation} (${getMatchScore(item)})`,
+          `${item.citation || 'Citation unavailable'}`,
 
         content:
-          `Title: ${item.title}\n\n` +
-          `Legal Principle & Holding:\n${item.principle}`,
+          `Title: ${item.title || ''}\n` +
+          `Court: ${item.court || ''}\n` +
+          `Decision Date: ${item.date || ''}\n` +
+          `AI Estimated Match: ${getMatchScore(item)}\n` +
+          `Original Source: ${item.caseUrl || ''}\n\n` +
+          `Legal Principle & Factual Relevance:\n` +
+          `${item.principle || ''}\n\n` +
+          `Judgment Retrieval Status:\n` +
+          `${item.judgmentTextStatus || 'Not specified'}\n\n` +
+          `Judgment text is available separately in LawVise.`,
       })),
     ];
 
@@ -319,7 +434,7 @@ export default function FactMatcherScreen() {
       sections,
 
       footerNote:
-        'LawVise Fact Matcher & Precedent Finder • Chamber-Grade Legal Report',
+        'LawVise Fact Matcher • AI match scores are estimates. Verify original judgments and subsequent treatment before relying on them.',
     });
   };
 
@@ -458,6 +573,7 @@ export default function FactMatcherScreen() {
               size={16}
               color="#C9A84C"
             />
+
             <Text
               style={[
                 styles.featureText,
@@ -474,6 +590,7 @@ export default function FactMatcherScreen() {
               size={16}
               color="#C9A84C"
             />
+
             <Text
               style={[
                 styles.featureText,
@@ -555,8 +672,8 @@ export default function FactMatcherScreen() {
               { color: colors.mutedForeground },
             ]}
           >
-            Input case scenarios to instantly discover matching
-            case laws and legal principles under{' '}
+            Compare case facts with retrieved judgments and
+            identify potentially relevant precedents under{' '}
             <Text
               style={{
                 fontFamily: 'Inter_700Bold',
@@ -608,8 +725,8 @@ export default function FactMatcherScreen() {
             title={
               loading
                 ? 'Analyzing Precedents...'
-                : freeUsesLeft > 0
-                  ? `Find Matching Precedents (${freeUsesLeft} free left)`
+                : freeUsesLeft > 0 || isPro
+                  ? `Find Matching Precedents (${isPro ? 'Pro' : `${freeUsesLeft} free left`})`
                   : 'Find Matching Precedents (Upgrade Required)'
             }
             variant="primary"
@@ -654,6 +771,22 @@ export default function FactMatcherScreen() {
           )}
         </View>
 
+        {/* SERVER MESSAGE */}
+
+        {!!serverMessage && results.length > 0 && (
+          <View style={styles.infoBox}>
+            <Feather
+              name="info"
+              size={16}
+              color="#C9A84C"
+            />
+
+            <Text style={styles.infoText}>
+              {serverMessage}
+            </Text>
+          </View>
+        )}
+
         {/* LOADING */}
 
         {loading && (
@@ -669,8 +802,7 @@ export default function FactMatcherScreen() {
                 { color: colors.mutedForeground },
               ]}
             >
-              Searching {jurisdiction} Supreme Court &
-              appellate databases...
+              Retrieving case records and judgment texts...
             </Text>
           </View>
         )}
@@ -701,84 +833,241 @@ export default function FactMatcherScreen() {
               ]}
             >
               No precedents matched yet. Enter case facts above
-              to run the search analysis.
+              to search available judgment records.
             </Text>
           </Card>
         ) : (
-          results.map((item, index) => (
-            <Card
-              key={item.id ?? item.citation ?? index}
-              style={[
-                styles.resultCard,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <View style={styles.cardRow}>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {item.citation || 'Citation not provided'}
+          results.map((item, index) => {
+            const resultKey = getResultKey(item, index);
+
+            const isExpanded =
+              expandedJudgments.includes(resultKey);
+
+            const hasJudgment =
+              typeof item.judgmentText === 'string' &&
+              item.judgmentText.trim().length > 0;
+
+            return (
+              <Card
+                key={resultKey}
+                style={[
+                  styles.resultCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                {/* CITATION AND SCORE */}
+
+                <View style={styles.cardRow}>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {item.citation || 'Citation unavailable'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.scoreContainer}>
+                    <Text style={styles.matchScore}>
+                      {getMatchScore(item)}
+                    </Text>
+
+                    <Text style={styles.scoreCaption}>
+                      AI ESTIMATE
+                    </Text>
+                  </View>
+                </View>
+
+                {/* CASE NAME */}
+
+                <Text
+                  style={[
+                    styles.caseTitle,
+                    { color: colors.foreground },
+                  ]}
+                >
+                  {item.title || 'Untitled Precedent'}
+                </Text>
+
+                {/* CASE METADATA */}
+
+                <View style={styles.metadataBox}>
+                  <Text style={styles.metadataText}>
+                    Court: {item.court || 'Not provided'}
+                  </Text>
+
+                  <Text style={styles.metadataText}>
+                    Decision Date: {item.date || 'Not provided'}
+                  </Text>
+
+                  {!!item.docketNumber && (
+                    <Text style={styles.metadataText}>
+                      Docket Number: {item.docketNumber}
+                    </Text>
+                  )}
+
+                  {!!item.sourceRecordId && (
+                    <Text style={styles.metadataText}>
+                      CourtListener Record ID: {item.sourceRecordId}
+                    </Text>
+                  )}
+                </View>
+
+                {/* LEGAL PRINCIPLE */}
+
+                <Text style={styles.sectionTitle}>
+                  Legal Principle & Factual Relevance
+                </Text>
+
+                <Text
+                  style={[
+                    styles.principleText,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
+                  {item.principle ||
+                    'No legal principle was returned.'}
+                </Text>
+
+                {/* JUDGMENT STATUS */}
+
+                <View style={styles.judgmentStatus}>
+                  <Feather
+                    name={
+                      hasJudgment
+                        ? 'check-circle'
+                        : 'alert-circle'
+                    }
+                    size={15}
+                    color={
+                      hasJudgment
+                        ? '#16A34A'
+                        : '#D97706'
+                    }
+                  />
+
+                  <Text
+                    style={[
+                      styles.statusText,
+                      {
+                        color: hasJudgment
+                          ? '#16A34A'
+                          : '#D97706',
+                      },
+                    ]}
+                  >
+                    {hasJudgment
+                      ? 'Judgment text retrieved'
+                      : 'Full judgment text unavailable'}
                   </Text>
                 </View>
 
-                <Text style={styles.matchScore}>
-                  {getMatchScore(item)}
+                {/* FULL JUDGMENT */}
+
+                {hasJudgment && (
+                  <View style={styles.judgmentContainer}>
+                    <Pressable
+                      style={styles.judgmentToggle}
+                      onPress={() =>
+                        toggleJudgment(item, index)
+                      }
+                    >
+                      <Feather
+                        name="book-open"
+                        size={16}
+                        color="#C9A84C"
+                      />
+
+                      <Text style={styles.judgmentToggleText}>
+                        {isExpanded
+                          ? 'Hide Full Judgment'
+                          : 'Read Full Judgment'}
+                      </Text>
+
+                      <Feather
+                        name={
+                          isExpanded
+                            ? 'chevron-up'
+                            : 'chevron-down'
+                        }
+                        size={17}
+                        color="#C9A84C"
+                      />
+                    </Pressable>
+
+                    {isExpanded && (
+                      <View style={styles.judgmentTextBox}>
+                        <Text style={styles.judgmentText}>
+                          {item.judgmentText}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* SOURCE LINK */}
+
+                <Pressable
+                  style={styles.sourceButton}
+                  onPress={() =>
+                    openOriginalSource(item.caseUrl)
+                  }
+                >
+                  <Feather
+                    name="external-link"
+                    size={15}
+                    color="#C9A84C"
+                  />
+
+                  <Text style={styles.sourceButtonText}>
+                    Open Original CourtListener Case
+                  </Text>
+                </Pressable>
+
+                {/* ACTION BUTTONS */}
+
+                <View style={styles.actionRow}>
+                  <Pressable
+                    style={styles.actionBtn}
+                    onPress={() => handleCopy(item)}
+                  >
+                    <Feather
+                      name="copy"
+                      size={14}
+                      color="#C9A84C"
+                    />
+
+                    <Text style={styles.actionBtnText}>
+                      Copy
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.actionBtn}
+                    onPress={() => handleSaveToVault(item)}
+                  >
+                    <Feather
+                      name="bookmark"
+                      size={14}
+                      color="#C9A84C"
+                    />
+
+                    <Text style={styles.actionBtnText}>
+                      Save to Vault
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* DISCLAIMER */}
+
+                <Text style={styles.disclaimer}>
+                  AI-generated relevance assessment. Verify the
+                  original judgment, applicable law and subsequent
+                  judicial treatment before relying on this result.
                 </Text>
-              </View>
-
-              <Text
-                style={[
-                  styles.caseTitle,
-                  { color: colors.foreground },
-                ]}
-              >
-                {item.title || 'Untitled Precedent'}
-              </Text>
-
-              <Text
-                style={[
-                  styles.principleText,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                {item.principle || 'No legal principle provided.'}
-              </Text>
-
-              <View style={styles.actionRow}>
-                <Pressable
-                  style={styles.actionBtn}
-                  onPress={() => handleCopy(item)}
-                >
-                  <Feather
-                    name="copy"
-                    size={14}
-                    color="#C9A84C"
-                  />
-
-                  <Text style={styles.actionBtnText}>
-                    Copy
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  style={styles.actionBtn}
-                  onPress={() => handleSaveToVault(item)}
-                >
-                  <Feather
-                    name="bookmark"
-                    size={14}
-                    color="#C9A84C"
-                  />
-
-                  <Text style={styles.actionBtnText}>
-                    Save to Vault
-                  </Text>
-                </Pressable>
-              </View>
-            </Card>
-          ))
+              </Card>
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -820,6 +1109,7 @@ const styles = StyleSheet.create({
   screenSub: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
+    lineHeight: 19,
   },
 
   formCard: {
@@ -878,6 +1168,24 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
 
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#C9A84C15',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 14,
+  },
+
+  infoText: {
+    flex: 1,
+    color: '#C9A84C',
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: 'Inter_400Regular',
+  },
+
   loaderContainer: {
     alignItems: 'center',
     paddingVertical: 30,
@@ -887,6 +1195,7 @@ const styles = StyleSheet.create({
   loaderText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
+    textAlign: 'center',
   },
 
   emptyCard: {
@@ -906,7 +1215,7 @@ const styles = StyleSheet.create({
 
   resultCard: {
     marginVertical: 0,
-    marginBottom: 12,
+    marginBottom: 14,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -916,13 +1225,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    gap: 8,
   },
 
   badge: {
+    flexShrink: 1,
     backgroundColor: '#C9A84C20',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#C9A84C40',
@@ -934,28 +1245,126 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
 
+  scoreContainer: {
+    alignItems: 'flex-end',
+  },
+
   matchScore: {
-    fontSize: 13,
+    fontSize: 16,
     color: '#C9A84C',
     fontFamily: 'Inter_700Bold',
   },
 
+  scoreCaption: {
+    color: '#94A3B8',
+    fontSize: 9,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 0.7,
+  },
+
   caseTitle: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 15,
-    marginBottom: 6,
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+
+  metadataBox: {
+    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+    borderRadius: 8,
+    padding: 11,
+    gap: 6,
+    marginBottom: 14,
+  },
+
+  metadataText: {
+    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
+  sectionTitle: {
+    fontFamily: 'Inter_700Bold',
+    color: '#C9A84C',
+    fontSize: 13,
+    marginBottom: 7,
   },
 
   principleText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 21,
     marginBottom: 12,
+  },
+
+  judgmentStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 10,
+  },
+
+  statusText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+  },
+
+  judgmentContainer: {
+    borderWidth: 1,
+    borderColor: 'rgba(201, 168, 76, 0.35)',
+    borderRadius: 9,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+
+  judgmentToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: '#C9A84C12',
+    gap: 8,
+  },
+
+  judgmentToggleText: {
+    flex: 1,
+    color: '#C9A84C',
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+  },
+
+  judgmentTextBox: {
+    padding: 12,
+    maxHeight: 450,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+
+  judgmentText: {
+    color: '#CBD5E1',
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 19,
+  },
+
+  sourceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+
+  sourceButtonText: {
+    color: '#C9A84C',
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
   },
 
   actionRow: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(201, 168, 76, 0.15)',
     paddingTop: 12,
@@ -967,8 +1376,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#C9A84C15',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
     borderRadius: 6,
   },
 
@@ -976,6 +1385,14 @@ const styles = StyleSheet.create({
     color: '#C9A84C',
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
+  },
+
+  disclaimer: {
+    color: '#94A3B8',
+    fontSize: 10,
+    lineHeight: 15,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 12,
   },
 
   paywallTitle: {
