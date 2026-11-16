@@ -2,19 +2,22 @@ import { Router, Request, Response } from "express";
 
 const router: Router = Router();
 
-/*
-|--------------------------------------------------------------------------
-| LAWISE GLOBAL CASE-LAW ENGINE
-|--------------------------------------------------------------------------
-| Automated connector:
-| USA - CourtListener
-|
-| Official research sources:
-| India, UK and UAE
-|
-| IMPORTANT:
-| Never generate fictional case names, citations or judgments.
-| Never represent a portal link as a retrieved judgment.
+/* |--------------------------------------------------------------------------
+   LAWISE GLOBAL CASE-LAW ENGINE
+
+   Automated connector:
+   USA - CourtListener
+
+   Individual judgment retrieval:
+   UK - The National Archives Find Case Law API
+
+   Official research sources:
+   India, UK and UAE
+
+   IMPORTANT:
+   Never generate fictional case names, citations or judgments.
+   Never represent a portal link as a retrieved judgment.
+   UK bulk discovery and computational analysis remain disabled.
 |--------------------------------------------------------------------------
 */
 
@@ -24,13 +27,20 @@ const COURTLISTENER_API =
 const COURTLISTENER_WEBSITE =
   "https://www.courtlistener.com";
 
+const UK_CASELAW_API =
+  "https://caselaw.nationalarchives.gov.uk";
+
+const UK_CASELAW_API_DOCS =
+  "https://nationalarchives.github.io/ds-find-caselaw-docs/public";
+
+const UK_COMPUTATIONAL_ANALYSIS_ENABLED = false;
+
 const REQUEST_TIMEOUT = 20000;
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 20;
 
-/*
-|--------------------------------------------------------------------------
-| COURT SOURCE TYPE
+/* |--------------------------------------------------------------------------
+   COURT SOURCE TYPE
 |--------------------------------------------------------------------------
 */
 
@@ -44,9 +54,8 @@ interface CourtSource {
   notes: string;
 }
 
-/*
-|--------------------------------------------------------------------------
-| INDIA - OFFICIAL COURT SOURCES
+/* |--------------------------------------------------------------------------
+   INDIA - OFFICIAL COURT SOURCES
 |--------------------------------------------------------------------------
 */
 
@@ -84,9 +93,8 @@ const INDIA_COURT_SOURCES: CourtSource[] = [
   },
 ];
 
-/*
-|--------------------------------------------------------------------------
-| UNITED STATES - COURT SOURCES
+/* |--------------------------------------------------------------------------
+   UNITED STATES - COURT SOURCES
 |--------------------------------------------------------------------------
 */
 
@@ -103,9 +111,8 @@ const US_COURT_SOURCES: CourtSource[] = [
   },
 ];
 
-/*
-|--------------------------------------------------------------------------
-| UNITED KINGDOM - COURT SOURCES
+/* |--------------------------------------------------------------------------
+   UNITED KINGDOM - COURT SOURCES
 |--------------------------------------------------------------------------
 */
 
@@ -115,30 +122,30 @@ const UK_COURT_SOURCES: CourtSource[] = [
     name: "UK Supreme Court",
     court: "Supreme Court",
     source: "The National Archives - Find Case Law",
-    website: "https://caselaw.nationalarchives.gov.uk/",
+    website: UK_CASELAW_API,
     automatedSearch: false,
     notes:
-      "Official UK Supreme Court case-law search destination.",
+      "Official UK Supreme Court case-law source. Individual judgment retrieval is available using a known National Archives Document URI.",
   },
   {
     code: "UK-CA",
     name: "England and Wales Court of Appeal",
     court: "Court of Appeal",
     source: "The National Archives - Find Case Law",
-    website: "https://caselaw.nationalarchives.gov.uk/",
+    website: UK_CASELAW_API,
     automatedSearch: false,
     notes:
-      "Official Court of Appeal case-law search destination.",
+      "Official Court of Appeal case-law source. Individual judgment retrieval is available using a known National Archives Document URI.",
   },
   {
     code: "UK-HC",
     name: "England and Wales High Court",
     court: "High Court",
     source: "The National Archives - Find Case Law",
-    website: "https://caselaw.nationalarchives.gov.uk/",
+    website: UK_CASELAW_API,
     automatedSearch: false,
     notes:
-      "Official High Court case-law search destination.",
+      "Official High Court case-law source. Individual judgment retrieval is available using a known National Archives Document URI.",
   },
   {
     code: "UK-SCOT",
@@ -152,9 +159,8 @@ const UK_COURT_SOURCES: CourtSource[] = [
   },
 ];
 
-/*
-|--------------------------------------------------------------------------
-| UAE - COURT SOURCES
+/* |--------------------------------------------------------------------------
+   UAE - COURT SOURCES
 |--------------------------------------------------------------------------
 */
 
@@ -187,8 +193,7 @@ const UAE_COURT_SOURCES: CourtSource[] = [
     source: "Abu Dhabi Judicial Department",
     website: "https://www.adjd.gov.ae/",
     automatedSearch: false,
-    notes:
-      "Official Abu Dhabi judicial portal.",
+    notes: "Official Abu Dhabi judicial portal.",
   },
   {
     code: "UAE-DIFC",
@@ -198,8 +203,7 @@ const UAE_COURT_SOURCES: CourtSource[] = [
     website:
       "https://www.difccourts.ae/rules-decisions/judgments-orders",
     automatedSearch: false,
-    notes:
-      "Publicly available DIFC judgments and orders.",
+    notes: "Publicly available DIFC judgments and orders.",
   },
   {
     code: "UAE-ADGM",
@@ -213,9 +217,8 @@ const UAE_COURT_SOURCES: CourtSource[] = [
   },
 ];
 
-/*
-|--------------------------------------------------------------------------
-| ALL COURT SOURCES
+/* |--------------------------------------------------------------------------
+   ALL COURT SOURCES
 |--------------------------------------------------------------------------
 */
 
@@ -226,9 +229,8 @@ const ALL_COURT_SOURCES: CourtSource[] = [
   ...UAE_COURT_SOURCES,
 ];
 
-/*
-|--------------------------------------------------------------------------
-| JURISDICTION DIRECTORY
+/* |--------------------------------------------------------------------------
+   JURISDICTION DIRECTORY
 |--------------------------------------------------------------------------
 */
 
@@ -284,10 +286,10 @@ const JURISDICTIONS: JurisdictionSource[] = [
       "Selected Tribunals",
     ],
     source: "The National Archives / Scottish Courts",
-    website: "https://caselaw.nationalarchives.gov.uk/",
+    website: UK_CASELAW_API,
     automatedSearch: false,
     notes:
-      "Official case-law sources identified. Automated retrieval and licensing checks are pending.",
+      "Individual judgment retrieval is supported through the National Archives API using a known Document URI. Bulk discovery and computational analysis are disabled.",
   },
   {
     code: "UAE",
@@ -345,9 +347,8 @@ const JURISDICTIONS: JurisdictionSource[] = [
   },
 ];
 
-/*
-|--------------------------------------------------------------------------
-| CASE SEARCH RESULT TYPE
+/* |--------------------------------------------------------------------------
+   CASE SEARCH RESULT TYPE
 |--------------------------------------------------------------------------
 */
 
@@ -365,9 +366,8 @@ interface CaseSearchResult {
   retrievalStatus: string;
 }
 
-/*
-|--------------------------------------------------------------------------
-| REQUEST HELPER
+/* |--------------------------------------------------------------------------
+   REQUEST HELPER
 |--------------------------------------------------------------------------
 */
 
@@ -416,9 +416,8 @@ async function fetchJson(
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| COURTLISTENER AUTOMATED CONNECTOR
+/* |--------------------------------------------------------------------------
+   COURTLISTENER AUTOMATED CONNECTOR
 |--------------------------------------------------------------------------
 */
 
@@ -500,6 +499,11 @@ export async function searchCourtListener(
   });
 }
 
+/* |--------------------------------------------------------------------------
+   COURTLISTENER JUDGMENT RETRIEVAL
+|--------------------------------------------------------------------------
+*/
+
 export interface CourtListenerOpinion {
   opinionId: number;
   opinionType: string | null;
@@ -512,7 +516,9 @@ export async function fetchCourtListenerJudgment(
   const token = process.env.COURTLISTENER_API_TOKEN;
 
   if (!token) {
-    throw new Error("CourtListener API token is not configured.");
+    throw new Error(
+      "CourtListener API token is not configured."
+    );
   }
 
   const id = String(clusterId).trim();
@@ -525,7 +531,6 @@ export async function fetchCourtListenerJudgment(
     Authorization: `Token ${token}`,
   };
 
-  // Step 1: Retrieve the case cluster.
   const cluster = await fetchJson(
     `${COURTLISTENER_API}/clusters/${id}/`,
     headers
@@ -539,14 +544,17 @@ export async function fetchCourtListenerJudgment(
     return [];
   }
 
-  // Step 2: Retrieve the individual opinions.
   const opinions = await Promise.all(
     opinionLinks.slice(0, 10).map(async (link: unknown) => {
-      if (typeof link !== "string") return null;
+      if (typeof link !== "string") {
+        return null;
+      }
 
       const match = link.match(/\/opinions\/(\d+)\/?/);
 
-      if (!match) return null;
+      if (!match) {
+        return null;
+      }
 
       const opinionId = Number(match[1]);
 
@@ -556,7 +564,6 @@ export async function fetchCourtListenerJudgment(
           headers
         );
 
-        // CourtListener recommends html_with_citations where available.
         const html =
           typeof opinion.html_with_citations === "string"
             ? opinion.html_with_citations
@@ -582,12 +589,16 @@ export async function fetchCourtListenerJudgment(
           .replace(/\s+/g, " ")
           .trim();
 
-        if (!judgmentText) return null;
+        if (!judgmentText) {
+          return null;
+        }
 
         return {
           opinionId,
           opinionType:
-            typeof opinion.type === "string" ? opinion.type : null,
+            typeof opinion.type === "string"
+              ? opinion.type
+              : null,
           judgmentText,
         };
       } catch (error) {
@@ -595,18 +606,122 @@ export async function fetchCourtListenerJudgment(
           `CourtListener opinion ${opinionId} retrieval failed:`,
           error
         );
+
         return null;
       }
     })
   );
 
   return opinions.filter(
-    (item): item is CourtListenerOpinion => item !== null
+    (item): item is CourtListenerOpinion =>
+      item !== null
   );
 }
-/*
+
+/* |--------------------------------------------------------------------------
+   UK NATIONAL ARCHIVES - INDIVIDUAL JUDGMENT RETRIEVAL
+
+   This endpoint retrieves a judgment when its Document URI
+   is already known.
+
+   It does not perform bulk discovery or computational analysis.
 |--------------------------------------------------------------------------
-| SOURCE DIRECTORY HELPER
+*/
+
+export interface UKJudgmentDocument {
+  documentUri: string;
+  source: string;
+  sourceUrl: string;
+  contentType: string;
+  format: string;
+  xml: string;
+}
+
+export async function fetchUKJudgment(
+  documentUri: string
+): Promise<UKJudgmentDocument> {
+  const uri = String(documentUri || "").trim();
+
+  if (
+    !uri ||
+    uri.length > 200 ||
+    uri.startsWith("/") ||
+    uri.includes("..") ||
+    !/^[a-z0-9/-]+$/i.test(uri)
+  ) {
+    throw new Error(
+      "Invalid National Archives document URI."
+    );
+  }
+
+  const url = `${UK_CASELAW_API}/${uri}/data.xml`;
+
+  const controller = new AbortController();
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT
+  );
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/akn+xml",
+        "User-Agent": "LawVise-Legal-Research/1.0",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const error: any = new Error(
+        `National Archives returned HTTP ${response.status}.`
+      );
+
+      error.status = response.status;
+
+      const retryAfter =
+        response.headers.get("Retry-After");
+
+      if (retryAfter) {
+        error.retryAfter = retryAfter;
+      }
+
+      throw error;
+    }
+
+    const contentType =
+      response.headers.get("Content-Type") || "";
+
+    if (!contentType.toLowerCase().includes("xml")) {
+      throw new Error(
+        "Unexpected response format from National Archives."
+      );
+    }
+
+    const xml = await response.text();
+
+    if (!xml.trim()) {
+      throw new Error(
+        "National Archives returned an empty document."
+      );
+    }
+
+    return {
+      documentUri: uri,
+      source: "The National Archives - Find Case Law",
+      sourceUrl: `${UK_CASELAW_API}/${uri}`,
+      contentType,
+      format: "Akoma Ntoso XML",
+      xml,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/* |--------------------------------------------------------------------------
+   SOURCE DIRECTORY HELPER
 |--------------------------------------------------------------------------
 */
 
@@ -634,9 +749,8 @@ function getSourcesForJurisdiction(
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| ALL INDIAN COURT SOURCES
+/* |--------------------------------------------------------------------------
+   INDIA - ALL COURT SOURCES
 |--------------------------------------------------------------------------
 */
 
@@ -653,9 +767,8 @@ router.get(
   }
 );
 
-/*
-|--------------------------------------------------------------------------
-| UK COURT SOURCES
+/* |--------------------------------------------------------------------------
+   UK COURT SOURCES
 |--------------------------------------------------------------------------
 */
 
@@ -666,15 +779,83 @@ router.get(
       success: true,
       jurisdiction: "United Kingdom",
       sources: UK_COURT_SOURCES,
+      individualJudgmentRetrieval: true,
+      automatedDiscovery: false,
+      computationalAnalysis:
+        UK_COMPUTATIONAL_ANALYSIS_ENABLED,
+      documentation: UK_CASELAW_API_DOCS,
       notice:
-        "Official research destinations. Check the applicable licence before computational analysis or automated reuse of judgments.",
+        "Individual judgment retrieval is supported using a known National Archives Document URI. Bulk discovery and computational analysis are not enabled.",
     });
   }
 );
 
-/*
+/* |--------------------------------------------------------------------------
+   UK - RETRIEVE INDIVIDUAL JUDGMENT
 |--------------------------------------------------------------------------
-| UAE COURT SOURCES
+*/
+
+router.get(
+  "/uk/document",
+  async (req: Request, res: Response) => {
+    const documentUri = String(
+      req.query.documentUri || ""
+    ).trim();
+
+    if (!documentUri) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "A National Archives document URI is required.",
+        example: "uksc/2024/123",
+      });
+    }
+
+    try {
+      const document =
+        await fetchUKJudgment(documentUri);
+
+      res.setHeader(
+        "X-LawVise-Source",
+        "The National Archives - Find Case Law"
+      );
+
+      res.setHeader(
+        "X-LawVise-License",
+        "Open Justice Licence v2.0"
+      );
+
+      res.setHeader(
+        "X-LawVise-Computational-Analysis",
+        "Disabled"
+      );
+
+      return res
+        .status(200)
+        .type("application/akn+xml")
+        .send(document.xml);
+
+    } catch (error: any) {
+      console.error(
+        "UK National Archives retrieval error:",
+        error
+      );
+
+      return res.status(error?.status || 502).json({
+        success: false,
+        source:
+          "The National Archives - Find Case Law",
+        message:
+          error?.message ||
+          "Unable to retrieve the UK judgment.",
+        retryAfter: error?.retryAfter || null,
+      });
+    }
+  }
+);
+
+/* |--------------------------------------------------------------------------
+   UAE COURT SOURCES
 |--------------------------------------------------------------------------
 */
 
@@ -691,9 +872,8 @@ router.get(
   }
 );
 
-/*
-|--------------------------------------------------------------------------
-| GLOBAL SOURCE DIRECTORY
+/* |--------------------------------------------------------------------------
+   GLOBAL SOURCE DIRECTORY
 |--------------------------------------------------------------------------
 */
 
@@ -702,6 +882,7 @@ router.get(
   (_req: Request, res: Response) => {
     return res.json({
       success: true,
+
       engine: "LawVise Global Case-Law Engine",
 
       jurisdictions: JURISDICTIONS,
@@ -718,15 +899,27 @@ router.get(
         },
       ],
 
+      individualRetrievalConnectors: [
+        {
+          name:
+            "The National Archives - Find Case Law",
+          jurisdiction: "UK",
+          enabled: true,
+          documentRetrieval: true,
+          automatedDiscovery: false,
+          computationalAnalysis:
+            UK_COMPUTATIONAL_ANALYSIS_ENABLED,
+        },
+      ],
+
       coverageNotice:
-        "CourtListener is currently the only automated case-law connector. Other jurisdictions provide official research destinations, not automatically retrieved judgments.",
+        "CourtListener is the automated case-law search connector. The National Archives connector supports individual UK judgment retrieval using a known Document URI. Other jurisdictions provide official research destinations, not automatically retrieved judgments.",
     });
   }
 );
 
-/*
-|--------------------------------------------------------------------------
-| SUPPORTED JURISDICTIONS
+/* |--------------------------------------------------------------------------
+   SUPPORTED JURISDICTIONS
 |--------------------------------------------------------------------------
 */
 
@@ -741,19 +934,22 @@ router.get(
   }
 );
 
-/*
-|--------------------------------------------------------------------------
-| GLOBAL CASE-LAW SEARCH
-|--------------------------------------------------------------------------
-|
-| Examples:
-|
-| /search?q=contract+breach&jurisdiction=IN
-| /search?q=contract+breach&jurisdiction=IN&court=IN-JK
-| /search?q=negligence&jurisdiction=UK&court=UK-SC
-| /search?q=contract&jurisdiction=UAE&court=UAE-DIFC
-| /search?q=negligence&jurisdiction=US
-| /search?q=contract&jurisdiction=ALL
+/* |--------------------------------------------------------------------------
+   GLOBAL CASE-LAW SEARCH
+
+   Examples:
+
+   /search?q=contract+breach&jurisdiction=IN
+
+   /search?q=contract+breach&jurisdiction=IN&court=IN-JK
+
+   /search?q=negligence&jurisdiction=UK&court=UK-SC
+
+   /search?q=contract&jurisdiction=UAE&court=UAE-DIFC
+
+   /search?q=negligence&jurisdiction=US
+
+   /search?q=contract&jurisdiction=ALL
 |--------------------------------------------------------------------------
 */
 
@@ -766,11 +962,15 @@ router.get(
 
     const jurisdiction = String(
       req.query.jurisdiction || "ALL"
-    ).trim().toUpperCase();
+    )
+      .trim()
+      .toUpperCase();
 
     const court = String(
       req.query.court || ""
-    ).trim().toUpperCase();
+    )
+      .trim()
+      .toUpperCase();
 
     const requestedLimit = Number(
       req.query.limit || DEFAULT_PAGE_SIZE
@@ -853,16 +1053,26 @@ router.get(
 
       connectorStatus.push({
         source: source.source,
+
         jurisdiction:
           source.code.split("-")[0],
+
         courtCode: source.code,
+
         court: source.name,
+
         status: "OFFICIAL_SEARCH_AVAILABLE",
+
         automatedSearch: false,
+
         website: source.website,
+
         searchQuery: query,
+
         message:
-          "Open the official portal and enter the search phrase. LawVise has not retrieved judgment records from this portal.",
+          source.code.startsWith("UK-")
+            ? "Open the official portal to search for a judgment. LawVise supports individual retrieval when a valid National Archives Document URI is already known. This search endpoint has not performed automated discovery."
+            : "Open the official portal and enter the search phrase. LawVise has not retrieved judgment records from this portal.",
       });
     }
 
@@ -898,6 +1108,7 @@ router.get(
             status: "SUCCESS",
             resultCount: cases.length,
           });
+
         } catch (error: any) {
           connectorStatus.push({
             source: "CourtListener",
@@ -964,9 +1175,8 @@ router.get(
   }
 );
 
-/*
-|--------------------------------------------------------------------------
-| CASE-LAW ENGINE HEALTH
+/* |--------------------------------------------------------------------------
+   CASE-LAW ENGINE HEALTH
 |--------------------------------------------------------------------------
 */
 
@@ -994,9 +1204,14 @@ router.get(
         },
 
         uk: {
-          configured: false,
+          configured: true,
+          individualJudgmentRetrieval: true,
+          automatedDiscovery: false,
+          computationalAnalysis:
+            UK_COMPUTATIONAL_ANALYSIS_ENABLED,
           officialSources:
             UK_COURT_SOURCES.length,
+          documentation: UK_CASELAW_API_DOCS,
         },
 
         uae: {
