@@ -1,5 +1,17 @@
 import { Router, Request, Response } from "express";
 
+import {
+  getAllJurisdictions,
+  isSupportedJurisdiction,
+  type JurisdictionCode,
+} from "../../services/jurisdictions/jurisdictionRegistry";
+
+import {
+  normalizeLegalSource,
+  normalizeLegalSources,
+  type LegalSource,
+} from "../../services/jurisdictions/sourceNormalizer";
+
 const router: Router = Router();
 
 /* |--------------------------------------------------------------------------
