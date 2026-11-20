@@ -1135,7 +1135,55 @@ router.get(
         }
       }
     }
+/*
+ * NORMALISE RETRIEVED CASES
+ */
 
+const legalSourceCandidates: LegalSource[] = [];
+
+for (const item of results) {
+  try {
+    const jurisdictionCode: JurisdictionCode =
+      item.jurisdiction === "US" ? "USA" : "INDIA";
+
+    if (
+      !isSupportedJurisdiction(jurisdictionCode) ||
+      !item.sourceUrl ||
+      !item.sourceRecordId
+    ) {
+      continue;
+    }
+
+    const legalSource = normalizeLegalSource({
+      id: String(item.sourceRecordId),
+      jurisdiction: jurisdictionCode,
+      sourceType: "CASE",
+      title: item.caseName,
+      citation: item.citation || undefined,
+      court: item.court,
+      decisionDate: item.date || undefined,
+      sourceUrl: item.sourceUrl,
+      verificationStatus: "UNVERIFIED",
+      retrievedAt: new Date().toISOString(),
+      metadata: {
+        source: item.source,
+        docketNumber: item.docketNumber,
+        excerpt: item.excerpt,
+        retrievalStatus: item.retrievalStatus,
+      },
+    });
+
+    legalSourceCandidates.push(legalSource);
+  } catch (error) {
+    console.error(
+      "Legal source normalisation failed:",
+      error
+    );
+  }
+}
+
+const legalSources =
+  normalizeLegalSources(legalSourceCandidates)
     /*
      * OTHER JURISDICTIONS WITHOUT CONNECTORS
      */
