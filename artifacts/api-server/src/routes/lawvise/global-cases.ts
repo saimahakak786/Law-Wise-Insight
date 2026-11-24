@@ -778,17 +778,44 @@ router.get(
 |--------------------------------------------------------------------------
 */
 
-router.get(
-  "/uk/sources",
-  (_req: Request, res: Response) => {
-    return res.json({
-      success: true,
-      jurisdiction: "United Kingdom",
-      sources: UK_COURT_SOURCES,
-      individualJudgmentRetrieval: true,
-      automatedDiscovery: false,
-      computationalAnalysis:
-        UK_COMPUTATIONAL_ANALYSIS_ENABLED,
-      documentation: UK_CASELAW_API_DOCS,
-      notice:
-        "Individual judgment retrieval is supported
+router.get("/uk/sources", (_req: Request, res: Response) => {
+  return res.json({
+    success: true,
+    jurisdiction: "United Kingdom",
+    sources: UK_COURT_SOURCES,
+    individualJudgmentRetrieval: true,
+    automatedDiscovery: false,
+    computationalAnalysis: UK_COMPUTATIONAL_ANALYSIS_ENABLED,
+    documentation: UK_CASELAW_API_DOCS,
+    notice:
+      "Individual judgment retrieval is available through the National Archives Find Case Law service. Bulk discovery and computational analysis remain disabled pending the required licence permissions.",
+  });
+});
+
+router.get("/usa/sources", (_req: Request, res: Response) => {
+  return res.json({
+    success: true,
+    jurisdiction: "United States",
+    sources: USA_COURT_SOURCES,
+    automatedSearch: true,
+  });
+});
+
+router.get("/uae/sources", (_req: Request, res: Response) => {
+  return res.json({
+    success: true,
+    jurisdiction: "United Arab Emirates",
+    sources: UAE_COURT_SOURCES,
+    automatedSearch: false,
+  });
+});
+
+router.get("/sources", (_req: Request, res: Response) => {
+  return res.json({
+    success: true,
+    jurisdictions: JURISDICTIONS,
+    sources: ALL_COURT_SOURCES,
+  });
+});
+
+export default router;
