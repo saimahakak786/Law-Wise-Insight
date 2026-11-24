@@ -796,7 +796,7 @@ router.get("/usa/sources", (_req: Request, res: Response) => {
   return res.json({
     success: true,
     jurisdiction: "United States",
-    sources: USA_COURT_SOURCES,
+    sources: US_COURT_SOURCES,
     automatedSearch: true,
   });
 });
