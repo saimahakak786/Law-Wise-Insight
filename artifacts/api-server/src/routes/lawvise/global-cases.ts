@@ -497,7 +497,7 @@ const escaped = attribute.replace(
 );
 
 const match = xml.match(
-new RegExp("${escaped}=["']([^"']+)["']", "i")
+new RegExp(`${escaped}=["']([^"']+)["']`, "i")
 );
 
 return match ? decodeXml(match[1]) : null;
