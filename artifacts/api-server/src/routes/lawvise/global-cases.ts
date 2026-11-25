@@ -463,11 +463,19 @@ String.fromCharCode(Number(code))
 String.fromCharCode(parseInt(code, 16))
 );
 }
-
-function getXmlTag(
-xml: string,
-tagName: string
+function getXmlAttribute(
+  xml: string,
+  attribute: string
 ): string | null {
+  const escaped = attribute.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const match = xml.match(
+    new RegExp(`${escaped}=["']([^"']+)["']`, "i")
+  );
+
+  return match ? decodeXml(match[1]) : null;
+}
+
 const escaped = tagName.replace(/[.*+?^${}()|[]\]/g, "\$&");
 
 const expression = new RegExp(
