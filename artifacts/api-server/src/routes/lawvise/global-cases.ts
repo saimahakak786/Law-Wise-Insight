@@ -500,8 +500,8 @@ function extractAtomLink(entry: string): string | null {
 /* --------------------------------------------------------------------------
    COURTLISTENER - USA CASE SEARCH
    -------------------------------------------------------------------------- */
+export async function searchCourtListener(
 
-async function searchCourtListener(
   query: string,
   pageSize: number,
   page: number
@@ -590,7 +590,7 @@ async function searchCourtListener(
    COURTLISTENER - USA JUDGMENT RETRIEVAL
    -------------------------------------------------------------------------- */
 
-async function fetchCourtListenerJudgment(
+export async function fetchCourtListenerJudgment(
   clusterId: string
 ): Promise<unknown> {
   const token = process.env.COURTLISTENER_API_TOKEN;
