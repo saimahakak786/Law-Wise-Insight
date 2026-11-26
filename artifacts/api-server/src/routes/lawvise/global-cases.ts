@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+3import { Router, Request, Response } from "express";
 
 const router: Router = Router();
 
@@ -506,7 +506,7 @@ return match ? decodeXml(match[1]) : null;
 function extractXmlEntries(xml: string): string[] {
 return (
 xml.match(
-/<entry(?:\s[^>])?>[\s\S]?</entry>/gi
+/<entry(?:\s[^>]*)?>[\s\S]*?<\/entry>/gi
 ) || []
 );
 }
